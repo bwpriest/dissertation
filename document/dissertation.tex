@@ -1146,16 +1146,16 @@ In a directed graph, the indegree (outdegree) centrality of vertex $x$ is the nu
 \begin{align} 
 \label{eq:dc}
 \textrm{DC}(x) 
-&= |\{(u,v) \in E \mid x \in \{u,v\} \}| 
+&= |\{(u,v) \in \mathcal{E} \mid x \in \{u,v\} \}| 
 = \| A_{x,:} \|_1 
 = \| A_{:,x} \|_1 \\
 \label{eq:idc}
 \textrm{IDC}(x) 
-&= |\{(u,v) \in E \mid x =v \}| 
+&= |\{(u,v) \in \mathcal{E} \mid x =v \}| 
 = \| A_{x,:} \|_1 \\
 \label{eq:odc}
 \textrm{ODC}(x) 
-&= |\{(u,v) \in E \mid x =u \}|
+&= |\{(u,v) \in \mathcal{E} \mid x =u \}|
 = \| A_{:,x} \|_1
 \end{align}
 %
@@ -2334,7 +2334,7 @@ Even if the empirical accuracy is substandard compared to state-of-the-art techn
 
 %------------------------------------------------
 %\bibliography{sketching-centrality} 
-\bibliography{../eed1a7a966f874f4aa88bc8e943e71ce/bibliography.bib} 
+\bibliography{../../eed1a7a966f874f4aa88bc8e943e71ce/bibliography.bib} 
 \bibliographystyle{alpha} 
 %------------------------------------------------
 
