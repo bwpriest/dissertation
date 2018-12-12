@@ -88,6 +88,7 @@
 \usepackage{color}
 \usepackage{pifont}
 \usepackage{multirow,bigdelim,blkarray}
+\usepackage{array}
 
 % fancy matrices
 \usepackage{blkarray}% http://www.hss.caltech.edu/~kcb/TeX/kbordermatrix.sty
@@ -144,13 +145,13 @@
   {}%
 \makeatother
 
-
+\newcolumntype{C}{>{\centering\arraybackslash}p{14em}}
 
 %----------------------------------------------------------------------------------------
 %	TITLE PAGE
 %----------------------------------------------------------------------------------------
 
-\title[Sublinear Centrality]{Sublinear-Space Approximations of Vertex Centrality in Evolving Graphs} % The short title appears at the bottom of every slide, the full title is only on the title page
+\title[Sublinear Centrality]{Sublinear-Space Approximations of Centrality in Evolving Massive Graphs} % The short title appears at the bottom of every slide, the full title is only on the title page
 %\subtitle{Thesis Proposal}
 
 \author[Priest]{Benjamin W. Priest} % Your name
@@ -169,58 +170,119 @@ Thayer School of Engineering \\
 \titlepage % Print the title page as the first slide
 \end{frame}
 
-\begin{frame}
-\frametitle{Overview} % Table of contents slide, comment this block out to remove it
-\tableofcontents % Throughout your presentation, if you choose to use \section{} and \subsection{} commands, these will automatically be printed on this slide as an overview of your presentation
-\end{frame}
+%\begin{frame}
+%\frametitle{Overview} % Table of contents slide, comment this block out to remove it
+%\tableofcontents % Throughout your presentation, if you choose to use \section{} and \subsection{} commands, these will automatically be printed on this slide as an overview of your presentation
+%\end{frame}
 
 %----------------------------------------------------------------------------------------
 %	PRESENTATION SLIDES
 %----------------------------------------------------------------------------------------
 
+%\newcommand{\mymacro}[0]{}
+
+\begin{frame}<1>[label = overview]
+\frametitle{Overview} % Table of contents slide, comment this block out to remove it
+
+{\large
+\begin{enumerate}
+	\setlength\itemsep{1em}
+	\item {\color<3-6>{gray}Introduction \& Background}
+	\only<2>{
+	\begin{enumerate}
+		\setlength\itemsep{0.5em}
+		\item Problem Overview
+		\item Graph Primitives
+		\item Streaming Data Model Background
+		\item Sketching Definitions
+	\end{enumerate}
+	}
+	\item {\color<2, 4-6>{gray}Summary of Results}
+	\only<3>{
+	\begin{enumerate}
+		\setlength\itemsep{0.5em}
+		\item Streaming Degree Centrality
+		\item $O(1)$-Pass Semi-Streaming Closeness Centrality
+		\item $2$-Pass Semi-Streaming Triangle Count Heavy Hitters
+		\item Distributed Sublinear $\kappa$-Path Centrality
+	\end{enumerate}
+	}
+	\item {\color<2-3,5-6>{gray}Pseudo-Asynchronous Communication for Distributed Algorithms}
+	\only<4>{
+	\begin{enumerate}
+		\setlength\itemsep{0.5em}
+		\item Vertex-Centric Algorithm Challenges
+		\item Pseudo-Asyncronous Communication Protocols
+		\item Verification \& Implementation Details
+	\end{enumerate}
+	}
+	\item {\color<2-4, 6>{gray}DegreeSketch and Local Triangle Count Heavy Hitters}
+	\only<5>{
+	\begin{enumerate}
+		\setlength\itemsep{0.5em}
+		\item Local Triangle Counting
+		\item HyperLogLog Cardinality Sketches
+		\item DegreeSketch and Triangle Counting
+		\item Verification \& Implementation Details
+	\end{enumerate}
+	}
+	\item {\color<2-5>{gray}Sublinear $\kappa$-Path Centrality}
+	\only<6>{
+	\begin{enumerate}
+		\setlength\itemsep{0.5em}
+		\item Betweenness Centrality Challenges
+		\item $\kappa$-Path Centrality and Betweenness Centrality
+		\item $\ell_p$ Sampling Sketches
+		\item Sublinear Distributed $\kappa$-Path Centrality
+	\end{enumerate}
+	}
+\end{enumerate}
+}
+\end{frame}
+%\renewcommand{\mymacro}[0]{
+%\begin{itemize}
+%	\item This is a test
+%\end{itemize}
+%}
+
+
 
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
-\section{Introduction}
+\section{Introduction \& Background}
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
+
+\againframe<2>{overview}
 
 \begin{frame}
 \frametitle{Motivation}
 
 
 \begin{columns}
-\begin{column}{0.55\textwidth}
-	\begin{itemize}
-		\item Many modern computing problem focus on complex relational data
-		\item Data are phrased as large graphs
+	\begin{column}{0.55\textwidth}
 		\begin{itemize}
-			\item e.g. the Internet, communication networks, transportation systems, protein networks, epidemiological models, social networks
+			\item Many modern computing problem focus on complex relational data
+			\item Data are phrased as large graphs
+			\begin{itemize}
+				\item e.g. the Internet, communication networks, transportation systems, protein networks, epidemiological models, social networks
+			\end{itemize}
+			\item Often want to identify which vertices are ``important''
 		\end{itemize}
-		\item Often want to identify which vertices are ``important''
-		\begin{itemize}
-			\item Robust to changes?
-			\item Sublinear memory?
-		\end{itemize}
-%		\item Increasingly want to 
-%		\item \emph{Centrality} captures the ``importance'' of a vertex
-%		\begin{itemize}
-%			\item Many different measures
-%			\item Expensive to recompute whenever graph changes
-%		\end{itemize}
-	%	\item Data warehousing becomes difficult
-	%	\begin{itemize}
-	%		\item parallelization, pass-contrained computation
-	%	\end{itemize}
-	\end{itemize}
-\end{column}
-\begin{column}{0.45\textwidth}  %%<--- here
-\begin{center}
-	\includegraphics[width=1.0\textwidth]{bigdata}
-\end{center}
-\end{column}
-
+	\end{column}
+	\begin{column}{0.45\textwidth}  %%<--- here
+		\begin{center}
+			\includegraphics[width=1.0\textwidth]{bigdata}
+		\end{center}
+	\end{column}
 \end{columns}
+
+\begin{block}{\centering Approach}
+	\begin{center}
+		Use data stream and distributed memory models
+	\end{center}
+\end{block}
+
 \end{frame}
 
 %------------------------------------------------
@@ -241,7 +303,7 @@ Thayer School of Engineering \\
 		\begin{itemize}
 			\item Sequential data access
 			\item Sublinear memory
-			\item Linear amortized time
+			\item Nearly linear amortized time
 			\item Constrained number of passes
 			\item Monte Carlo Approximations
 		\end{itemize}
@@ -273,18 +335,17 @@ Thayer School of Engineering \\
 
 
 \begin{columns}
-\begin{column}{0.65\textwidth}
+\begin{column}{0.6\textwidth}
 	\begin{itemize}
 		\item Distributed memory model a staple of HPC
 		\begin{itemize}
-			\item Divide computation across many processors
-			\item Communication an important resource
-			\item Immense scaling of exact algorithms
+			\item Divide computation
+			\item Immense scaling
 		\end{itemize}
-		\item Why not distributed data streams!
+		\item Why not distributed data streams!?!
 		\begin{itemize}
-			\item Sketch data structures afford stream composition
-			\item Works nicely with vertex-centric algorithms
+			\item \textbf{Sketches} - composable summaries
+			\item vertex-centric algorithms
 			\item Even greater scaling
 			\item Linear communication
 		\end{itemize}
@@ -300,7 +361,7 @@ Thayer School of Engineering \\
 	%	\end{itemize}
 	\end{itemize}
 \end{column}
-\begin{column}{0.35\textwidth}  %%<--- here
+\begin{column}{0.4\textwidth}  %%<--- here
 \begin{center}
 	\includegraphics[width=0.9\textwidth]{dist_stream_model}
 \end{center}
@@ -347,7 +408,7 @@ Thayer School of Engineering \\
 %------------------------------------------------
 
  \begin{frame}
-\frametitle{Large Scale Graph Centrality}
+\frametitle{Massive-Scale Graph Centrality}
 
 \textbf{The Problem}
 \begin{itemize}
@@ -421,84 +482,120 @@ Thayer School of Engineering \\
 
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
-\section{Background}
+%\section{Background}
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
 
 
-\begin{frame}
-\frametitle{Graph Primitives}
-
-Assume throughout that $\mathcal{G}=(\mathcal{V}, \mathcal{E}, \mathbf{w})$, where $|\mathcal{V}| = n$ and $|\mathcal{E}| = m$
-
-\begin{itemize}
-	\item $\mathbf{w}_e$ is the weight of edge $e$ if $e \in \mathcal{E}$ and zero otherwise
-	\item $\mathcal{G}$ has adjacency matrix $A \in \mathbb{R}^{n \times n}$ so that $A_{x,y} = \textbf{w}_{xy}$ for $xy \in \mathcal{E}$
-	\item $\mathcal{G}$ has vertex-edge incidence matrix $B \in \mathbb{R}^{{n \choose 2} \times n}$ so that 
-$B_{xy,z} = 
-\begin{cases}
-\textbf{w}_{xy} & \textnormal{if $x=z$} \\
--\textbf{w}_{xy} & \textnormal{if $y=z$} \\
-0 & \textnormal{else}.
-\end{cases}$
-\end{itemize}
-
-
-\begin{columns}
-
-\begin{column}{0.35\textwidth}
-\begin{center}
-\tikz \graph [nodes={draw,circle}] { a -- {b, c} -- d };
-\end{center}
-\end{column}
-
-\begin{column}{0.65\textwidth}
-\[
-B=
-\begin{blockarray}{ccccc}
-& a & b & c & d \\
-\begin{block}{c(cccc)}
-  ab & 1 & -1 & 0 & 0 \\
-  ac & 1 & 0 & -1 & 0 \\
-  ad & 0 & 0 & 0 & 0 \\
-  bc & 0 & 0 & 0 & 0 \\
-  bd & 0 & 1 & 0 & -1 \\  
-  cd & 0 & 0 & 1 & -1 \\
-\end{block}
-\end{blockarray}
- \]
-\end{column}
-\end{columns}
-
-\end{frame}
+%\begin{frame}
+%\frametitle{Graph Primitives}
+%
+%Assume throughout that $\mathcal{G}=(\mathcal{V}, \mathcal{E}, \mathbf{w})$, where $|\mathcal{V}| = n$ and $|\mathcal{E}| = m$
+%
+%\begin{itemize}
+%	\item $\mathbf{w}_e$ is the weight of edge $e$ if $e \in \mathcal{E}$ and zero otherwise
+%	\item $\mathcal{G}$ has adjacency matrix $A \in \mathbb{R}^{n \times n}$ so that $A_{x,y} = \textbf{w}_{xy}$ for $xy \in \mathcal{E}$
+%	\item $\mathcal{G}$ has vertex-edge incidence matrix $B \in \mathbb{R}^{{n \choose 2} \times n}$ so that 
+%$B_{xy,z} = 
+%\begin{cases}
+%\textbf{w}_{xy} & \textnormal{if $x=z$} \\
+%-\textbf{w}_{xy} & \textnormal{if $y=z$} \\
+%0 & \textnormal{else}.
+%\end{cases}$
+%\end{itemize}
+%
+%
+%\begin{columns}
+%
+%\begin{column}{0.35\textwidth}
+%\begin{center}
+%\tikz \graph [nodes={draw,circle}] { a -- {b, c} -- d };
+%\end{center}
+%\end{column}
+%
+%\begin{column}{0.65\textwidth}
+%\[
+%B=
+%\begin{blockarray}{ccccc}
+%& a & b & c & d \\
+%\begin{block}{c(cccc)}
+%  ab & 1 & -1 & 0 & 0 \\
+%  ac & 1 & 0 & -1 & 0 \\
+%  ad & 0 & 0 & 0 & 0 \\
+%  bc & 0 & 0 & 0 & 0 \\
+%  bd & 0 & 1 & 0 & -1 \\  
+%  cd & 0 & 0 & 1 & -1 \\
+%\end{block}
+%\end{blockarray}
+% \]
+%\end{column}
+%\end{columns}
+%
+%\end{frame}
 
 %------------------------------------------------
 
 \begin{frame}
 \frametitle{Streaming Background}
 
-\begin{itemize}
-	\item A \emph{stream} $\sigma$ accumulating $\mathbf{f} \in \mathbb{R}^{n}$ is a list of rank-1 updates
-	\begin{itemize}
-		\item An update $(i,c)$ means $M \gets \mathbf{f} + c*e_i$
-		\item A \emph{cash register} stream enforces $c > 0$ for all updates
-		\item A \emph{turnstile} stream allows negative updates
-		\item A \emph{strict turnstile} stream allows negatives but enforces $\mathbf{f} \in \mathbb{R}^{n}_{\geq 0}$
-	\end{itemize}
-	\item An algorithm accumulating a data structure $\mathcal{S}$ and is said to be...
-	\begin{itemize}
-		\item \emph{streaming} if $\mathcal{S}$ uses $O(\log n)$ memory
-		\item \emph{semi-streaming} if $\mathcal{S}$ uses $O(n \polylog n)$\footnote{sometimes $O(n^{1+\alpha})$ for $\alpha \in (0,1/2]$} memory
-	\end{itemize}
-	\item Want to minimize the number of passes over $\sigma$	
-	\begin{itemize}
-		\item 1 pass ideal
-		\item Constant or logarithmic passes sometimes acceptable 
-	\end{itemize}
+Assume throughout that $\mathcal{G}=(\mathcal{V}, \mathcal{E}, \mathbf{w})$, where $|\mathcal{V}| = n$ and $|\mathcal{E}| = m$
 
+\begin{itemize}
+	\item $\mathbf{w}_e$ is the weight of edge $e$ if $e \in \mathcal{E}$ and zero otherwise
+	\item $\mathcal{G}$ has adjacency matrix $A \in \mathbb{R}^{n \times n}$ so that $A_{x,y} = \textbf{w}_{xy}$ for $xy \in \mathcal{E}$
+\end{itemize}
+
+$\mathcal{G}$ is given by a \emph{stream} $\sigma$
+\begin{itemize}
+	\item A list of edge insertions
+	\item If deletions exist, say \emph{turnstile stream}
+\end{itemize}
+
+An algorithm accumulating a data structure $\mathcal{S}$ and is said to be...
+\begin{itemize}
+	\item \emph{streaming} if $\mathcal{S}$ uses $\widetilde{O}(1) = O(\log n)$
+	\footnote{\scriptsize $\widetilde{O}()$ notation suppresses polylogarithmic factors} memory
+	\item \emph{semi-streaming} if $\mathcal{S}$ uses $\widetilde{O}(n) = O(n \polylog n)$
+	\footnote{\scriptsize sometimes $\widetilde{O} \left (n^{1+\alpha} \right )$ for $\alpha \in (0,1/2]$} memory
+\end{itemize}
+
+Want to minimize the number of passes over $\sigma$	
+\begin{itemize}
+	\item 1 pass ideal
+	\item Constant or logarithmic passes sometimes acceptable 
 \end{itemize}
 
 \end{frame}
+
+%------------------------------------------------
+
+%\begin{frame}
+%\frametitle{Streaming Background}
+%
+%\begin{itemize}
+%	\item A \emph{stream} $\sigma$ accumulating $\mathbf{f} \in \mathbb{R}^{n}$ is a list of index updates
+%	\begin{itemize}
+%		\item An update $(i,c)$ means $\mathbf{f} \gets \mathbf{f} + c*e_i$
+%		\item A \emph{cash register} stream enforces $c > 0$ for all updates
+%		\item A \emph{turnstile} stream allows negative updates
+%		\item A \emph{strict turnstile} stream allows negatives but enforces $\mathbf{f} \in \mathbb{R}^{n}_{\geq 0}$
+%	\end{itemize}
+%	\item An algorithm accumulating a data structure $\mathcal{S}$ and is said to be...
+%	\begin{itemize}
+%		\item \emph{streaming} if $\mathcal{S}$ uses $\widetilde{O}(1) = O(\log n)$
+%		\footnote{\scriptsize $\widetilde{O}()$ notation suppresses polylogarithmic factors} memory
+%		\item \emph{semi-streaming} if $\mathcal{S}$ uses $\widetilde{O}(n) = O(n \polylog n)$
+%		\footnote{\scriptsize sometimes $\widetilde{O} \left (n^{1+\alpha} \right )$ for $\alpha \in (0,1/2]$} memory
+%	\end{itemize}
+%	\item Want to minimize the number of passes over $\sigma$	
+%	\begin{itemize}
+%		\item 1 pass ideal
+%		\item Constant or logarithmic passes sometimes acceptable 
+%	\end{itemize}
+%
+%\end{itemize}
+%
+%\end{frame}
 
 %------------------------------------------------
 
@@ -514,7 +611,7 @@ If $\circ$ is the stream concatenation operator, then for any streams $\sigma_1$
 \end{definition}
 
 \begin{definition}[Linear Sketch]
-A \emph{Linear Sketch} $\mathcal{S}$ is a linear projection of $\mathbb{f}$ to a lower dimension.
+A \emph{Linear Sketch} $\mathcal{S}$ is a linear projection of $\mathbf{f}$ to a lower dimension.
 For any streaming frequency vectors $\mathbf{f}_1$ and $\mathbf{f}_2$ and scalars $a$ and $b$, 
 \begin{equation*}
 	a\mathcal{S}(\mathbf{f}_1) + b\mathcal{S}(\mathbf{f}_2) = \mathcal{S}(a\mathbf{f}_1 + b\mathbf{f}_2).
@@ -532,6 +629,12 @@ For any streaming frequency vectors $\mathbf{f}_1$ and $\mathbf{f}_2$ and scalar
 \end{frame}
 
 %------------------------------------------------
+%------------------------------------------------
+\section{Summary of Results}
+%------------------------------------------------
+%------------------------------------------------
+
+\againframe<3>{overview}
 
 \begin{frame}
 \frametitle{Summary of Results: Serial Algorithms}
@@ -600,11 +703,9 @@ Closeness Centrality
 
 \end{dynblock}
 
-
+\end{frame}
 
 %------------------------------------------------
-
-\end{frame}
 
 \begin{frame}
 \frametitle{Summary of Results: Distributed Streaming Algorithms}
@@ -629,22 +730,13 @@ Triangle Count Centrality
 \vspace{-1.3cm}
 %
 \begin{itemize}
-	\item Exact $O(m)$-space, $O(m^{\frac{3}{2}})$ serial and distributed algorithms \cite{arifuzzaman2013patric}
+	\item Exact $O(m)$-space, $O \left ( m^{\frac{3}{2}} \right )$-time serial and distributed algorithms \cite{arifuzzaman2013patric, pearce2017triangle}
+	\footnote{\tiny Roger Pearce, ``Triangle counting for scale-free graphs at scale in distributed memory,'' HPEC 2017}
 	\item Streaming sampling sublinear-space algorithms \cite{lim2015mascot, stefani2017triest}
 	\begin{itemize}
-		\item Including distributed generalizations \cite{shin2018tri, shin2018dislr, priest2018estimating}
+		\item Including distributed generalizations \cite{shin2018tri, shin2018dislr}
 	\end{itemize}
 \end{itemize}
-}
-
-\invblock<2->
-
-% Second block
-\opaqueblock<2->[0.8\textwidth]{
-\begin{center}
-	\vspace{-1.1em}
-	We show 2-pass, semi-streaming, distributed sketch-based query algorithms for estimating heavy hitters
-\end{center}
 }
 \end{dynblock}
 
@@ -652,7 +744,35 @@ Triangle Count Centrality
 %close/between centrality
 \begin{dynblock}
 % First block
-\opaqueblock<3>{
+\opaqueblock<2>{
+%\vspace{-1.1em}
+We show 2-pass, semi-streaming, distributed sketch-based query algorithms for estimating heavy hitters 
+\cite{priest2018estimating, priest2019degreesketch}
+%[PPS18, PPS19]
+\footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``Estimating Edge-Local Triangle Count Heavy Hitters in Edge-Linear Time and Almost-Vertex-Linear Space,'' HPEC 2018}
+\footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``\algoname{DegreeSketch}: Distributed Cardinality Sketches on Graphs, with Applications to Counting Triangles,'' In preparation for SigKDD 2019}
+}
+
+\end{dynblock}
+
+
+
+
+%------------------------------------------------
+
+
+
+\end{frame}
+
+
+
+\begin{frame}
+\frametitle{Summary of Results: Distributed Streaming Algorithms}
+
+%Degree centrality
+\begin{dynblock}
+% First block
+\opaqueblock<1->{
 $\kappa$-Path Centrality
 %
 \vspace{-0.2cm}
@@ -671,15 +791,17 @@ $\kappa$-Path Centrality
 	\end{itemize}
 \end{itemize}
 }
+\end{dynblock}
 
-\invblock<4->
 
-% Second block
-\opaqueblock<4->[0.75\textwidth]{
-\begin{center}
-	\vspace{-1.1em}
-	We show distributed sublinear vertex-centric sampling algorithm
-\end{center}
+%close/between centrality
+\begin{dynblock}
+% First block
+\opaqueblock<2>{
+\begin{itemize}
+	\item	We show distributed sublinear vertex-centric random walk and simple path sampling algorithms
+	\item	Yields sublinear distributed $\kappa$-path centrality approximation algorithm
+\end{itemize}
 }
 
 \end{dynblock}
@@ -1370,9 +1492,11 @@ $\kappa$-Path Centrality
 
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
-\section{Pseudo-Asynchronous Communication Schemes for Vertex-Centric Distributed Algorithms}
+\section{Pseudo-Asynchronous Communication for Distributed Algorithms}
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
+
+\againframe<4>{overview}
 
 \begin{frame}
 \frametitle{Motivation: Vertex-Centric Algorithms}
@@ -1386,13 +1510,12 @@ $\kappa$-Path Centrality
 	\end{itemize}
 	\item Scale-free graphs common in applications
 	\begin{itemize}
-		\item Exhibit very high degree vertices
-		\item Cause computation, communication, and memory ``hotspots''
-		\item Synchronous communication moves at the speed of the slowest processor
+		\item High degree vertices cause computation ``hotspots''
+		\item Moves at the speed of the slowest processor
 	\end{itemize}
 \end{itemize}
 
-\textbf{Existing Solutions}:
+\textbf{Solutions}:
 \begin{itemize}
 	\item Asynchronous Communication 
 	\begin{itemize}
@@ -1400,9 +1523,10 @@ $\kappa$-Path Centrality
 		\item Increased implementation complexity
 	\end{itemize}
 	\item Vertex delegation \cite{pearce2014faster}
+	\footnote{\scriptsize Roger Pearce, Maya Gokhale and Nancy M. Amato, ``Faster parallel traversal of scale free graphs at extreme scale with vertex delegates,'' SC 2014}
 	\begin{itemize}
-		\item Subpartition high degree vertices between processors
-		\item Adds communication overhead
+		\item Cut hubs between processors
+%		\item Adds communication overhead
 	\end{itemize}
 \end{itemize}
 
@@ -1415,7 +1539,7 @@ $\kappa$-Path Centrality
 \frametitle{Approach: Pseudo-Asynchronous Communication Protocol}
 
 \begin{block}{The Idea}
-Allow processors to drop out of communication exchanges when finished
+Aggregate and route messages ``asynchronously'', allowing processors to drop out of communication exchanges when finished
 \end{block}
 
 \begin{itemize}
@@ -1424,10 +1548,10 @@ Allow processors to drop out of communication exchanges when finished
 %		\item Each processor belongs to one local and one remote exchange
 		\item Takes advantage of hybrid distributed memory
 	\end{itemize}
-	\item $P \in \mathcal{P}$ maintains send buffer $\mathcal{S}[P]$ and receive buffer $\mathcal{R}[P]$ 
+	\item Mailbox abstraction
 	\begin{itemize}
-		\item Begin forwarding messages when $\mathcal{S}[P]$ reaches threshold
-		\item Drop out of exchange when all other processors in exchanges stop updating $\mathcal{R}[P]$
+		\item Aggregate messages at intermediaries
+		\item Route destination node traffic traffic through same remote channel
 	\end{itemize}
 	\item Three protocols:
 	\begin{itemize}
@@ -1446,29 +1570,46 @@ Allow processors to drop out of communication exchanges when finished
 
 
 \begin{columns}
-\begin{column}{0.65\textwidth}
-	\textbf{Node Local}
-	\begin{enumerate}
-		\item Send messages to local core matching destination local offset
-		\item Send messages to remote core matching destination node offset
-		\item Good for mostly point-to-point messages
-	\end{enumerate}
-	\textbf{Node Remote}
-	\begin{enumerate}
-		\item Send messages to remote core matching destination node offset
-		\item Send messages to local core matching destination local offset
-		\item Good for large numbers of broadcasts
-	\end{enumerate}
-\end{column}
-\begin{column}{0.35\textwidth}  %%<--- here
-\begin{center}
-	\includegraphics[width=0.7\textwidth]{local}
-\end{center}
-\begin{center}
-	\includegraphics[width=1.0\textwidth]{remote}
-\end{center}
-\end{column}
+	\begin{column}{0.5\textwidth}
+		\textbf{Node Local}
+		\begin{enumerate}
+			\setlength\itemsep{0.5em}
+			\item Exchange locally
+			\item Forward remotely
+		\end{enumerate}
+	\end{column}
+	\begin{column}{0.5\textwidth}  %%<--- here
+		\textbf{Node Remote} \checkmark
+		\begin{enumerate}
+			\setlength\itemsep{0.5em}
+			\item Exchange remotely
+			\item Forward locally
+%			\item Good for large numbers of broadcasts
+		\end{enumerate}
+	\end{column}
+\end{columns}
 
+\begin{table}
+\begin{tabular}{C|C}
+	\hline
+	\textbf{Local Route} & \textbf{Remote Route} \\
+	\hline
+\end{tabular}
+\end{table}
+\vspace{-1.0em}
+%
+\begin{columns}
+	\begin{column}{0.5\textwidth}
+		\begin{center}
+			\includegraphics[width=0.75\textwidth]{local}
+		\end{center}
+	\end{column}
+	\begin{column}{0.5\textwidth}  %%<--- here
+		\vspace{-1.5em}
+		\begin{center}
+			\includegraphics[width=0.9\textwidth]{remote}
+		\end{center}
+	\end{column}
 \end{columns}
 
 \end{frame}
@@ -1480,30 +1621,45 @@ Allow processors to drop out of communication exchanges when finished
 
 
 \begin{columns}
-\begin{column}{0.7\textwidth}
-	\textbf{Node Local Node Remote}
-	\begin{itemize}
-		\item Further partition processors by \emph{layers}
+	\begin{column}{0.5\textwidth}
+		\textbf{Node Local Node Remote}
 		\begin{itemize}
-			\item A layer is a collection of nodes equal to the number of cores per node
+			\item Further partition $\mathcal{P}$ by \emph{layers}
+			\begin{itemize}
+				\item Set of (\# cores) nodes
+			\end{itemize}
 		\end{itemize}
-	\end{itemize}
-	\begin{enumerate}
-		\item Send messages to local core matching destination layer offset
-		\item Send messages to remote core matching destination node offset
-		\item Send messages to local core matching destination local offset
-		\item Best for extreme scale where many layers exist
-	\end{enumerate}
-\end{column}
-\begin{column}{0.3\textwidth}  %%<--- here
-\begin{center}
-	\includegraphics[width=1.0\textwidth]{intra_layer_nlnr}
-\end{center}
-\begin{center}
-	\includegraphics[width=1.0\textwidth]{inter_layer_nlnr}
-\end{center}
-\end{column}
+	\end{column}
+	\begin{column}{0.5\textwidth}  %%<--- here
+		\begin{enumerate}
+			\item Exchange locally	
+			\item Forward remotely
+			\item Forward locally
+		\end{enumerate}
+	\end{column}
+\end{columns}
 
+\begin{table}
+\begin{tabular}{C|C}
+	\hline
+	\textbf{Intra-Layer Remote Route} & \textbf{Inter-Layer Remote Route} \\
+	\hline
+\end{tabular}
+\end{table}
+%
+\vspace{-1.0em}
+%
+\begin{columns}
+	\begin{column}{0.5\textwidth}
+		\begin{center}
+			\includegraphics[width=0.9\textwidth]{intra_layer_nlnr}
+		\end{center}
+	\end{column}
+	\begin{column}{0.5\textwidth}  %%<--- here
+		\begin{center}
+			\includegraphics[width=0.9\textwidth]{inter_layer_nlnr}
+		\end{center}
+	\end{column}
 \end{columns}
 
 \end{frame}
@@ -1523,6 +1679,7 @@ Allow processors to drop out of communication exchanges when finished
 			\item Destination sampled from Pareto distribution
 			\item Batch size is maximum $|\mathcal{S}[P]|$
 		\end{itemize}
+		\item Run on quartz @ LLNL
 	\end{itemize}
 \end{column}
 \begin{column}{0.7\textwidth}  %%<--- here
@@ -1535,7 +1692,7 @@ Allow processors to drop out of communication exchanges when finished
 
 \begin{block}{}
 	\begin{center}
-		NLNR exhibits best scaling, others more useful with fewer nodes
+		NLNR exhibits best scaling, NR best with fewer nodes
 	\end{center}
 \end{block}
 
@@ -1554,19 +1711,28 @@ Allow processors to drop out of communication exchanges when finished
 	\begin{itemize}
 		\item Clients need only specify receive behavior
 	\end{itemize}
-	\item Supports message serialization for arbitrary, variable-length messages
+%	\item Supports message serialization for arbitrary, variable-length messages
 	\item Supports LLNL Projects
 	\begin{itemize}
-		\item HAVOQgt
-		\item graph500 scale leader
-		\item others?
+		\item HavoqGT (graph challenge \& pattern matching)
+		\item Sierra 42 - largest scale to date graph 500 ($\sim 70$T edges)
+		\item Possibly more in the future
+		\begin{itemize}
+			\item Eccentricity
+		\end{itemize}
 	\end{itemize}
-	\item Useful for not just vertex-centric algorithms, but any algorithm with asymmetric computational and communication load
+	\item Improvements over legacy HavoqGT routing
+	\begin{itemize}
+		\item Flow control via pseudo-asynchronicity 
+		\item NLNR more scalable
+		\item Variable length messages
+	\end{itemize}
+%	\item Useful for not just vertex-centric algorithms, but any algorithm with asymmetric computational and communication load
 \end{itemize}
 
 \begin{block}{}
 	\begin{center}
-		\algoname{YGM} to be open sourced	
+		\algoname{YGM} to be open sourced, published in IPDPS 2019 workshop
 	\end{center}
 \end{block}
 
@@ -1578,6 +1744,8 @@ Allow processors to drop out of communication exchanges when finished
 \section{\algoname{DegreeSketch} and Local Triangle Count Heavy Hitters}
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
+
+\againframe<5>{overview}
 
 \begin{frame}
 \frametitle{Motivation: Local Triangle Counting}
@@ -1714,6 +1882,104 @@ Outputs $\widetilde{C}$ such that for cardinality C, w.h.p. $| C - \widetilde{C}
 
 %----------------------------------------------------------------------------------------
 
+\begin{frame}
+\frametitle{Set operation estimation with \algoname{HLL}s}
+
+Streaming sets $X$ and $Y$ with \algoname{HLL}s $S_X$ and $S_Y$
+\begin{columns}
+\begin{column}{0.5\textwidth}
+	\begin{itemize}
+		\item $S_X \approx |X|$
+		\item $S_Y \approx |Y|$
+		\item $S_X \widetilde{\cup} S_Y \approx |X \cup Y|$
+		\begin{itemize}
+			\item Same error guarantees
+		\end{itemize}
+		\item $S_X \widetilde{\cap} S_Y \approx |X \cap Y|$
+		\begin{itemize}
+			\item High variance if $|X \cap Y|$ small
+		\end{itemize}
+	\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}  %%<--- here
+	\begin{center}
+		\includegraphics[width=1.0\textwidth]{edge_local}
+	\end{center}
+\end{column}
+
+\end{columns}
+
+
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+
+\begin{frame}[label = accumulation]
+\frametitle{\algoname{DegreeSketch} Accumulation} % Table of contents slide, comment this block out to remove it
+
+\begin{center}
+\only<1>{
+		\includegraphics[width=0.85\textwidth]{ingest_1}
+}
+\only<2>{
+		\includegraphics[width=0.85\textwidth]{ingest_2}
+}
+\only<3>{
+		\includegraphics[width=0.85\textwidth]{ingest_3}
+}
+\end{center}
+
+\begin{block}{}
+\begin{center}
+\only<1>{
+	Partition stream across $\mathcal{P}$
+}
+\only<2>{
+	Distribute edges to endpoint owners
+}
+\only<3>{
+	Insert into $\mathcal{D}$ for each vertex
+}
+\end{center}
+\end{block}
+
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+
+\begin{frame}[label = query]
+\frametitle{\algoname{DegreeSketch} Query} % Table of contents slide, comment this block out to remove it
+
+\begin{center}
+\only<1>{
+		\includegraphics[width=0.85\textwidth]{query_1}
+}
+\only<2>{
+		\includegraphics[width=0.85\textwidth]{query_2}
+}
+\only<3>{
+		\includegraphics[width=0.85\textwidth]{query_3}
+}
+\end{center}
+
+\begin{block}{}
+\begin{center}
+\only<1>{
+	Query routes to one endpoint owner
+}
+\only<2>{
+	Owner sends cardinality sketch to other endpoint owner
+}
+\only<3>{
+	Final owner outputs intersection estimation
+}
+\end{center}
+\end{block}
+
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+
 
 
 \begin{frame}
@@ -1775,7 +2041,7 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 \State $H_k \gets \textnormal{empty $k$-heap}$
 \State $T \gets 0$
 \ParFor{$xy \in \sigma_P$}  \qquad // second pass
-	\State Send $(\textnormal{E}, xy)$ to $f(x)$ and $(\textnormal{E}, yx)$ $f(y)$
+	\State Send $(\textnormal{E}, xy)$ to $f(x)$
 	\For {$(\textnormal{E}, xy) \in \mathcal{R}[P]$}
 		\State Send $(\textnormal{S}, xy, \mathcal{D}[x])$ to $f(y)$
 	\EndFor
@@ -1798,28 +2064,53 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 %----------------------------------------------------------------------------------------
 
 \begin{frame}
-\frametitle{Validation of Claims: Precision and Recall}
+\frametitle{Validation of Claims}
 
-\centerline{\includegraphics[width=0.7\columnwidth]{precision_vs_recall_all}}
+\begin{columns}
+	\begin{column}{0.2\textwidth}
+		\begin{block}{}
+			HPEC graph challenge results
+		\end{block}
+		\begin{block}{}
+			Good performance  on top 10 heavy hitters of \emph{most} graphs
+		\end{block}
+		\begin{block}{}
+			Why do some graphs perform worse?
+		\end{block}
+	\end{column}
+	\begin{column}{0.4\textwidth}
+		\centerline{\includegraphics[width=1.0\columnwidth]{precision_vs_recall_top_10}}
+		\centerline{\includegraphics[width=1.0\columnwidth]{errs_vs_E_top_10}}
+	\end{column}
+	\begin{column}{0.4\textwidth}
+		\centerline{\includegraphics[width=0.5\columnwidth]{gc_legend_1}\includegraphics[width=0.5\columnwidth]{gc_legend_2}}
+	\end{column}
+\end{columns}
 
 \end{frame}
 
 
 %----------------------------------------------------------------------------------------
 
-\begin{frame}
-\frametitle{Validation of Claims: Relative Error}
-
-\centerline{\includegraphics[width=0.9\columnwidth]{errs_vs_E}}
-
-\end{frame}
+%\begin{frame}
+%\frametitle{Validation of Claims: Relative Error}
+%
+%\centerline{\includegraphics[width=0.9\columnwidth]{errs_vs_E}}
+%
+%\end{frame}
 
 %----------------------------------------------------------------------------------------
 
 \begin{frame}
-\frametitle{Validation of Claims: Good vs Bad Triangle Density}
+\frametitle{High vs Low Triangle Density}
 
-\centerline{\includegraphics[width=0.8\columnwidth]{hh_comp}}
+\centerline{\includegraphics[width=0.75\columnwidth]{hh_comp}}
+
+\begin{block}{}
+	\begin{center}
+		Low triangle density $\rightarrow$ high variance
+	\end{center}
+\end{block}
 
 \end{frame}
 
@@ -1839,6 +2130,9 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 	\item Supports sparse and compressed registers
 	\item Implementations for edge- and vertex-local triangle count heavy hitter estimation
 	\item Supports more exotic queries
+	\begin{itemize}
+		\item e.g. 2nd Neighborhood size
+	\end{itemize}
 \end{itemize}
 
 \begin{block}{}
@@ -1855,6 +2149,8 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 \section{Sublinear $\kappa$-Path Centrality}
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
+
+\againframe<6>{overview}
 
 \begin{frame}
 \frametitle{Motivation: Betweenness Centrality Heavy Hitters}
@@ -1939,35 +2235,13 @@ Sample from frequency vector $\mathbf{f}$ with probability relative to $\ell_p$ 
 %
 \vspace{-0.5cm}
 %
-\begin{center}
-Blah blah etc etc\\
-It is complex
-\end{center}
-}
-%
-\invblock<3->
-
-% Second block
-\opaqueblock<3->[0.6\textwidth]{
-%
-\vspace{-0.5cm}
+%\vspace{-0.5cm}
 %
 \begin{center}
 Outputs $(i,P)$ w.p. $1 - \delta$, where $i \in [n]$ is sampled w.p. $P = (1 \pm \varepsilon)\frac{|v_i|^p}{\|v\|^p_p}$ \cite{monemizadeh20101}
 \end{center}
 }
-%\invblock<3->
 %
-%% Second block
-%\opaqueblock<3->[0.7\textwidth]{
-%%
-%\vspace{-0.5cm}
-%%
-%\begin{center}
-%$O(\log^2n \log (1/\delta))$ space for $p=0$ \\
-%$O(\varepsilon^{-1}\log(1/\varepsilon)\log^2n \log (1/\delta))$ space for $p=1$ \\
-%\end{center}
-%}
 
 \end{dynblock}
 
@@ -2008,37 +2282,37 @@ Outputs $(i,P)$ w.p. $1 - \delta$, where $i \in [n]$ is sampled w.p. $P = (1 \pm
 
 
 
-\begin{frame}
-\frametitle{$\ell_p$ Sampling Graph Sparsification}
-
-
-%\begin{definition}[$\ell_p$-Sampling Sketch]
-%A distribution $\Pi$  on $k \times n$ matrices so that if for any $v \in \mathbb{R}^n$, $S$ drawn from $\Pi$ is such that, given $Sv$, one can produce $i \in [n]$ sampled with probability $(1 \pm \varepsilon)\frac{|v_i|^p}{\|v\|_p}$
-%\end{definition}
-
-\begin{itemize}
-	\item Exploit sketch linearity
-	\begin{itemize}
-		\item Sample $\ell_0$ sampling sketch matrices $S_1, \dots, S_t$, each of which will sketch every column of $B$
-		\item $S_1(B_{:,x})$ returns a sampled neighbor of $x$, say $y$
-		\item $S_2(B_{:,x}) + S_2(B_{:,y}) = S_2(B_{:,x} + B_{:,y})$ returns a sampled neighbor of the supervertex $(x + y)$
-		\item et cetera
-	\end{itemize}
-%	\item {[AGM12-1]} \& [AGM12-2] use this method to solve several problems:
-	\item This method can solve several problems \cite{ahn2012analyzing, ahn2012graph}:
-	\begin{itemize}
-		\item $O(n\polylog n)$ to decide connectivity, k-connectivity, bipartiteness, and to approximate the weight of the MST
-		\item Multipass $\tilde{O}(n^{1+1/\alpha})$ to compute sparsifiers, the exact MST, \textbf{$\alpha$-spanners}, and approximate the maximum weight matching
-	\end{itemize}
-\end{itemize}
-
-\begin{block}{}
-\begin{center}
-We will use similar methods to sample random walks and random simple paths in distributed algorithms
-\end{center}
-\end{block}
-
-\end{frame}
+%\begin{frame}
+%\frametitle{$\ell_p$ Sampling Graph Sparsification}
+%
+%
+%%\begin{definition}[$\ell_p$-Sampling Sketch]
+%%A distribution $\Pi$  on $k \times n$ matrices so that if for any $v \in \mathbb{R}^n$, $S$ drawn from $\Pi$ is such that, given $Sv$, one can produce $i \in [n]$ sampled with probability $(1 \pm \varepsilon)\frac{|v_i|^p}{\|v\|_p}$
+%%\end{definition}
+%
+%\begin{itemize}
+%	\item Exploit sketch linearity
+%	\begin{itemize}
+%		\item Sample $\ell_0$ sampling sketch matrices $S_1, \dots, S_t$, each of which will sketch every column of $B$
+%		\item $S_1(B_{:,x})$ returns a sampled neighbor of $x$, say $y$
+%		\item $S_2(B_{:,x}) + S_2(B_{:,y}) = S_2(B_{:,x} + B_{:,y})$ returns a sampled neighbor of the supervertex $(x + y)$
+%		\item et cetera
+%	\end{itemize}
+%%	\item {[AGM12-1]} \& [AGM12-2] use this method to solve several problems:
+%	\item This method can solve several problems \cite{ahn2012analyzing, ahn2012graph}:
+%	\begin{itemize}
+%		\item $O(n\polylog n)$ to decide connectivity, k-connectivity, bipartiteness, and to approximate the weight of the MST
+%		\item Multipass $\tilde{O}(n^{1+1/\alpha})$ to compute sparsifiers, the exact MST, \textbf{$\alpha$-spanners}, and approximate the maximum weight matching
+%	\end{itemize}
+%\end{itemize}
+%
+%\begin{block}{}
+%\begin{center}
+%We will use similar methods to sample random walks and random simple paths in distributed algorithms
+%\end{center}
+%\end{block}
+%
+%\end{frame}
 
 %----------------------------------------------------------------------------------------
 
@@ -2067,7 +2341,7 @@ We will use similar methods to sample random walks and random simple paths in di
 
 \begin{block}{}
 \begin{center}
-Avoids need to subpartition vertices across multiple processors, effectively exchanging communication time for I/O time
+Avoids vertex cuts, exchanging communication for I/O
 \end{center}
 \end{block}
 
@@ -2474,7 +2748,7 @@ $\kappa$-Path Centrality Approximation Algorithm (\cite{kourtellis2013identifyin
 
 
 %----------------------------------------------------------------------------------------
-\nobibliography{../../eed1a7a966f874f4aa88bc8e943e71ce/bibliography.bib} 
+\bibliography{../../eed1a7a966f874f4aa88bc8e943e71ce/bibliography.bib} 
 \bibliographystyle{alpha} 
 %\nobibliography{sketching-centrality} 
 %\bibliographystyle{alpha}
