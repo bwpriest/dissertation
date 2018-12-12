@@ -30,7 +30,11 @@
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage{amsthm}
- 
+
+\usepackage{subcaption}
+%\usepackage[demo]{graphicx}
+%\usepackage{tikz,pgfplots} 
+
 \newtheorem{theorem}{Theorem}[section]
 %\newtheorem{corollary}{Corollary}[theorem]
 \newtheorem{corollary}[theorem]{Corollary}
@@ -38,6 +42,8 @@
 \newtheorem{definition}{Definition}[section]
 %\newtheorem{definition}[theorem]{Definition}
 
+
+\graphicspath{{../figs/}}
 
 \usepackage{color}
 %\usepackage{hyperref}       
@@ -54,6 +60,7 @@
 \newcommand{\med}{\mathrm{median}}
 \newcommand{\mean}{\mathrm{mean}}
 \newcommand{\argmax}{\mathrm{argmax}}
+\newcommand{\argmin}{\mathrm{argmin}}
 \newcommand{\poly}{\mathrm{poly}}
 \newcommand{\polylog}{\, \mathrm{polylog} \,}
 \newcommand{\el}{\mathrm{else}}
@@ -185,8 +192,9 @@ In this dissertation, we consider the application of distributed data stream alg
 We pay special attention to the recovery of \emph{heavy hitters} - the largest elements relative to the given index.
 
 The first part of this dissertation focuses on serial graph stream algorithms.
-We present new algorithms providing a streaming approximation of degree centrality, a semi-streaming constant-pass approximation of closeness centrality, and a semi-streaming approximation of HITS on large collections of small graphs.
-We achieve our results by way of counting sketches, sampling sketches, and subspace embeddings.
+We present new algorithms providing streaming approximations of degree centrality and a semi-streaming constant-pass approximation of closeness centrality.
+%We present new algorithms providing a streaming approximation of degree centrality, a semi-streaming constant-pass approximation of closeness centrality, and a semi-streaming approximation of HITS on large collections of small graphs.
+We achieve our results by way of counting sketches and sampling sketches.
 
 The second part of this dissertation considers vertex-centric distributed graph stream algorithms.
 We develop hybrid pseudo-asynchronous communication protocols tailored to managing communication on distributed graph algorithms with asymmetric computational loads.
@@ -332,40 +340,30 @@ Classic degree centrality is still one of the most commonly applied centrality m
 %%
 %\begin{align} 
 %\label{eq:dc}
-%\textrm{DC}(x) 
+%\textnormal{DC}(x) 
 %&= |\{(u,v) \in E \mid x \in \{u,v\} \}| 
 %= \| A_{x,:} \|_1 
 %= \| A_{:,x} \|_1 \\
 %\label{eq:idc}
-%\textrm{IDC}(x) 
+%\textnormal{IDC}(x) 
 %&= |\{(u,v) \in E \mid x =v \}| 
 %= \| A_{x,:} \|_1 \\
 %\label{eq:odc}
-%\textrm{ODC}(x) 
+%\textnormal{ODC}(x) 
 %&= |\{(u,v) \in E \mid x =u \}|
 %= \| A_{:,x} \|_1.
 %\end{align}
 %
 Indeed, indegree centrality is known to correlate well with PageRank, and so can be used as a proxy in some scenarios \cite{upstill2003predicting}.
-We demonstrate a streaming $(1+\varepsilon, \delta)$-approximation for degree centrality of a graph that uses $O(\varepsilon^{-1} \log n \log (1/ \delta))$ space.
-This algorithm is a straightforward application of \algoname{CountMinSketch}, where we interpolate a graph stream as updates to a vector of the degrees of the vertices.
-Accordingly, our algorithm has $O(\log (1/ \delta))$ update and query times.
+We demonstrate streaming $(1+\varepsilon, \delta)$-approximations for degree centrality of a graph that recovers the degree centrality heavy hitters.
 
-Furthermore, we can simultaneously maintain a list of the approximate top $k$ degree vertices for a space overhead of
-%
-\begin{equation} \label{eq:dc:space}
-O \left (
-k \log \frac{n}{\delta}
-+ 
-\frac{\sum_{q = k+1}^n n_q^2}{n_k^2}
-\varepsilon^{-2}
-\log \frac{n}{\delta}
-\right ),
-\end{equation}
-%
-where $n_x$ is the degree of vertex $x$.
-This follows a procedure very similar to that given by Charikar et al. in \cite{charikar2002finding}.
-For practical scale-free graphs and reasonably small values of $k$, the space dependence upon $n$ remains logarithmic.
+These algorithms are a straightforward application of \algoname{CountMinSketch}, where we interpolate a graph stream as updates to a vector $\mathbf{d} \in \mathbb{R}^n$ of the degrees of the vertices.
+The algorithms accept a threshold fraction $\phi$ and attempt to recover all vertices $x \in \mathcal{V}$ such that $\mathbf{d}_x \geq \phi \|d\|_1$.
+In a cash register stream, we demonstrate an algorithm that recovers every vertex with degree $\geq \phi \|d\|_1$, and avoids returning any vertices with degree $< (\phi - \varepsilon) \|d\|_1$ with probability $(1-\delta))$.
+This algorithm requires space $O(\varepsilon^{-1} \log \frac{n}{\delta})$ with update time $O(\log \frac{n}{\delta})$.
+We also give an algorithm that accepts strict turnstile streams. 
+This algorithm returns every vertex with degree $\geq (\phi + varepsilon) \|d\|_1$, and avoids returning any vertices with degree $< \phi \|d\|_1$ with probability $1 - \delta$. 
+The turnstile algorithm has the increased requirements of $O(\varepsilon^{-1} \log n \log \frac{2 \log n}{\phi \delta})$ space and $O(\log n \log \frac{2\log n}{\phi \delta})$ update time.
 
 
 
@@ -463,8 +461,8 @@ For practical scale-free graphs and reasonably small values of $k$, the space de
 \noindent
 \textbf{Constant-pass semi-streaming closeness centrality}:
 The closeness centrality of a vertex is the inverse of all of its shortest paths, and is a common centrality index of interest in applications.
-We describe a semi-streaming $(r^{\log_2 5} -1, \delta)$-approximation algorithm for the vertex centrality of a graph that uses $O(n^{1+1/r})$ space and $\log r$ passes, where $r$ is an accuracy parameter.
-The algorithm builds on an algorithm developed by Ahn, Guha, and McGregor that builds a $(r^{\log_2 5} -1)$-spanning sparsifying subgraph of an input graph \cite{ahn2012graph}.
+We describe a semi-streaming $(r^{\log 5} -1, \delta)$-approximation algorithm for the vertex centrality of a graph that uses $O(n^{1+1/r})$ space and $\log r$ passes, where $r$ is an accuracy parameter.
+The algorithm builds on an algorithm developed by Ahn, Guha, and McGregor that builds a $(r^{\log 5} -1)$-spanning sparsifying subgraph of an input graph \cite{ahn2012graph}.
 Ahn, Guha, and McGregor's algorithm depends upon building random subtrees by iteratively querying $\ell_p$-sampling sketches in $\log r$ passes.
 We then compute the closeness centrality of this subgraph, which bounds the shortest paths distance error by design.
 For an almost-linear runtime, we can instead employ the fast, scalable algorithm due to Cohen et al. at the expense of some additional error \cite{cohen2014computing}. 
@@ -476,15 +474,15 @@ For an almost-linear runtime, we can instead employ the fast, scalable algorithm
 
 
 
-\noindent
-\textbf{Semi-streaming HITS}
-HITS is an algorithm that outputs two indices, an authoritativenss index, and a hubbiness index, for each vertex in a graph.
-If $A$ is the adjacency matrix of an input graph, these scores converge to the left dominant eigenvectors of $A^TA$ and $AA^T$, respectively \cite{kleinberg1999authoritative}. 
-%We provide an algorithm that approximates these eigenvectors by estimating the dominant singular vectors of $A$.
-We build on a sketching algorithm due to Gilbert, Park, and Wakin to estimate the dominant singular vectors of $A$ \cite{gilbert2012sketched}. 
-This enables us to estimate the authoritativeness and hubbiness scores of the underlying graph using space $O(nr\varepsilon^{-2}(\log (1/\varepsilon) + \log(1/\delta)))$, where $r$ is the rank of $A$.
-Unfortunately, this means that the algorithm with only be efficient if the graph is made of many disconnected components.
-On the other hand, it is efficient for approximating HITS on many small parallel graphs.
+%\noindent
+%\textbf{Semi-streaming HITS}
+%HITS is an algorithm that outputs two indices, an authoritativenss index, and a hubbiness index, for each vertex in a graph.
+%If $A$ is the adjacency matrix of an input graph, these scores converge to the left dominant eigenvectors of $A^TA$ and $AA^T$, respectively \cite{kleinberg1999authoritative}. 
+%%We provide an algorithm that approximates these eigenvectors by estimating the dominant singular vectors of $A$.
+%We build on a sketching algorithm due to Gilbert, Park, and Wakin to estimate the dominant singular vectors of $A$ \cite{gilbert2012sketched}. 
+%This enables us to estimate the authoritativeness and hubbiness scores of the underlying graph using space $O(nr\varepsilon^{-2}(\log (1/\varepsilon) + \log(1/\delta)))$, where $r$ is the rank of $A$.
+%Unfortunately, this means that the algorithm with only be efficient if the graph is made of many disconnected components.
+%On the other hand, it is efficient for approximating HITS on many small parallel graphs.
 
 
 
@@ -626,9 +624,9 @@ Consider the signed vertex-edge incidence matrix, $B \in \mathbb{R}^{{n \choose 
 \begin{equation} \label{eq:veim}
 B_{xy,z} = 
 \begin{cases}
-1 & \textrm{if $xy \in \mathcal{E}$ and $x=z$} \\
--1 & \textrm{if $xy \in \mathcal{E}$ and $y=z$} \\
-0 & \textrm{else}.
+1 & \textnormal{if $xy \in \mathcal{E}$ and $x=z$} \\
+-1 & \textnormal{if $xy \in \mathcal{E}$ and $y=z$} \\
+0 & \textnormal{else}.
 \end{cases}
 \end{equation}
 %
@@ -1130,9 +1128,9 @@ We will similarly relax the requirements to \algoname{UBApproxTopCentral}$(\math
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
 
-In this chapter we present an $\widetilde{O}(1)$ space and update time algorithm for approximating degree centrality in one pass.
-The algorithm is a straightforward application of \algoname{CountMinSketch} to the degree counting problem, and so instead of maintaining $O(n)$ counters we maintain a $\widetilde{O}(1)$ sketch that can be queried for degrees.
-We also discuss streaming heavy hitter recovery.
+In this chapter we present streaming algorithms for approximating degree centrality.
+The algorithms are straightforward applications of \algoname{CountMinSketch} to the degree counting problem, and so instead of maintaining $O(n)$ counters we maintain a $\widetilde{O}(1)$ sketch that can be queried for degrees.
+These algorithms also address sublinear streaming heavy hitter recovery.
 
 %----------------------------------------------------------------------------------------
 \section{Introduction and Related Work} \label{dc:sec:intro}
@@ -1145,16 +1143,16 @@ In a directed graph, the indegree (outdegree) centrality of vertex $x$ is the nu
 %
 \begin{align} 
 \label{eq:dc}
-\textrm{DC}(x) 
+\mathcal{C}^{\algoname{Deg}}(x) 
 &= |\{(u,v) \in \mathcal{E} \mid x \in \{u,v\} \}| 
 = \| A_{x,:} \|_1 
 = \| A_{:,x} \|_1 \\
 \label{eq:idc}
-\textrm{IDC}(x) 
+\mathcal{C}^{\algoname{IDeg}}(x) 
 &= |\{(u,v) \in \mathcal{E} \mid x =v \}| 
 = \| A_{x,:} \|_1 \\
 \label{eq:odc}
-\textrm{ODC}(x) 
+\mathcal{C}^{\algoname{ODeg}}(x) 
 &= |\{(u,v) \in \mathcal{E} \mid x =u \}|
 = \| A_{:,x} \|_1
 \end{align}
@@ -1245,7 +1243,7 @@ All of the results in the following are stated in terms of \algoname{CountMinSke
 %The term in Equation (\ref{eq:cs:space}) depending on the distribution of $v$ is $n-k$ in the worst case, where $n_k = n_{k+1} = \dots = n_n$.  
 
 %----------------------------------------------------------------------------------------
-\section{Turnstile Streaming Degree Centrality} \label{dc:sec:dc}
+\section{Streaming Degree Centrality} \label{dc:sec:dc}
 %----------------------------------------------------------------------------------------
 
 
@@ -1440,7 +1438,7 @@ This also fixes the space and update time complexities.
 %Let $\sigma$ be a stream updating $A$, $G$'s adjacency matrix. 
 %Assume that $t = O(\log n/\delta)$ and $r = k$. 
 %Let $n_q = |v_{i_q}|$, where $v_{i_q}$ is the $q$th largest index of $v$. 
-%Then there exists a streaming algorithm maintaining a heap during accumulation of \algoname{CountSketch} that can solve \algoname{ApproxTopCentral}$(\textrm{DC}, G, k, \varepsilon)$ using space
+%Then there exists a streaming algorithm maintaining a heap during accumulation of \algoname{CountSketch} that can solve \algoname{ApproxTopCentral}$(\textnormal{DC}, G, k, \varepsilon)$ using space
 %%
 %\begin{equation} \label{eq:dc:space}
 %O \left (
@@ -1459,7 +1457,7 @@ This also fixes the space and update time complexities.
 
 
 
-%Note that the space of the above \algoname{ApproxTopCentral}$(\textrm{DC}, G, k, \varepsilon)$ algorithm depends on a quotient involving the valency of the bottom $n-k+1$ indices. 
+%Note that the space of the above \algoname{ApproxTopCentral}$(\textnormal{DC}, G, k, \varepsilon)$ algorithm depends on a quotient involving the valency of the bottom $n-k+1$ indices. 
 %In a graph processed as formulated above, these values are the valencies of the corresponding vertex and are thus bounded above by $n-1$ and below by $0$. 
 %In the worst case (a graph where the bottom $n-k+1$ vertices have the same valency, such as a regular graph) this additional dependence can be $O(n)$, meaning that the algorithm is semi-streaming.
 %Thus, the algorithm will only be expected to be very efficient for graphs where the $k$th-largest valency is of higher order than a strong majority of the bottom $n-k$ valencies.
@@ -1489,9 +1487,56 @@ This also fixes the space and update time complexities.
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
 
+In this chapter we present a $O(1)$-pass semi-streaming algorithm for the approximation of closeness centrality over strict turnstile streams.
+The algorithm draws upon recent advances in graph sparsification using $\ell_p$ sampling sketches.
+We are unable to gain asymptotic improvements by only returning the heavy hitters, as writing the sketches down requires superlinear memory in $n$. 
+However, it is trivial to maintain a heap of the heavy hitters during computation. 
+
+
 %----------------------------------------------------------------------------------------
 \section{Introduction and Related Work} \label{cc:sec:intro}
 %----------------------------------------------------------------------------------------
+
+Closeness centrality is a commonly used centrality measure in the analysis of networks \cite{bavelas1948mathematical, wasserman1994social, boldi2014axioms, cohen2014computing, wei2014real}.
+Closeness centrality, itself an early measure of graph centrality, defines centrality of a vertex in terms of the reciprocal of the vertex's distance to the graph's other vertices \cite{boldi2014axioms}. 
+Unlike degree centrality, which is based on vertex-local measurements, the closeness centrality depends on the full path structure of $\mathcal{G}$.
+Consequently, a logarithmic amount of memory appears unlikely to suffice.
+
+
+A vertex with high closeness can be thought of as one that can communicate with the other vertices in the graph relatively quickly. 
+Put precisely, one calculates the closeness centrality of a vertex $x$ as
+%
+\begin{equation} \label{eq:cc}
+\textnormal{CC}(x) = \frac{1}{\sum\limits_{y \in \mathcal{V} \setminus \{x\}} d(x,y)}.
+\end{equation}
+%
+Consequently, an implementation of exact closeness centrality requires one to solve the \algoname{AllSourcesAllShortestPaths} problem, making it  expensive to compute on a large dense graph.
+Consequently, on a large evolving graph maintaining up-to-date measures of closeness centrality requires a more sophisticated approach. 
+It is worth pointing out that Eq.~(\ref{eq:cc}) is not defined if the underlying graph is not strongly connected, and indeed it was probably not intended for such graphs \cite{boldi2014axioms}. 
+While there are generalizations to the definition that account for disconnected graphs, their details are out of the scope of this document .
+
+Computing the closeness centrality of an evolving graph is an interesting problem, but one that is eclipsed by the attention paid to its cousin betweenness centrality.
+We discuss some of this literature in Section~\ref{kpath:sec:intro}.
+However, online solutions have been suggested in the literature \cite{wei2014real}. 
+In particular, given the information required to solve betweenness centrality for all vertices one can also solve the closeness centrality.
+Thus, it might be expected that a solution for betweenness centrality can be adapted into a solution for closeness centrality. 
+However, computing closeness centrality is strictly easier than betweenness centrality, so some solutions that work for closeness centrality in pass- or space-constrained settings may not generalize to betweenness centrality.
+
+Cohen et al. describe the best known approximation algorithm for $\mathcal{C}^{\algoname{Cloes}}$ in terms of speed, producing approximations in  nearly linear time \cite{cohen2014computing}. 
+Like many approximation algorithms for path-based centrality indices, their algorithm depends upon solving \algoname{SingleSourceShortestPaths} for a $k = O(\log n)$ uniformly sampled source vertices, $C \subseteq \mathcal{V}$.
+For $x \in \mathcal{V}$, we can estimate closeness centrality using $\widetilde{\mathcal{C}}^{\algoname{Close}}(x) = \sum_{y \in C \setminus} \frac{d(x,y)}{k}$.
+However, this estimate can have high variance.
+In order to improve error bounds, Cohen et al. use the \emph{pivot} of $v$ for $v$ that are ``far'' from $C$ , $c(v) = \argmin_{u \in C} d(uv)$ to estimate $\mathcal{C}^{\algoname{Close}}(v)$, as $\widetilde{\mathcal{C}}^{\algoname{Close}}(v) \coloneqq \widetilde{\mathcal{C}}^{\algoname{Close}}(c(v)) + d(u, c(v))$. 
+Their algorithm satisfies the following theorem:
+%
+\begin{theorem}{Theorem 2.1 of \cite{cohen2014computing}} \label{thm:cc:approx}
+There is an algorithm (Algorithm 1 of \cite{cohen2014computing}) that produces, for every $x \in \mathcal{V}$, an approximation of closeness centrality satisfying $\widetilde{\mathcal{C}}^{Close}(x) - \mathcal{C}^{Close}(x) \leq O(\varepsilon) \mathcal{C}^{Close}(x)$ with high probability.
+This algorithm requires $O((m + n \log n) \log \frac{n}{\varepsilon^{3}})$ time and $O(m)$ memory.
+\end{theorem}
+
+
+We will also utilize graph sparsification methods stemming from work by Ahn, Guha and McGregor to produce spanning subgraphs using semi-streaming methods.
+Section~\ref{sec:lp-sample} describes $\ell_p$ sampling sketches, while Section~\ref{sec:spanner} discusses their application to constructing spanning subgraphs.
 
 
 %----------------------------------------------------------------------------------------
@@ -1501,10 +1546,10 @@ This also fixes the space and update time complexities.
 First, we define a $\ell_p$-sampling sketch on vector $v \in \mathbb{R}^n$ as follows.
 %
 \begin{definition}
-Let $\Pi$ be a distribution on real $r \times n$ matrices, where $r$ depends on $\varepsilon$ and $\delta$. 
+Let $\Pi$ be a distribution on real $r \times n$ matrices, where $r = \poly(1/\varepsilon, \log(1/\delta))$. 
 Suppose $v \in \mathbb{R}^n$ and sample $S \sim \Pi$. 
 Suppose further that there is a procedure that, given $Sv$, can output $(i,P)$ where $i \in [n]$ is an index of $v$ sampled with probability $P = (1 \pm \varepsilon)\frac{|v_i|^p}{\|v\|^p_p}$, failing with probability at most $\delta$. 
-Then $\Pi$ is an $\ell_p$ sampling sketch.
+Then $\Pi$ is an $\ell_p$ sampling sketch distribution, $S \sim \Pi$ is an $\ell_p$ sketch transform, and $Sv$ is an $\ell_p$ sampling sketch.
 \end{definition}
 %
 %Here $\|\cdot\|_p$ is the $\ell_p$-norm operator, and $(1 \pm \varepsilon)a = \left [ (1-\varepsilon)a, (1+\varepsilon)a \right]$. 
@@ -1513,39 +1558,45 @@ Monemizadeh and Woodruff proved the existence of such sampling sketches and prov
 Jowhari et al. \cite{jowhari2011tight} improved upon these space bounds.
 In particular, they proved that $\ell_0$ and $\ell_1$ sampling sketches require $O(\log^2 n \log \delta^{-1})$ and $O(\varepsilon^{-1} \log \varepsilon^{-1} \log^2 n \log \delta^{-1})$ space, respectively.
 Note that both have only a polylogarithmic dependence on $n$, and $\ell_0$-sampling sketches can achieve arbitrary sampling precision at no additional cost. 
-Interestingly, the main ingredients in these sketches are applications of \algoname{Tug-of-War} and \algoname{CountSketch}, defined in Sections \ref{sec:tow} and \ref{sec:countsketch}. 
+Vu improves these sampling sketches with algorithms that allow the simultaneous accumulation of $s$ sampling sketches for a single vector $\mathbf{f}$ the same asymptotic update times, i.e. without dependence upon $s$ so long as $s = o(\|\mathbf{f}\|_0)$.
+%Interestingly, the main ingredients in these sketches are applications of the famous \algoname{Tug-of-War} and \algoname{CountSketch} sketches.
+%\algoname{Tug-of-War} is a sketch family that can return approximations of $\|\mathbf{f}\|_p$ for $p \in (0, 2]$ using $\widetilde{O}(\varepsilon^{-2}\log (1/\delta))$ space.
+%\algoname{CountSketch} is related to the \algoname{CountMinSketch} we used in Chapter~\ref{chap:dc}, but is robust to fully turnstile streams using $\widetilde{O}(\varepsilon^{-2}\log (1/\delta))$ space.
 
-The full details are too verbose for the purposes of this document.
-The core idea of Jowhari et al.'s approach is as follows:
+The full details are verbose and out of the scope of this document, as we will be using $\ell_p$ samplers as black box building blocks.
+%The core idea of Jowhari et al.'s approach for $p \in (0,2]$ is as follows:
+%%
+%\begin{enumerate}
+%\item Sample a  uniform random scaling factor $t_i \in_R [0,1]$ for every $i \in [n]$.
+%\item Given a streaming vector $v \in \mathbb{R}^n$, rescale each update to $v_i$ by $1/t_i^{1/p}$, obtaining $z \in \mathbb{R}^n$ such that $z_i = v_i/t_i^{1/p}$.
+%\item In one pass, accumulate \algoname{CountSketch} and $\ell_2$ norm approximation data structures of $z$ ($C$ and $L^\prime$) and an $\ell_p$ norm approximation of $v$ ($L$). 
+%\item Compute the output $z^*$ of $C$, and a sparse approximation $\widetilde{z}$.
+%\item Using $z^*$, $\widetilde{z}$, $L$, and $L^\prime$, compute real $r$ and $s$ satisfying a specific relationship with the norms of $v$ and $z-\widetilde{z}$. 
+%\item Compute $j = \argmax_i |z_i^*|$
+%\item If $s$, $r$, and $z_j^*$ satisfy certain inequalities, output FAIL.
+%\item Otherwise, output $(j, z_j^*t_j^{1/p})$.
+%\end{enumerate}
+%%%
+%See \cite{jowhari2011tight} for a full treatment of the algorithm and its analysis. 
 %
-\begin{enumerate}
-\item Sample a  uniform random scaling factor $t_i \in_R [0,1]$ for every $i \in [n]$.
-\item Given a streaming vector $v \in \mathbb{R}^n$, rescale each update to $v_i$ by $1/t_i^{1/p}$, obtaining $z \in \mathbb{R}^n$ such that $z_i = v_i/t_i^{1/p}$.
-\item In one pass, accumulate \algoname{CountSketch} and $\ell_2$ norm approximation data structures of $z$ ($C$ and $L^\prime$) and an $\ell_p$ norm approximation of $v$ ($L$). 
-\item Compute the output $z^*$ of $C$, and a sparse approximation $\widetilde{z}$.
-\item Using $z^*$, $\widetilde{z}$, $L$, and $L^\prime$, compute real $r$ and $s$ satisfying a specific relationship with the norms of $v$ and $z-\widetilde{z}$. 
-\item Compute $j = \argmax_i |z_i^*|$
-\item If $s$, $r$, and $z_j^*$ satisfy certain inequalities, output FAIL.
-\item Otherwise, output $(j, z_j^*t_j^{1/p})$.
-\end{enumerate}
-%
-See \cite{jowhari2011tight} for a full treatment of the algorithm and its analysis. 
-
-As these sampling sketches are linear, they can be added together. 
-That is, if we have two vectors of the same length $v, v^\prime \in \mathbb{R}^n$ and $S$ is a sketch matrix drawn from such a sampling distribution, then $Sv + Sv^\prime = S(v+v^\prime)$. 
-This observation will prove important in Section \ref{sec:spanner}. 
+It is important to note that as these sampling sketches are linear, they can be added together. 
+That is, if we have two vectors of the same length $\mathbf{v}, \mathbf{v}^\prime \in \mathbb{R}^n$ and $S$ is a sketch mat    rix drawn from such a sampling distribution, then $S\mathbf{v} + S\mathbf{v}^\prime = S(\mathbf{v}+\mathbf{v}^\prime)$. 
+This observation is key for many sublinear graph sparsification algorithms, such as the spanner construction discussed in  Section~\ref{sec:spanner}. 
 
 
 %----------------------------------------------------------------------------------------
 \subsection{$\ell_p$-Sampling Graph Sparsification} \label{sec:spanner}
 %----------------------------------------------------------------------------------------
 
+$\ell_p$ sampling sketches, particularly of the $\ell_0$ and $\ell_1$ variety, have proven popular for solving various problems on dynamic graph streams under semi-streaming memory constraints.
+Applications include testing connectivity and bipartiteness, approximating the weight of the minimum spanning tree in one pass and in multiple passes computing sparsifiers, the exact minimum spanning tree, and approximating the maximum weight matching \cite{ahn2012analyzing}, as well as computing in several passes cut sparsifiers, approximate subgraph pattern counting, and sparsifying subgraphs \cite{ahn2012graph}, spectral sparsification \cite{ahn2013spectral}, and identifying densest subgraphs \cite{vu2018data}. 
+%In a seminal series of papers, Ahn, Guha, and McGregor used $\ell_0$- and $\ell_1$-sampling sketches on the columns of the vertex-edge incidence matrix to solve or approximating a number of other semi-streaming graph problems \cite{ahn2012analyzing, ahn2012graph,  }. 
+%Their approach depends on $\ell_p$ sampliing sketches as discussed in Section \ref{sec:lp-sample}.
 
-In a recent series of papers, Ahn, Guha, and McGregor used $\ell_0$- and $\ell_1$-sampling sketches on the columns of the vertex-edge incidence matrix to solve or approximating a number of other semi-streaming graph problems \cite{ahn2012analyzing,ahn2012graph}. 
-Their approach depends on $\ell_p$ sampliing sketches as discussed in Section \ref{sec:lp-sample}.
+We briefly summarize the general approach taken in the literature.
 Consider the columns of the vertex-edge incidence matrix $B$ (see Equation (\ref{eq:veim})), and a series of $\ell_0$ sampling sketches $S_1, S_2, \dots, S_t$, for some $t = O(\log n)$.
-The graph sparsification algorithms all proceed along the following basic premise. 
-Algorithms depending on $\ell_1$ sampling are similar. 
+%The graph sparsification algorithms all proceed along the following basic premise. 
+%Algorithms depending on $\ell_1$ sampling are similar. 
 First, read the stream defining $B$ (which can be adapted from a stream defining $A$) and sketch each column of $B$ using each of $S_1, S_2, \dots, S_t$.
 If $x \in [n]$ is a vertex of $\mathcal{G}$, then $B_{:,x}$ is a vector whose nonzero entries correspond to edges of which it is an endpoint. 
 Thus, $S_1(B_{:,x})$ can recover a uniformly sampled neighbor of $x$, say $y$, with high probability. 
@@ -1554,7 +1605,7 @@ New sketches are required for each contraction, as otherwise the samples will no
 The sparisification of the graph so obtained may then be used, possibly over several passes, to learn nontrivial information about $G$ using a semi-streaming algorithm. 
 Algorithms using $\ell_1$-sampling sketches are similar. 
 
-In particular, we are interested in their construction of sparse graph spanners. 
+For the purposes of this chapter we are interested in their construction of sparse graph spanners as discussed in \cite{ahn2012graph}. 
 %
 \begin{definition}
 An $\alpha$-spanner of a graph $\mathcal{G}$ is a sparse subgraph $\mathcal{H}$ of $\mathcal{G}$ such that for all $x,y \in \mathcal{V}$, the following holds: 
@@ -1563,12 +1614,12 @@ d_\mathcal{H}(x,y) \leq \alpha d_\mathcal{G}(x,y).
 \end{equation}
 \end{definition}
 %
-If one is able to construct such a spanner $\mathcal{H}$ using only $O(n \polylog n)$ memory in a small number of passes over $\mathcal{G}$, then one can estimate vertex-vertex distances on $\mathcal{G}$ in the semi-streaming model. 
+If one is able to construct such a spanner $\mathcal{H}$ using small memory in a small number of passes over $\mathcal{G}$, then one can estimate vertex-vertex distances on $\mathcal{G}$ in the semi-streaming model. 
 Unfortunately, there is presently no known algorithm that can do so in a single pass. 
-The following result corresponds to Theorem 5.1 of \cite{ahn2012graph}.
+The following Theorem summarizes the result.
 %
-\begin{theorem}[\cite{ahn2012graph}] \label{thm:spanner}
-Given an unweighted graph $\mathcal{G}$, there is a randomized algorithm that constructs a $(k^{\log_2 5}-1)$-spanner in $\log k$ passes using $\widetilde{O}(n^{1+1/k})$ space. 
+\begin{theorem}[Theorem 5.1 of \cite{ahn2012graph}] \label{thm:spanner}
+Given an unweighted graph $\mathcal{G}$, there is a randomized algorithm that constructs a $(k^{\log 5}-1)$-spanner in $\log k$ passes using $\widetilde{O}(n^{1+1/k})$ space. 
 \end{theorem}
 %
 The rough idea of the algorithm is as follows.
@@ -1586,365 +1637,378 @@ For full details, see \cite{ahn2012graph}.
 \section{Semi-Streaming Constant-Pass Closeness Centrality} \label{sec:sscc}
 %----------------------------------------------------------------------------------------
 
-More complex notions of centrality require more complex data. 
-Closeness centrality, itself an early measure of graph centrality, defines centrality of a vertex in terms of the reciprocal of the vertex's distance to the graph's other vertices \cite{boldi2014axioms}. 
-Thus, a vertex with high closeness can be thought of as one that can communicate with the other vertices in the graph relatively quickly. 
-Specifically, one calculates the closeness centrality of a vertex $x$ as
-%
-\begin{equation} \label{eq:cc}
-\textrm{CC}(x) = \frac{1}{\sum\limits_{y \in \mathcal{V}} d(x,y)}.
-\end{equation}
-%
-Consequently, an implementation of exact closeness centrality requires one to solve the all pairs shortest paths problem, making it extremely expensive to compute on a large dense graph.
-Consequently, on a large evolving graph maintaining up-to-date measures of closeness centrality requires a more sophisticated approach. 
-It is worth pointing out that $CC(x)$ is not defined if the underlying graph is not strongly connected, and indeed it was probably not intended for such graphs. 
-While there are generalizations to the definition that account for disconnected graphs, their details are out of the scope of this document \cite{boldi2014axioms}.
-
-Computing the closeness centrality of an evolving graph is an interesting problem, but one that is eclipsed by the attention paid to its cousin betweenness centrality, covered in Section \ref{sec:bc}.
-However, online solutions have been suggested in the literature \cite{wei2014real}. 
-In particular, given the information required to solve betweenness centrality for all vertices one can also solve the closeness centrality.
-Thus, it might be expected that a solution for betweenness centrality can be adapted into a solution for closeness centrality. 
-However, computing closeness centrality is strictly easier than betweenness centrality, so some solutions that work for closeness centrality in pass- or space-constrained settings may not generalize to betweenness centrality.
 
 
 %------------------------------------------------------------------------------------------
 
 
-A natural avenue of inquiry is whether the $\ell_p$-norm sampling approach developed by Ahn, Guha, and McGregor discussed in Section \ref{sec:spanner} can be applied to approximating centrality. 
-One of their results of particular interest to our analysis is the construction of graph spanners,.
-Theorem \ref{thm:spanner} provides an algorithm for computing a $(k^{\log_2 5} -1)$-spanner using $\widetilde{O}(n^{1+1/k})$ space taking $\log k$ passes over a stream defining $B$ \cite{ahn2012graph}. 
+A natural avenue of inquiry is whether the $\ell_p$-norm sampling approach discussed in Section \ref{sec:spanner} can be applied to approximating centrality. 
+Theorem \ref{thm:spanner} provides an algorithm for computing a $(k^{\log 5} -1)$-spanner using $\widetilde{O}(n^{1+1/k})$ space taking $\log k$ passes over a stream defining $B$ \cite{ahn2012graph}. 
+This is of particular note for approximating closeness centrality, as it is defined in terms of shortest path distances.
 %We here omit the details for brevity.
 %Here the $\widetilde{O}(\cdot)$ operator merely suppresses logarithmic factors for readability. 
 
 An $\alpha$-spanner $\mathcal{H}$ of $\mathcal{G}$ can then be used to approximate the closeness centrality of the vertices in $\mathcal{G}$.
-Discounting the time spent constructing the sketched spanner, the time needed to compute $CC_H(x)$ (Equation (\ref{eq:cc})) will be substantially less than the time required to compute $CC_\mathcal{G}(x)$, particularly if $\mathcal{G}$ is dense. 
-Moreover, an appropriate choice of $k$ places this formulation in the semi-streaming model, making it much more space efficient than any existing algorithm.
+Discounting the time spent constructing the sketched spanner, the time needed to compute $\mathcal{C}^{\algoname{Close}}_{\mathcal{H}}(x)$ (Equation (\ref{eq:cc})) will be substantially less than the time required to compute $\mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x)$, particularly if $\mathcal{G}$ is dense. 
+%Moreover, an appropriate choice of $k$ places this formulation in the semi-streaming model, making it much more space efficient than any existing algorithm.
 
 Though this approximation of closeness centrality is a fairly obvious application of Ahn, Guha, and McGregor's work, to our knowledge it has not be formulated in prior literature. 
-First note that if $\mathcal{H}$ is an $\alpha$-spanner of $\mathcal{G}$, then for any $x \in \mathcal{V}$, the following holds:
+We prove the following lemma:
+
+\begin{lemma} \label{lem:spanner:cc}
+Let $\mathcal{H}$ be an $\alpha$-spanner of $\mathcal{G}$. 
+Then for all $x \in \mathcal{V}$, 
 %
-\begin{align*}
-CC_\mathcal{H}(x) 
-&= \frac{1}{\sum\limits_{y \in \mathcal{V}} d_\mathcal{H}(x,y)}
-&\textrm{Equation (\ref{eq:cc}})\\
-&\geq \frac{1}{\sum\limits_{y \in \mathcal{V}} \alpha d_\mathcal{G}(x,y)}
-&\textrm{Equation (\ref{eq:spanner}})\\
-&\geq \frac{1}{\alpha}CC_\mathcal{G}(x).
-\end{align*}
-%
-Since $\mathcal{H}$ is a spanning subgraph of $\mathcal{G}$, this implies that for all $x \in \mathcal{V}$, $\textrm{CC}_\mathcal{H}(x) \in [\frac{1}{\alpha},1]\textrm{CC}_\mathcal{G}(x)$. 
-Hence, $\textrm{CC}_\mathcal{H}(x)$ is an $\alpha$-approximation of $\textrm{CC}_\mathcal{G}(x)$ for all $x \in \mathcal{V}$. 
-This implies that the algorithm corresponding to Theorem \ref{thm:spanner} can be used to solve $\algoname{ApproxCentral}(\textrm{CC}, \mathcal{G}, 1- (k^{\log_2 5}-1)^{-1})$.
-As $k$ increases, the guaranteed bound becomes less tight, but the space complexity of $\mathcal{H}$ improves. 
-We summarize the result in the following theorem,
-%
-\begin{corollary} \label{cor:ccapprox}
-Let $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ be an unweighted graph with $|\mathcal{V}| = n$ and $|\mathcal{E}|=m$. 
-Let $\mathcal{H}$ be the subgraph spanner of $\mathcal{G}$ output by the algorithm corresponding to Theorem \ref{thm:spanner}, where we choose $k$ sufficiently large.
-Then $\textrm{CC}_\mathcal{H}(\mathcal{G})$ solves $\algoname{ApproxCentral}(\textrm{CC},\mathcal{G}, 1- (k^{\log_2 5}-1)^{-1})$ in the semi-streaming model using $\log k$ passes over the stream defining $\mathcal{G}$.
-\end{corollary}
-
-
-
-
-This technique has two major drawbacks. 
-First, while vertices with high closeness centrality in $\mathcal{G}$  might have similarly high closeness centrality in the sketched spanner, unlike the results in Section \ref{sec:sdc} there are no theoretical guarantees thereof. 
-Indeed, this spanner construction does not imply a procedure for maintaining a list of the top closeness central vertices in $\mathcal{H}$ or $\mathcal{G}$. 
-%If $\alpha$ is chosen to be very small, then this problem will sort itself out. 
-%However, 
-Second, this approach requires $\log k$ passes over the stream updating $B$. 
-This means that this algorithm is not appropriate for real-time analysis of evolving graphs, and $\mathcal{H}$ must be treated as a static graph for any subsequent analysis. 
-%We may take some solace from the fact that sublinear analysis of dynamic graphs is still a very young field, and improved methods may arise in the near future. 
-However, the underlying algorithm due to Ahn, Guha, and McGregor is a very recent discovery. 
-It may be possible to construct such a graph in a single pass using related techniques. 
-
-
-
-
-
-%----------------------------------------------------------------------------------------
-%----------------------------------------------------------------------------------------
-\chapter{Semi-Streaming HITS} \label{chap:hits}
-%----------------------------------------------------------------------------------------
-%----------------------------------------------------------------------------------------
-
-In this section we will briefly discuss some preliminary results in this research area. 
-Much of this section is a straightforward application of results from Chapters \ref{chap:background} and \ref{chap:sketch}.
-Unsurprisingly, a cursory analysis yields the most promising results for approximating degree centrality in the streaming model. 
-Degree centrality has the advantage of being the most simple of the many centrality indices, and one which can be succinctly captured using $O(n)$ bits of memory. 
-We also apply existing algorithms to yield semi-streaming approximations of closeness centrality and HITS, a variant of eigencentrality. 
-
-This chapter is intended as a brief overview of the relevant concepts from the sketching and streaming literature. 
-Section \ref{sec:sdc} describes how \algoname{CountSketch}, as described in Section \ref{sec:countsketch}, can be used to maintain a streaming approximation of the top $k$ degree central vertices in a graph. 
-Section \ref{sec:sscc} shows how prior results in graph sparsification yields a multi-pass semi-streaming algorithm for approximating closeness centrality. 
-Section \ref{sec:sshits} explains a procedure for approximating HITS, a variant of eigencentrality, using the direct singular vector approximation techniques discussed in Section \ref{svdapprox}.
-These results are meant to motivate the claim that other, more widely used, centrality indices can be approximated in the semi-streaming model.
-
-%----------------------------------------------------------------------------------------
-\section{Introduction and Related Work} \label{hits:sec:intro}
-%----------------------------------------------------------------------------------------
-
-
-
-
-%----------------------------------------------------------------------------------------
-\section{$\ell_2$-Subspace Embeddings} \label{hits:sec:subspace}
-%----------------------------------------------------------------------------------------
-
-The defintion of a turnstile data stream can be easily generalized to instead update a matrix $M \in \mathbb{R}^{n \times d}$.
-In such a stream $\sigma$ the elements are of the form $(i,j,c)$, and are interpreted as ``add $c$ to $M_{i,j}$''. 
-%The stream defines $M$ as follows. 
-%Initialize $M = \{0\}^{k \times d}$ and read through the stream in order.
-%Given each update $(i,j,c)$ set $M \gets M + c(e_i*e_j^T)$, where $e_\ell$ is the $\ell$th standard unit vector of the appropriate size. 
-When streaming a graph $\mathcal{G}$, the data structure being aggregated is commonly the adjacency matrix $A \in \mathbb{R}^{n \times n}$ or sometimes the vertex-edge incidence matrix $B$. 
-
-A transformation $S$ drawn from a linear sketch distribution on $k \times n$ matrices can be used to accumulate a sketch of a matrix $M$ given a turnstile stream as follows.
-Initialize $SM = \{0\}^{k \times d}$ and apply updates $(i,j,c)$ in order: $SM \gets SM + S(c(e_i*e_j^T))$.
-An example turnstile algorithm might accumulate $SM$ and then compute some function thereon as an approximation of the function applied to $M$. 
-
-Sketching has had much success in the numerical linear algebra literature by way of \emph{subspace embeddings}.
-%
-\begin{definition}
-A $(1 \pm \varepsilon)$ $\ell_2$-subspace embedding for the column space of an $n \times d$ matrix $A$ is a matrix $S$ for which for all $x \in \mathbb{R}^d$
-\begin{center}
-$\|SAx\|_2^2 = (1 \pm \varepsilon)\|Ax\|_2^2$.
-\end{center}
-\end{definition}
-%
-If $S$ is a  $(1 \pm \varepsilon)$ $\ell_2$-subspace embedding for the columnspace of $A$, then by the definition it is good at preserving the action of $A$'s columns.
-This will prove to be a very useful property. 
-Much emphasis in the literature is placed upon finding sketch distributions $\Pi$ whose elements are $(1 \pm \varepsilon)$ $\ell_2$-subspace embeddings for arbitrary matrices with high probability. 
-%
-\begin{definition}
-Suppose $\Pi$ is a distribution on $r \times n$ matrices, where $r$ is a function of $n, d, \varepsilon$, and $\delta$. 
-Suppose that for any fixed $A \in \mathbb{R}^{n\times d}$, a matrix $S \sim \Pi$ is a $(1\pm \varepsilon)$ $\ell_2$-subspace embedding for $A$ with probability at least $1-\delta$. 
-Then we call $\Pi$ an $(\varepsilon, \delta)$ oblivious $\ell_2$-subspace embedding.
-\end{definition}
-%
-If the dimension $r \ll n$, then $SA$ will be efficient to store.
-If $S$ is sparse, then $SA$ will also be efficient to compute. 
-Computing the product $SA$ is known to be the computational bottleneck in many applications, and so such a distribution $\Pi$ is very desirable. 
-
-The earliest known oblivious $\ell_2$-subspace embeddings satisfy a stronger property: they are Johnson-Lindenstrauss Transforms.
-%
-\begin{definition}
-Suppose that a matrix $S \in \mathbb{R}^{r \times n}$ has the property that, for any $f$-element subset $V \subset \mathbb{R}^n$, for all $v, v^\prime \in V$
-\begin{center}
-$|\langle Sv, Sv^\prime \rangle - \langle v, v^\prime \rangle | \leq \varepsilon \|v\|_2\|v^\prime \|_2$.
-\end{center}
-Then $S$ forms a $(\varepsilon, \delta, f)$ Johnson-Lindenstrauss Transform, alternately JLT$(\varepsilon, \delta, f)$.
-\end{definition}
-%
-Johnson-Lindenstrauss Transforms, by their definition, are good at preserving the inner product.
-Such transforms satisfy the conditions of the Johnson-Lindenstrauss Lemma, hence their name, and require $r = \Omega(\log(f)/\varepsilon^2)$.
-Tamas Sarlos famously used Johnson-Lindenstrauss transforms to give some of the first semi-streaming algorithms for approximating regression, matrix multiplication, and low-rank approximation \cite{sarlos2006improved}. 
-Others have since refined this approach \cite{clarkson2009numerical,clarkson2017low}. 
-
-There are numerous ways to construct Johnson-Lindenstrauss Transforms. 
-A matrix consisting entirely of scaled gaussian random variables suffices, for example. 
-Achlioptas showed that a scaled matrix of variables drawn uniformly from $\{-1,1\}$ also suffices, while having obviously more favorable computational features \cite{achlioptas2001database}.
-However, computing $SA$ for such a matrix $S$ will still prove very expensive in practice. 
-Consequently, researchers placed much focus on sparsifying these matrices.
-Nelson and Nguy$\tilde\hat$en showed that such matrices must have $\Omega(\log (f/d)/\varepsilon \log (1/\varepsilon))$ nonzero entries \cite{nelson2014lower}. 
-The tightest known construction is $O(\log (f/\delta)/\varepsilon)$, given by Kane and Nelson \cite{kane2014sparser}.
-If $nnz(A)$ is the number of nonzero entries of a matrix $A$, then a JLT sketch of $A$ can be performed using this construction in $O(nnz(A) \cdot \log (f/\delta)/ \varepsilon)$ time.
-Ailon and Chazelle devised a different JLT construction by performing coordinate sampling over the input vector $x$, after applying a random rotation and the Hadamard transform \cite{ailon2006approximate}.
-Such a transform can be applied to a matrix in $O(nd\log n)$ time, which can be more efficient depending on $d$ and $\delta$.  
-
-Clarkson and Woodruff given an entirely different oblivious $(1\pm \varepsilon)$ $\ell_2$ subspace embedding using none other than \algoname{CountSketch} \cite{clarkson2017low}.
-Their forumulation does not satisfy the requirements of a JLT, but allows for the construction of a sketch that can be applied in $O(nnz(A))$ time. 
-However, this construction requires that $S$ have $r = O(d^2/(\delta\varepsilon^2))$ rows, which is large if $d$ is not much smaller than $n$. 
-
-Going forward, we will state results that depend on $(1 \pm \varepsilon)$ $\ell_2$-subspace embeddings as such, without delving into the details of which formulation is used. 
-We invite the interested reader to examine Woodruff's excellent book on the subject for more details \cite{woodruff2014sketching}. 
-
-%----------------------------------------------------------------------------------------
-\subsection{Direct Singular Vector Approximation} \label{hits:sec:svdapprox}
-%----------------------------------------------------------------------------------------
-
-
-It is desirable for some situations to have bounded error guarantees on the singular vectors themselves. 
-Fortunately, Gilbert, Park, and Wakin approach the problem of approximating right singular vectors directly by sketching using JLTs \cite{gilbert2012sketched} \cite{anaraki2014memory}. 
-Their proposed algorithm is very simple: Sketch the left-hand side of a matrix, compute the truncated SVD of the sketch, and return the singular values and right singular vectors. 
-The following theorem, corresponding to Theorem 1 of \cite{gilbert2012sketched} summarizes their results:
-%
-\begin{theorem}[\cite{gilbert2012sketched}] \label{thm:svdapprox}
-Let $A \in \mathbb{R}^{n \times d}$ with $n \geq m$ and $\rank(A) = r \leq d$. 
-Let $A = U \Sigma V^T$ be the $r$-truncated SVD of $A$. 
-Let $\varepsilon, \delta \in (0,1)$ be accuracy and precision parameters. 
-Suppose that $S \in \mathbb{R}^{m \times n}$ is randomly drawn from a JLT distribution satisfying
-%
-\begin{equation*}
-m \geq \frac{r \log (42/\varepsilon) + \log (2/\delta)}{f(\varepsilon/\sqrt{2})}
-\end{equation*}
-%
-Let $SA = \widetilde{U} \widetilde{\Sigma} \widetilde{V}^T$ be the $r$-truncated SVD of $SA$.
-%Let $\sigma_j$ and $\widetilde{\sigma}_j$ be the singular values (diagonal entries) of $\Sigma_k$ and $\widetilde{\Sigma}_k$, respectively.
-%Let $
-Then with probability $1-\delta$, $\rank(SA) = r$ and for $j \in [r]$ each of the following hold:
-%
-%\begin{enumerate}
-%\item For all $j \in [k]$:
-%
-\begin{equation*}
-\widetilde{\Sigma}_{j,j} = (1 \pm \varepsilon)^{\frac{1}{2}} \Sigma_{j,j},
-\end{equation*}
-%
-and
-%
-\begin{equation} \label{eq:singvecapprox}
-\|V_{:,j} - \widetilde{V}_{:,j}\|_2 \leq
-\min 
-\left \{ 
-\sqrt{2}, 
-\frac{\varepsilon \sqrt{1+ \varepsilon}}{\sqrt{1-\varepsilon}}
-\max\limits_{i\neq j}
-\frac{\sqrt{2} \Sigma_{i,i} \Sigma_{j,j}}
-%{}
-{\min\limits_{c \in [-1,1]} \{| \Sigma_{i,i}^2 - \Sigma_{j,j}^2 (1 + c\varepsilon)|\}}
-\right \}.
+\begin{equation} \label{eq:spanner:cc}
+\mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x) - \mathcal{C}^{\algoname{Close}}_{\mathcal{H}}(x) \leq \left ( 1 - \frac{1}{\alpha} \right ) \mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x).
 \end{equation}
 %
-%\end{enumerate}
+\end{lemma}
 %
+\begin{proof}
+Note that if $\mathcal{H}$ is an $\alpha$-spanner of $\mathcal{G}$, then for any $x \in \mathcal{V}$, the following holds:
+%
+\begin{align*}
+\mathcal{C}^{\algoname{Close}}_\mathcal{H}(x) 
+&= \frac{1}{\sum\limits_{y \in \mathcal{V} \setminus \{x\}} d_\mathcal{H}(x,y)}
+&\textnormal{Eq. (\ref{eq:cc}})\\
+&\geq \frac{1}{\sum\limits_{y \in \mathcal{V} \setminus \{x\}} \alpha d_\mathcal{G}(x,y)}
+&\textnormal{Eq. (\ref{eq:spanner}})\\
+&= \frac{1}{\alpha}\mathcal{C}^{\algoname{Close}}_\mathcal{G}(x).
+\end{align*}
+This immediately implies Eq. (\ref{eq:spanner:cc}).
+\end{proof}
+%
+
+%Since $\mathcal{H}$ is a spanning subgraph of $\mathcal{G}$, this implies that for all $x \in \mathcal{V}$, $\mathcal{C}^{\algoname{Close}}_\mathcal{H}(x) \in [\frac{1}{\alpha},1]\mathcal{C}^{\algoname{Close}}_\mathcal{G}(x)$. 
+%Hence, $\mathcal{C}^{\algoname{Close}}_\mathcal{H}(x)$ is an $\alpha$-approximation of $\mathcal{C}^{\algoname{Close}}_\mathcal{G}(x)$ for all $x \in \mathcal{V}$. 
+Lemma~\ref{lem:spanner:cc} immediately implies that the algorithm corresponding to Theorem \ref{thm:spanner} can be used to approximate the closeness centrality of $\mathcal{G}$ up to a factor of $1- \frac{1}{k^{\log 5}}$.
+As $k$ increases, the guaranteed bound becomes less tight, but the space complexity of $\mathcal{H}$ improves. 
+As the spanner and analysis applies for both weighted and unweighted graphs, we have the following Theorem.
+
+%
+\begin{theorem} \label{thm:cc:sstream:approx:heavy}
+%Let $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ be a graph with $|\mathcal{V}| = n$ and $|\mathcal{E}|=m$. 
+Let $\mathcal{H}$ be the subgraph spanner of $\mathcal{G}$ output by the algorithm corresponding to Theorem \ref{thm:spanner}.
+Then for all $x \in \mathcal{V}$
+%
+\begin{equation} \label{eq:spanner:cc}
+\mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x) - \mathcal{C}^{\algoname{Close}}_{\mathcal{H}}(x) \leq \left ( 1 - \frac{1}{k^{\log 5}} \right ) \mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x).
+\end{equation}
+%
+The implicit algorithm uses $\log k$ passes over $\mathcal{G}$ and $\widetilde{O}(n^{1 + 1/k})$ space.
+Computing $\mathcal{C}^{\algoname{Close}}_{\mathcal{H}}(\mathcal{V})$ requires $\widetilde{O}(n^{2 + 1/k})$ time.
 \end{theorem}
+
+
+
+
+Theorem~\ref{thm:cc:sstream:approx:heavy} yields an approximation algorithm, although one that is still rather expensive in the output stage, as we must compute closeness centrality on $\mathcal{H}$. 
+At the expense of possible additional error, however, we can improve the computational cost of this output by utilizing a closeness centrality approximation algorithm, such as that of Theorem~\ref{thm:cc:approx}.
+The application thereof is straightforward, and yields the following Theorem where we trade off precision for decreased computation time.
+
 %
-%If $V_j$ is the $j$th singular vector, their algorithm is guaranteed to output approximation $V^\prime_{j}$ with failure probability $\delta$ that satisfies 
+\begin{theorem} \label{thm:cc:sstream:approx:light}
+%Let $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ be a graph with $|\mathcal{V}| = n$ and $|\mathcal{E}|=m$. 
+Let $\mathcal{H}$ be the subgraph spanner of $\mathcal{G}$ output by the algorithm corresponding to Theorem \ref{thm:spanner}.
+For $x \in \mathcal{V}$, let $\widetilde{\mathcal{C}}^{\algoname{Close}}_{\mathcal{H}}(x)$ be the approximation output by the algorithm of Theorem~\ref{thm:cc:approx}. 
+Then for all $x \in \mathcal{V}$,
+%
+\begin{equation} \label{eq:spanner:cc}
+\mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x) - \widetilde{\mathcal{C}}^{\algoname{Close}}_{\mathcal{H}}(x) \leq \left ( 1 - \frac{1 - O(\varepsilon)}{k^{\log 5}} \right ) \mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x).
+\end{equation}
+%
+The implicit algorithm uses $\log k$ passes over $\mathcal{G}$ and $\widetilde{O}(n^{1 + 1/k})$ space.
+Computing $\widetilde{\mathcal{C}}^{\algoname{Close}}_{\mathcal{H}}(\mathcal{V})$ requires $\widetilde{O}(n^{1 + 1/k} \log \frac{n}{\varepsilon^3})$ time.
+\end{theorem}
+
+%Unfortunately, this algorithm is not especially practical, even with the reduced computation time afforded by 
+ 
+
+
+%%----------------------------------------------------------------------------------------
+%%----------------------------------------------------------------------------------------
+%\chapter{Semi-Streaming HITS} \label{chap:hits}
+%%----------------------------------------------------------------------------------------
+%%----------------------------------------------------------------------------------------
+%
+%In this section we will briefly discuss some preliminary results in this research area. 
+%Much of this section is a straightforward application of results from Chapters \ref{chap:background} and \ref{chap:sketch}.
+%Unsurprisingly, a cursory analysis yields the most promising results for approximating degree centrality in the streaming model. 
+%Degree centrality has the advantage of being the most simple of the many centrality indices, and one which can be succinctly captured using $O(n)$ bits of memory. 
+%We also apply existing algorithms to yield semi-streaming approximations of closeness centrality and HITS, a variant of eigencentrality. 
+%
+%This chapter is intended as a brief overview of the relevant concepts from the sketching and streaming literature. 
+%Section \ref{sec:sdc} describes how \algoname{CountSketch}, as described in Section \ref{sec:countsketch}, can be used to maintain a streaming approximation of the top $k$ degree central vertices in a graph. 
+%Section \ref{sec:sscc} shows how prior results in graph sparsification yields a multi-pass semi-streaming algorithm for approximating closeness centrality. 
+%Section \ref{sec:sshits} explains a procedure for approximating HITS, a variant of eigencentrality, using the direct singular vector approximation techniques discussed in Section \ref{svdapprox}.
+%These results are meant to motivate the claim that other, more widely used, centrality indices can be approximated in the semi-streaming model.
+%
+%%----------------------------------------------------------------------------------------
+%\section{Introduction and Related Work} \label{hits:sec:intro}
+%%----------------------------------------------------------------------------------------
+%
+%
+%
+%
+%%----------------------------------------------------------------------------------------
+%\section{$\ell_2$-Subspace Embeddings} \label{hits:sec:subspace}
+%%----------------------------------------------------------------------------------------
+%
+%The defintion of a turnstile data stream can be easily generalized to instead update a matrix $M \in \mathbb{R}^{n \times d}$.
+%In such a stream $\sigma$ the elements are of the form $(i,j,c)$, and are interpreted as ``add $c$ to $M_{i,j}$''. 
+%%The stream defines $M$ as follows. 
+%%Initialize $M = \{0\}^{k \times d}$ and read through the stream in order.
+%%Given each update $(i,j,c)$ set $M \gets M + c(e_i*e_j^T)$, where $e_\ell$ is the $\ell$th standard unit vector of the appropriate size. 
+%When streaming a graph $\mathcal{G}$, the data structure being aggregated is commonly the adjacency matrix $A \in \mathbb{R}^{n \times n}$ or sometimes the vertex-edge incidence matrix $B$. 
+%
+%A transformation $S$ drawn from a linear sketch distribution on $k \times n$ matrices can be used to accumulate a sketch of a matrix $M$ given a turnstile stream as follows.
+%Initialize $SM = \{0\}^{k \times d}$ and apply updates $(i,j,c)$ in order: $SM \gets SM + S(c(e_i*e_j^T))$.
+%An example turnstile algorithm might accumulate $SM$ and then compute some function thereon as an approximation of the function applied to $M$. 
+%
+%Sketching has had much success in the numerical linear algebra literature by way of \emph{subspace embeddings}.
 %%
-%\begin{equation} \label{eq:eig}
-%\| V_j - V^\prime_j\|_2 = 
+%\begin{definition}
+%A $(1 \pm \varepsilon)$ $\ell_2$-subspace embedding for the column space of an $n \times d$ matrix $A$ is a matrix $S$ for which for all $x \in \mathbb{R}^d$
+%\begin{center}
+%$\|SAx\|_2^2 = (1 \pm \varepsilon)\|Ax\|_2^2$.
+%\end{center}
+%\end{definition}
+%%
+%If $S$ is a  $(1 \pm \varepsilon)$ $\ell_2$-subspace embedding for the columnspace of $A$, then by the definition it is good at preserving the action of $A$'s columns.
+%This will prove to be a very useful property. 
+%Much emphasis in the literature is placed upon finding sketch distributions $\Pi$ whose elements are $(1 \pm \varepsilon)$ $\ell_2$-subspace embeddings for arbitrary matrices with high probability. 
+%%
+%\begin{definition}
+%Suppose $\Pi$ is a distribution on $r \times n$ matrices, where $r$ is a function of $n, d, \varepsilon$, and $\delta$. 
+%Suppose that for any fixed $A \in \mathbb{R}^{n\times d}$, a matrix $S \sim \Pi$ is a $(1\pm \varepsilon)$ $\ell_2$-subspace embedding for $A$ with probability at least $1-\delta$. 
+%Then we call $\Pi$ an $(\varepsilon, \delta)$ oblivious $\ell_2$-subspace embedding.
+%\end{definition}
+%%
+%If the dimension $r \ll n$, then $SA$ will be efficient to store.
+%If $S$ is sparse, then $SA$ will also be efficient to compute. 
+%Computing the product $SA$ is known to be the computational bottleneck in many applications, and so such a distribution $\Pi$ is very desirable. 
+%
+%The earliest known oblivious $\ell_2$-subspace embeddings satisfy a stronger property: they are Johnson-Lindenstrauss Transforms.
+%%
+%\begin{definition}
+%Suppose that a matrix $S \in \mathbb{R}^{r \times n}$ has the property that, for any $f$-element subset $V \subset \mathbb{R}^n$, for all $v, v^\prime \in V$
+%\begin{center}
+%$|\langle Sv, Sv^\prime \rangle - \langle v, v^\prime \rangle | \leq \varepsilon \|v\|_2\|v^\prime \|_2$.
+%\end{center}
+%Then $S$ forms a $(\varepsilon, \delta, f)$ Johnson-Lindenstrauss Transform, alternately JLT$(\varepsilon, \delta, f)$.
+%\end{definition}
+%%
+%Johnson-Lindenstrauss Transforms, by their definition, are good at preserving the inner product.
+%Such transforms satisfy the conditions of the Johnson-Lindenstrauss Lemma, hence their name, and require $r = \Omega(\log(f)/\varepsilon^2)$.
+%Tamas Sarlos famously used Johnson-Lindenstrauss transforms to give some of the first semi-streaming algorithms for approximating regression, matrix multiplication, and low-rank approximation \cite{sarlos2006improved}. 
+%Others have since refined this approach \cite{clarkson2009numerical,clarkson2017low}. 
+%
+%There are numerous ways to construct Johnson-Lindenstrauss Transforms. 
+%A matrix consisting entirely of scaled gaussian random variables suffices, for example. 
+%Achlioptas showed that a scaled matrix of variables drawn uniformly from $\{-1,1\}$ also suffices, while having obviously more favorable computational features \cite{achlioptas2001database}.
+%However, computing $SA$ for such a matrix $S$ will still prove very expensive in practice. 
+%Consequently, researchers placed much focus on sparsifying these matrices.
+%Nelson and Nguy$\tilde\hat$en showed that such matrices must have $\Omega(\log (f/d)/\varepsilon \log (1/\varepsilon))$ nonzero entries \cite{nelson2014lower}. 
+%The tightest known construction is $O(\log (f/\delta)/\varepsilon)$, given by Kane and Nelson \cite{kane2014sparser}.
+%If $nnz(A)$ is the number of nonzero entries of a matrix $A$, then a JLT sketch of $A$ can be performed using this construction in $O(nnz(A) \cdot \log (f/\delta)/ \varepsilon)$ time.
+%Ailon and Chazelle devised a different JLT construction by performing coordinate sampling over the input vector $x$, after applying a random rotation and the Hadamard transform \cite{ailon2006approximate}.
+%Such a transform can be applied to a matrix in $O(nd\log n)$ time, which can be more efficient depending on $d$ and $\delta$.  
+%
+%Clarkson and Woodruff given an entirely different oblivious $(1\pm \varepsilon)$ $\ell_2$ subspace embedding using none other than \algoname{CountSketch} \cite{clarkson2017low}.
+%Their forumulation does not satisfy the requirements of a JLT, but allows for the construction of a sketch that can be applied in $O(nnz(A))$ time. 
+%However, this construction requires that $S$ have $r = O(d^2/(\delta\varepsilon^2))$ rows, which is large if $d$ is not much smaller than $n$. 
+%
+%Going forward, we will state results that depend on $(1 \pm \varepsilon)$ $\ell_2$-subspace embeddings as such, without delving into the details of which formulation is used. 
+%We invite the interested reader to examine Woodruff's excellent book on the subject for more details \cite{woodruff2014sketching}. 
+%
+%%----------------------------------------------------------------------------------------
+%\subsection{Direct Singular Vector Approximation} \label{hits:sec:svdapprox}
+%%----------------------------------------------------------------------------------------
+%
+%
+%It is desirable for some situations to have bounded error guarantees on the singular vectors themselves. 
+%Fortunately, Gilbert, Park, and Wakin approach the problem of approximating right singular vectors directly by sketching using JLTs \cite{gilbert2012sketched} \cite{anaraki2014memory}. 
+%Their proposed algorithm is very simple: Sketch the left-hand side of a matrix, compute the truncated SVD of the sketch, and return the singular values and right singular vectors. 
+%The following theorem, corresponding to Theorem 1 of \cite{gilbert2012sketched} summarizes their results:
+%%
+%\begin{theorem}[\cite{gilbert2012sketched}] \label{thm:svdapprox}
+%Let $A \in \mathbb{R}^{n \times d}$ with $n \geq m$ and $\rank(A) = r \leq d$. 
+%Let $A = U \Sigma V^T$ be the $r$-truncated SVD of $A$. 
+%Let $\varepsilon, \delta \in (0,1)$ be accuracy and precision parameters. 
+%Suppose that $S \in \mathbb{R}^{m \times n}$ is randomly drawn from a JLT distribution satisfying
+%%
+%\begin{equation*}
+%m \geq \frac{r \log (42/\varepsilon) + \log (2/\delta)}{f(\varepsilon/\sqrt{2})}
+%\end{equation*}
+%%
+%Let $SA = \widetilde{U} \widetilde{\Sigma} \widetilde{V}^T$ be the $r$-truncated SVD of $SA$.
+%%Let $\sigma_j$ and $\widetilde{\sigma}_j$ be the singular values (diagonal entries) of $\Sigma_k$ and $\widetilde{\Sigma}_k$, respectively.
+%%Let $
+%Then with probability $1-\delta$, $\rank(SA) = r$ and for $j \in [r]$ each of the following hold:
+%%
+%%\begin{enumerate}
+%%\item For all $j \in [k]$:
+%%
+%\begin{equation*}
+%\widetilde{\Sigma}_{j,j} = (1 \pm \varepsilon)^{\frac{1}{2}} \Sigma_{j,j},
+%\end{equation*}
+%%
+%and
+%%
+%\begin{equation} \label{eq:singvecapprox}
+%\|V_{:,j} - \widetilde{V}_{:,j}\|_2 \leq
 %\min 
 %\left \{ 
 %\sqrt{2}, 
 %\frac{\varepsilon \sqrt{1+ \varepsilon}}{\sqrt{1-\varepsilon}}
 %\max\limits_{i\neq j}
-%\frac{\sqrt{2}\sigma_i \sigma_j}
+%\frac{\sqrt{2} \Sigma_{i,i} \Sigma_{j,j}}
 %%{}
-%{\min\limits_{c \in [-1,1]} \{| \sigma_i^2 - \sigma_j^2 (1 + c\varepsilon)|\}}
-%\right \},
+%{\min\limits_{c \in [-1,1]} \{| \Sigma_{i,i}^2 - \Sigma_{j,j}^2 (1 + c\varepsilon)|\}}
+%\right \}.
 %\end{equation}
+%%
+%%\end{enumerate}
+%%
+%\end{theorem}
+%%
+%%If $V_j$ is the $j$th singular vector, their algorithm is guaranteed to output approximation $V^\prime_{j}$ with failure probability $\delta$ that satisfies 
+%%%
+%%\begin{equation} \label{eq:eig}
+%%\| V_j - V^\prime_j\|_2 = 
+%%\min 
+%%\left \{ 
+%%\sqrt{2}, 
+%%\frac{\varepsilon \sqrt{1+ \varepsilon}}{\sqrt{1-\varepsilon}}
+%%\max\limits_{i\neq j}
+%%\frac{\sqrt{2}\sigma_i \sigma_j}
+%%%{}
+%%{\min\limits_{c \in [-1,1]} \{| \sigma_i^2 - \sigma_j^2 (1 + c\varepsilon)|\}}
+%%\right \},
+%%\end{equation}
+%%
+%%where $\sigma_i$ is the $i$th singular value of the original matrix and $\varepsilon$ is an accuracy parameter. 
+%The error bounds on the singular vectors given by Equation (\ref{eq:singvecapprox}) are not tight, particularly when the singular values of the matrix are close together. 
+%By Corollary 1 of \cite{gilbert2012sketched}, the algorithm works when $m = O(r\varepsilon^{-2}(\log(1/\varepsilon) + \log(1/\delta)))$.
+%The approach therefore requires only $O(dr\varepsilon^{-2}(\log(1/\varepsilon) + \log(1/\delta)))$ space to store $SA$, assuming a constant bound on the size of its entries. 
+%An immediate consequence of this is that the approach is only semi-streaming for a square matrix if $r = O(\polylog n)$.
 %
-%where $\sigma_i$ is the $i$th singular value of the original matrix and $\varepsilon$ is an accuracy parameter. 
-The error bounds on the singular vectors given by Equation (\ref{eq:singvecapprox}) are not tight, particularly when the singular values of the matrix are close together. 
-By Corollary 1 of \cite{gilbert2012sketched}, the algorithm works when $m = O(r\varepsilon^{-2}(\log(1/\varepsilon) + \log(1/\delta)))$.
-The approach therefore requires only $O(dr\varepsilon^{-2}(\log(1/\varepsilon) + \log(1/\delta)))$ space to store $SA$, assuming a constant bound on the size of its entries. 
-An immediate consequence of this is that the approach is only semi-streaming for a square matrix if $r = O(\polylog n)$.
-
-It is important to note that Li et al. proved the negative result that any general sketching algorithm guaranteed to approximate a top singular vector of a square matrix with probability $\leq \frac{1}{2}$ requires $\Omega(n^{3/2})$ space \cite{li2014sketching}. 
-This implies that directly approximating the top singular vector of a graph's adjacency matrix is intractable if high precision is demanded. 
-This negative result will remain important throughout the rest of this document.
-
-
-
-
-
-%------------------------------------------------
-
-%------------------------------------------------
-%\section{Betweenness Centrality} \label{sec:bc}
-%------------------------------------------------
-
-%------------------------------------------------
-
-%The way forward to approximating closeness centrality is somewhat more promising due to recent advances in using sketches to sparsify graphs. 
-
-%----------------------------------------------------------------------------------------
-\section{Semi-Streaming HITS} \label{hits:sec:sshits}
-%----------------------------------------------------------------------------------------
-
-Given a graph $\mathcal{G}$, the HITS algorithm iteratively computes two symbiotic scores - \emph{authoritativeness} and \emph{hubbiness} \cite{kleinberg1999authoritative}. 
-A vertex with high authoritativeness has many incoming edges to vertices with high hubbiness, while a vertex with high hubbiness has many outgoing edges to vertices with high authoritativeness. 
-The iterative process computing authoritativeness and hubbiness converges to the left dominant eigenvector of the matrices $A^TA$ and $AA^T$, respectively \cite{boldi2014axioms}. 
-These two vectors are the dominant right and left singular vectors of $A$. 
-We will discuss HITS in greater detail in Section \ref{sec:sshits}. 
-
-
-There is a large body of work in the streaming and sketching literature concerned with providing low-rank approximations to matrices \cite{sarlos2006improved,woodruff2014sketching,clarkson2009numerical,clarkson2017low}.
-Sections \ref{sec:lowrank} and \ref{sec:svdapprox} summarize some of these approximations. 
-One can use these procedures to accumulate a rank 1 approximation of a general matrix of the form $ \widetilde{\sigma}_1 \widetilde{u}_1 \widetilde{v}_1^T$ \cite{andoni2013eigenvalues}.
-However, the majority of these approach seek to minimize the error between the residual of the rank-$k$ approximation sketch and the residual of the rank-$k$ SVD (i.e. Equation (\ref{eq:lowrank})) rather than approximating the singular values and vectors directly.
-Thus, the singular value and corresponding vectors so found do not have guarantees as to their error with respect to the corresponding singular value and vectors of the original matrix. 
-However, so long as relatively large values in the dominant eigenvector of the original matrix are also large in the approximated dominant eigenvector, then they may still be useful in applications. 
-
-The results in Section \ref{sec:svdapprox} due to Gilbert, Park, and Wakin provide a way forward for bounding the error on approximating \emph{singular vectors}.
-Though not immediately applicable to approximating eigenvectors, it is known that the right and left singular vectors of a matrix $A$ inform the eigenvalues of $A^TA$ and $AA^T$, respectively. 
-It is widely known that if the singular value decomposition (SVD) of $A = U \Sigma V^T$, then $A^TA = V\Sigma^2 V^T$ and $AA^T = U \Sigma^2 U^T$.
-Thus, the eigenvalues of $A^TA$ and $AA^T$ are squares of the singular values of $A$, and the eigenvectors of $A^TA$ are the right singular vectors of $A$, while the eigenvectors of $AA^T$ are the left singular vectors of $A$. 
-Consequently, an approximation of the top right and left singular vectors of $A$ constitute approximations of the dominant eigenvectors of $A^TA$ and $AA^T$, respectively. 
-
-Recall that for a graph $\mathcal{G}$, the HITS algorithm outputs authoritativeness and hubbiness scores for each vertex. 
-These scores converge to the left dominant eigenvectors of the matrices $A^TA$ and $AA^T$, respectively \cite{kleinberg1999authoritative}. 
-%We will present a semi-streaming approximation to the HITS algorithm making use of the Gilbert, Park, and Wakin's approximation.
-%If $G$ is undirected, then $A$ is symmetric and the left and right eigenvectors of $A^TA$ are identical. 
-In what follows, we
-Thus, a straightforward application of Gilbert, Park and Wakin's approximation to $A$ and $A^T$'s right singular vectors suffices, where the only element of interest in each approximation is the dominant right singular vector.
-We summarize this result in the corollary to Theorem \ref{thm:svdapprox} below.
-%
-\begin{corollary} \label{cor:hitsapprox}
-Let $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ be a graph with $|\mathcal{V}| = n$ and $|\mathcal{E}|=m$. 
-Let $A \in \mathbb{R}^{n \times n}$ with be $\mathcal{G}$'s adjacency matrix, and assume $\rank(A) = r \leq n$. 
-Let $C_\textrm{auth}(\mathcal{G})$ and $C_\textrm{hub}(\mathcal{G})$ be the output of the HITS algorithm, and let $\widetilde{C}_\textrm{auth}(\mathcal{G})$ be the dominant right singular vector of the output of the algorithm associated with Theorem \ref{thm:svdapprox} applied to $A$ (and $\widetilde{C}_\textrm{hub}(\mathcal{G})$ defined equivalently in terms of $A^T$).
+%It is important to note that Li et al. proved the negative result that any general sketching algorithm guaranteed to approximate a top singular vector of a square matrix with probability $\leq \frac{1}{2}$ requires $\Omega(n^{3/2})$ space \cite{li2014sketching}. 
+%This implies that directly approximating the top singular vector of a graph's adjacency matrix is intractable if high precision is demanded. 
+%This negative result will remain important throughout the rest of this document.
 %
 %
-%Let $\sigma_j$ and $\widetilde{\sigma}_j$ be the singular values (diagonal entries) of $\Sigma_k$ and $\widetilde{\Sigma}_k$, respectively.
-%Let $
-For $j \in [r]$, assume that $\sigma_j$ is the $j$th singular value of $A$.
-Then with probability $1-\delta$, the following holds:
 %
-\begin{equation} \label{eq:hitstotalapprox}
-\|C_\textrm{auth}(\mathcal{G}) - \widetilde{C}_\textrm{auth}(\mathcal{G})\|_2 \leq
-\min 
-\left \{ 
-\sqrt{2}, 
-\frac{\varepsilon \sqrt{1+ \varepsilon}}{\sqrt{1-\varepsilon}}
-\max\limits_{i\neq j}
-\frac{\sqrt{2} \sigma_i \sigma_j}
-{\min\limits_{c \in [-1,1]} \{| \sigma_i^2 - \sigma_j^2 (1 + c\varepsilon)|\}}
-\right \}.
-\end{equation}
 %
-%\end{enumerate}
 %
-Let $\xi$ be the right side of Equation (\ref{eq:hitstotalapprox}).
-In particular, for every $x \in V$, the following holds with probability $1-\delta$:
+%%------------------------------------------------
 %
-\begin{equation} \label{eq:hitsapprox}
-\widetilde{C}_\textrm{auth}(x) = C_\textrm{auth}(x) \pm \xi.
-\end{equation}
+%%------------------------------------------------
+%%\section{Betweenness Centrality} \label{sec:bc}
+%%------------------------------------------------
 %
-The corresponding statements are also true for $\widetilde{C}_\textrm{hub}(G)$ and $C_\textrm{hub}(x)$.
-%Thus, this algorithm solves $\algoname{ApproxCentral}(\textrm{HITS},G,\nu)$, where $\nu$ is set equal to the right side of Equation (\ref{eq:hitsapprox}). 
-\end{corollary}
-
-As discussed in Section \ref{sec:svdapprox}, the space of the algorithm is dependent on $r$, the rank of $A$, with complexity $O(nr\varepsilon^{-2}(\log(1/\varepsilon) + \log(1/\delta)))$.
-Hence this algorithm will be efficient only when applied to graphs with $\rank(A) = r = O(\polylog n)$.
-That is, the algorithm will only be in the semi-streaming model for graphs with many disconnected components. 
-It is therefore not appropriate in general. 
-
-
+%%------------------------------------------------
+%
+%%The way forward to approximating closeness centrality is somewhat more promising due to recent advances in using sketches to sparsify graphs. 
+%
+%%----------------------------------------------------------------------------------------
+%\section{Semi-Streaming HITS} \label{hits:sec:sshits}
+%%----------------------------------------------------------------------------------------
+%
+%Given a graph $\mathcal{G}$, the HITS algorithm iteratively computes two symbiotic scores - \emph{authoritativeness} and \emph{hubbiness} \cite{kleinberg1999authoritative}. 
+%A vertex with high authoritativeness has many incoming edges to vertices with high hubbiness, while a vertex with high hubbiness has many outgoing edges to vertices with high authoritativeness. 
+%The iterative process computing authoritativeness and hubbiness converges to the left dominant eigenvector of the matrices $A^TA$ and $AA^T$, respectively \cite{boldi2014axioms}. 
+%These two vectors are the dominant right and left singular vectors of $A$. 
+%We will discuss HITS in greater detail in Section \ref{sec:sshits}. 
+%
+%
 %There is a large body of work in the streaming and sketching literature concerned with providing low-rank approximations to matrices \cite{sarlos2006improved,woodruff2014sketching,clarkson2009numerical,clarkson2017low}.
-%However, the majority of these approach seek to minimize the error between the residual of the rank-$k$ approximation sketch and the residual of the rank-$k$ SVD rather than approximating the singular values and vectors directly.
-
-
-%This approach still gives us a straightforward way to approximate the output of the HITS algorithm on a graph $G$ with adjacency matrix $A$. 
-%All one must do is follow the procedure to approximate $A$'s SVD, $A= U\Sigma V^T$, in particular obtaining $\widetilde{V}_{:,1}$, an approximation of the dominant right singular vector of $A$. 
-%This is then also an approximation with the same bounds (Equation (\ref{eq:eig})) of the dominant eigenvector of $A^TA$. 
-%Since we want to apply this algorithm to $A$, and its space is depended on $A$'s rank $k$, the algorithm will be efficient only when applied to graphs with many disconnected components. 
-
-Moreover, as noted in Section \ref{sec:svdapprox} the error bound on the dominating eigenvector (Equations (\ref{eq:singvecapprox}) and (\ref{eq:hitstotalapprox})) may be too loose for some applications.
-The worst-case bounds on the individual HITS scores for vertices are also additive rather than multiplicative as desired, and may be quite poor for some vertices.
-However, the error can only be severe for a relatively small number of vertices due to Equation (\ref{eq:hitstotalapprox}).
-To make matters worse, the negative result cited in that section indicate that any general sketching algorithm guaranteed to approximate a top singular vector of a square matrix with probability $\leq \frac{1}{2}$ requires $\Omega(n^{3/2})$ space \cite{li2014sketching}.  
-Thus, it appears that the best possible general approximation with bounded error for HITS sublinear in $m$ is not much better than the above result. 
-
-The other spectral notions of centrality discussed in Section \ref{sec:sc} depend on the spectrum of matrices whose structure does not benefit from the trick applied here to HITS. 
-In particular, it would be very desirable to obtain a sketching procedure by which to tightly approximate the top eigenvector of a general matrix in the semi-streaming model. 
-However, there are at present no known methods for doing so. 
-%One can use existing procedures to accumulate a rank 1 approximation of a general matrix of the form $ \widetilde{\sigma}_1 \widetilde{u}_1 \widetilde(v)_1^T$ \cite{andoni2013eigenvalues}. 
-%If we approximate such a matrix, say $M$, as $\widetilde{M} = \widetilde{\sigma}_1 \widetilde{u}_1 \widetilde(v)_1^T$, where
-%However, such a procedure is not guaranteed to have tight error bounds. 
-That said, the rank-1 approximation method detailed at the beginning of the section may be empirically useful in some applications. 
-This claim requires empirical evaluation, which we discuss below in Section \ref{sec:ssec}. 
+%Sections \ref{sec:lowrank} and \ref{sec:svdapprox} summarize some of these approximations. 
+%One can use these procedures to accumulate a rank 1 approximation of a general matrix of the form $ \widetilde{\sigma}_1 \widetilde{u}_1 \widetilde{v}_1^T$ \cite{andoni2013eigenvalues}.
+%However, the majority of these approach seek to minimize the error between the residual of the rank-$k$ approximation sketch and the residual of the rank-$k$ SVD (i.e. Equation (\ref{eq:lowrank})) rather than approximating the singular values and vectors directly.
+%Thus, the singular value and corresponding vectors so found do not have guarantees as to their error with respect to the corresponding singular value and vectors of the original matrix. 
+%However, so long as relatively large values in the dominant eigenvector of the original matrix are also large in the approximated dominant eigenvector, then they may still be useful in applications. 
+%
+%The results in Section \ref{sec:svdapprox} due to Gilbert, Park, and Wakin provide a way forward for bounding the error on approximating \emph{singular vectors}.
+%Though not immediately applicable to approximating eigenvectors, it is known that the right and left singular vectors of a matrix $A$ inform the eigenvalues of $A^TA$ and $AA^T$, respectively. 
+%It is widely known that if the singular value decomposition (SVD) of $A = U \Sigma V^T$, then $A^TA = V\Sigma^2 V^T$ and $AA^T = U \Sigma^2 U^T$.
+%Thus, the eigenvalues of $A^TA$ and $AA^T$ are squares of the singular values of $A$, and the eigenvectors of $A^TA$ are the right singular vectors of $A$, while the eigenvectors of $AA^T$ are the left singular vectors of $A$. 
+%Consequently, an approximation of the top right and left singular vectors of $A$ constitute approximations of the dominant eigenvectors of $A^TA$ and $AA^T$, respectively. 
+%
+%Recall that for a graph $\mathcal{G}$, the HITS algorithm outputs authoritativeness and hubbiness scores for each vertex. 
+%These scores converge to the left dominant eigenvectors of the matrices $A^TA$ and $AA^T$, respectively \cite{kleinberg1999authoritative}. 
+%%We will present a semi-streaming approximation to the HITS algorithm making use of the Gilbert, Park, and Wakin's approximation.
+%%If $G$ is undirected, then $A$ is symmetric and the left and right eigenvectors of $A^TA$ are identical. 
+%In what follows, we
+%Thus, a straightforward application of Gilbert, Park and Wakin's approximation to $A$ and $A^T$'s right singular vectors suffices, where the only element of interest in each approximation is the dominant right singular vector.
+%We summarize this result in the corollary to Theorem \ref{thm:svdapprox} below.
+%%
+%\begin{corollary} \label{cor:hitsapprox}
+%Let $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ be a graph with $|\mathcal{V}| = n$ and $|\mathcal{E}|=m$. 
+%Let $A \in \mathbb{R}^{n \times n}$ with be $\mathcal{G}$'s adjacency matrix, and assume $\rank(A) = r \leq n$. 
+%Let $C_\textnormal{auth}(\mathcal{G})$ and $C_\textnormal{hub}(\mathcal{G})$ be the output of the HITS algorithm, and let $\widetilde{C}_\textnormal{auth}(\mathcal{G})$ be the dominant right singular vector of the output of the algorithm associated with Theorem \ref{thm:svdapprox} applied to $A$ (and $\widetilde{C}_\textnormal{hub}(\mathcal{G})$ defined equivalently in terms of $A^T$).
+%%
+%%
+%%Let $\sigma_j$ and $\widetilde{\sigma}_j$ be the singular values (diagonal entries) of $\Sigma_k$ and $\widetilde{\Sigma}_k$, respectively.
+%%Let $
+%For $j \in [r]$, assume that $\sigma_j$ is the $j$th singular value of $A$.
+%Then with probability $1-\delta$, the following holds:
+%%
+%\begin{equation} \label{eq:hitstotalapprox}
+%\|C_\textnormal{auth}(\mathcal{G}) - \widetilde{C}_\textnormal{auth}(\mathcal{G})\|_2 \leq
+%\min 
+%\left \{ 
+%\sqrt{2}, 
+%\frac{\varepsilon \sqrt{1+ \varepsilon}}{\sqrt{1-\varepsilon}}
+%\max\limits_{i\neq j}
+%\frac{\sqrt{2} \sigma_i \sigma_j}
+%{\min\limits_{c \in [-1,1]} \{| \sigma_i^2 - \sigma_j^2 (1 + c\varepsilon)|\}}
+%\right \}.
+%\end{equation}
+%%
+%%\end{enumerate}
+%%
+%Let $\xi$ be the right side of Equation (\ref{eq:hitstotalapprox}).
+%In particular, for every $x \in V$, the following holds with probability $1-\delta$:
+%%
+%\begin{equation} \label{eq:hitsapprox}
+%\widetilde{C}_\textnormal{auth}(x) = C_\textnormal{auth}(x) \pm \xi.
+%\end{equation}
+%%
+%The corresponding statements are also true for $\widetilde{C}_\textnormal{hub}(G)$ and $C_\textnormal{hub}(x)$.
+%%Thus, this algorithm solves $\algoname{ApproxCentral}(\textnormal{HITS},G,\nu)$, where $\nu$ is set equal to the right side of Equation (\ref{eq:hitsapprox}). 
+%\end{corollary}
+%
+%As discussed in Section \ref{sec:svdapprox}, the space of the algorithm is dependent on $r$, the rank of $A$, with complexity $O(nr\varepsilon^{-2}(\log(1/\varepsilon) + \log(1/\delta)))$.
+%Hence this algorithm will be efficient only when applied to graphs with $\rank(A) = r = O(\polylog n)$.
+%That is, the algorithm will only be in the semi-streaming model for graphs with many disconnected components. 
+%It is therefore not appropriate in general. 
+%
+%
+%%There is a large body of work in the streaming and sketching literature concerned with providing low-rank approximations to matrices \cite{sarlos2006improved,woodruff2014sketching,clarkson2009numerical,clarkson2017low}.
+%%However, the majority of these approach seek to minimize the error between the residual of the rank-$k$ approximation sketch and the residual of the rank-$k$ SVD rather than approximating the singular values and vectors directly.
+%
+%
+%%This approach still gives us a straightforward way to approximate the output of the HITS algorithm on a graph $G$ with adjacency matrix $A$. 
+%%All one must do is follow the procedure to approximate $A$'s SVD, $A= U\Sigma V^T$, in particular obtaining $\widetilde{V}_{:,1}$, an approximation of the dominant right singular vector of $A$. 
+%%This is then also an approximation with the same bounds (Equation (\ref{eq:eig})) of the dominant eigenvector of $A^TA$. 
+%%Since we want to apply this algorithm to $A$, and its space is depended on $A$'s rank $k$, the algorithm will be efficient only when applied to graphs with many disconnected components. 
+%
+%Moreover, as noted in Section \ref{sec:svdapprox} the error bound on the dominating eigenvector (Equations (\ref{eq:singvecapprox}) and (\ref{eq:hitstotalapprox})) may be too loose for some applications.
+%The worst-case bounds on the individual HITS scores for vertices are also additive rather than multiplicative as desired, and may be quite poor for some vertices.
+%However, the error can only be severe for a relatively small number of vertices due to Equation (\ref{eq:hitstotalapprox}).
+%To make matters worse, the negative result cited in that section indicate that any general sketching algorithm guaranteed to approximate a top singular vector of a square matrix with probability $\leq \frac{1}{2}$ requires $\Omega(n^{3/2})$ space \cite{li2014sketching}.  
+%Thus, it appears that the best possible general approximation with bounded error for HITS sublinear in $m$ is not much better than the above result. 
+%
+%The other spectral notions of centrality discussed in Section \ref{sec:sc} depend on the spectrum of matrices whose structure does not benefit from the trick applied here to HITS. 
+%In particular, it would be very desirable to obtain a sketching procedure by which to tightly approximate the top eigenvector of a general matrix in the semi-streaming model. 
+%However, there are at present no known methods for doing so. 
+%%One can use existing procedures to accumulate a rank 1 approximation of a general matrix of the form $ \widetilde{\sigma}_1 \widetilde{u}_1 \widetilde(v)_1^T$ \cite{andoni2013eigenvalues}. 
+%%If we approximate such a matrix, say $M$, as $\widetilde{M} = \widetilde{\sigma}_1 \widetilde{u}_1 \widetilde(v)_1^T$, where
+%%However, such a procedure is not guaranteed to have tight error bounds. 
+%That said, the rank-1 approximation method detailed at the beginning of the section may be empirically useful in some applications. 
+%This claim requires empirical evaluation, which we discuss below in Section \ref{sec:ssec}. 
 
 
 
@@ -1955,13 +2019,301 @@ This claim requires empirical evaluation, which we discuss below in Section \ref
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
 
+In this chapter we present general-purpose communication protocols for the vertex-centric distributed graph algorithms. 
+The subject matter in this chapter is much more applied than the rest of this document, and is principally concerned with practical communication management for distributed codes expecting a skewed distribution of work across processors.
+In addition to motivating and describing the protocols, we discuss our implementation and provide empirical justification.
+
+
 %----------------------------------------------------------------------------------------
 \section{Introduction and Related Work} \label{async:sec:intro}
 %----------------------------------------------------------------------------------------
 
+
 %----------------------------------------------------------------------------------------
-\section{Pseudo-Asynchronous Routing Schemes} \label{async:sec:async}
+\subsection{Graph Partitioning} \label{async:sec:intro:partitioning}
 %----------------------------------------------------------------------------------------
+
+%Distributed graphs are known to exhibit partitioning challenges that are unusual among many other distributed data sets.
+Due to the structured nature of graphs, partitioning them across a universe of processors $\mathcal{P}$ presents challenges not present in many other data structures.
+A \emph{vertex-centric} or sometimes 1D partitioning is the most natural approach.
+In such a model the information local to each vertex $x \in \mathcal{V}$, e.g. its sparse adjacency vector $A_{:,x}$, is assigned to a specific processor, e.g. \cite{malewicz2010pregel}.
+A vertex-centric partitioning of $\mathcal{G}$ assumes a partitioning function $f: \mathcal{V} \rightarrow \mathcal{P}$.
+However, unlike many other common data structures in HPC applications, many natural graphs are scale-free, i.e. the vertex degree distribution asymptotically follows the power law distribution.
+Consequently, there is typically a lot of skewness present in the distribution of information size across $\mathcal{V}$, where high degree matrices or \emph{hubs} account for an outsized amount of partition memory.
+A paritioning $f$ might overwhelm the memory of some $P \in \mathcal{P}$, or incur significant communication overhead during overehead.
+Consequently, load-balancing $f$ is an active area of research with a rich history.
+See \cite{mccune2015thinking}. and \cite{bulucc2016recent} for good surveys of this literature. 
+
+Sub-vertex centric or 2D partitioning is an alternative scheme where the information in $A$ is instead partitioned into submatrices in a checkerboard pattern.
+2D partioning has been applied successfully to several HPC problems \cite{bulucc2011parallel, yoo2011scalable, simmhan2014goffish}.
+However, such schemes are susceptible to hypersparsity in some partitions, wherein a processor may be assigned more vertices than edges \cite{buluc2008representation}.
+This results in poor scaling in practice.
+Some approaches avoid this by joining 1D and 2D partitioning schemes \cite{boman2013scalable}.
+
+Still another approach to handling hubs is the use of vertex delegates, wherein a 1D partitioning is augmented by subpartitioning hubs over a certain size \cite{pearce2014faster}.
+In this way the computational load and some of the communication load of hubs is shared, at the expense of some additional communication between the \emph{controller} processor and the \emph{delegate} processors when solving problems.
+%Delegates have been shown to 
+
+In addition to all of this literature, streaming and semi-streaming algorithms have been proposed for graph partitioning \cite{stanton2012streaming, tsourakakis2014fennel, xu2015heterogeneous}.
+\cite{guo2017modeling} gives an overview and experimental comparison of many of these technologies.
+These algorithms seek to limit the time cost of optimizing a graph partition, which has been noted as approaching or eclipsing that of subsequent computation.
+ 
+We will limit our analysis in this work to vertex-centric partitioning, which we will assume has already been performed. 
+We note that the communication protocols in this chapter can be extended to sub-vertex-centric or hybrid partitioning as well, at the cost of a reduction in legibility. 
+As we are most concerned with optimizing bandwidth utilization, we will also not go into great detail about the partitioning functions $f$, and assume that it is given.
+We consider the optimization and computation of $f$ as important but out of scope. 
+
+
+%----------------------------------------------------------------------------------------
+\subsection{Synchronous and Asynchronous Communication} \label{async:sec:intro:communication}
+%----------------------------------------------------------------------------------------
+
+
+As many graph algorithms are pathing-centric, \emph{graph traversal} is a first class function of any reasonable graph processing library.
+This results in hubs costing much more time than low-degree vertices in practice.
+In many implementations of graph algorithms, even using optimized load-balancing on $f$, there is an unequal distribution of computation and communication labor across $\mathcal{P}$.
+
+This unequal distribution of labor poses problems for handling communication that do not arise in many other HPC applications where there is a roughly symmetric amount of computation on each processor. 
+Consider, for example, the famous Google Pregel framework \cite{malewicz2010pregel}.
+Pregel was the first proposed vertex-centric processing frameworks, where communication is handled in a series of synchronous communication rounds.
+Others have noted that this synchronicity results in poor performance in practice, as processing moves at the speed of the slowest processor \cite{pearce2014faster, junghanns2017management}.
+In some degenerate cases synchronous implementations of algorithms are entirely unable to complete in reasonable amounts of time compared to asynchronous implementations \cite{junghanns2017management}.
+Consequently, not only is bandwidth not utilized during processing rounds, but many processors may remain idle while waiting for communication.
+
+A different approach uses fully asynchronous communication, wherein processors communicate with one another in a point-to-point fashion as required by the algorithm.
+This approach potentially avoids the processor underutilization problem present in Pregel-like systems.
+However, in typical graph traversals message sizes are small.
+For instance, computing a random walk generally requires only the path so far to be forwarded to the next processor.
+
+It is conventional wisdom within the practice of HPC to avoid codes that transmit many small messages.
+This is because each message requires a constant amount of information be transmitted in the form of headers, and also incurs a computational cost at the sender and receiver to handle transmission and receipt.
+This cost is usually invisible to the application writer, and is incurred within a message handling service such as MPI - Message Passing Interface, the de facto standard HPC communication protocol.
+If messages contain a small amount of information relative to this overhead, then bandwidth utilization is said to be poor.
+
+To summarize, it is desirable to batch messages for most graph algorithms, as they tend to be small. 
+For synchronous, Pregel-like systems,  this is simple as all messages are sent within rounds. 
+Messages with matching sources and destinations can be simply packaged together at transmission.
+Asynchronous systems are much more complex, as the designer must make decisions balancing message size against delivery promptness.
+These decisions are application specific, as the needs of a \algoname{SingleSourceAllShortestPaths} computation are different than those of, say, second neighborhood size estimation or random walk sampling. 
+An optimized fully asynchronous communication scheme demands significant designer overhead and may not be generalizable.
+Consequently, these is a trade-off between synchronous and asynchronous communication, both leaving something to be desired.  
+
+
+
+
+
+%----------------------------------------------------------------------------------------
+\section{Pseudo-Asynchronous Communication Protocols} \label{async:sec:async}
+%----------------------------------------------------------------------------------------
+
+In this chapter we discuss pseudo-asynchronous communication protocols - a middle ground between synchronous and asynchronous protocols.
+These protocols attempt to join the desirable features of synchronous communication - batching of messages, pushback against prolific senders - with the desirable features of asynchronous communication - processors can enter and leave communication context when ready - while retaining generality, easy of use and ease of maintenance. 
+
+We describe messaging protocols that provide a mailbox abstraction.
+Algorithm implementations place messages in a mailbox during normal computation and continue with local tasks. 
+Once a mailbox reaches a threshold size, the processor enters communication context and begins the process of communicating - whether or not its communication partners have entered communication context themselves. 
+The algorithm designer can also manually enter communication context.
+Once the mailbox receives confirmation that it is to receive no more communications in the current exchange, it drops out of the communication context and returns to the local algorithm computation.
+An algorithm implementation need only specify when to send messages and the behavior upon receipt, and may otherwise be agnostic to the communication.
+We also ensure standard MPI guarantees - such as that messages arrive in the order they are sent. 
+
+We discuss three related routing protocols - \emph{Node Local}, \emph{Node Remote}, and \emph{Node Local Node Remote} or \emph{NLNR}.
+Each of these variants take advantage of \emph{local} and \emph{remote} routing in hybrid distributed memory systems. 
+We use the term \emph{local} to refer to communications wherein the source and destination processors exist on different processors (cores) on the same compute node.
+We meanwhile use \emph{remote} to refer to the converse situation, where the endpoints of a message exist on different nodes. 
+
+The key insight to this analysis is that remote communication requires the transmission of messages over a wire, whereas local communication is handled in shared memory of a single machine. 
+The latter is generally more costly.
+Consequently, we seek to minimize the number of discrete remote messages and channels.
+Aggregating messages improves bandwidth utilization and reduces overhead, while  partitioning routing into channels increases asynchronicity. 
+%We also seek to constrain the maximum number of direct communication partners for each processor, meaning that most messages are received by at least one intermediary during transmission. 
+
+Throughout, we assume that there are $N$ compute nodes participating in a hybrid distributed memory instance.
+We identify each node with an offset in $[N]$.
+Here we use the notation $[z] = \{1, 2, \dots, z\}$ for $z \in \mathbb{Z}_+$.
+We will further assume that each participating node holds the same number of cores $C$, similarly identified with an offset in $[C]$. 
+We address a processor identified with the $c$th core on the $n$th node by the tuple $(n,c) \in [N] \times [C]$.
+We call $c$ the processor's \emph{core offset} and $n$ the processors \emph{node offset}.
+We will refer to the universe of $N \times C$ processors as $\mathcal{P}$.
+
+We assume without loss of generality that $N$ is a multiple of $C$. 
+We will refer to partitions of $[N]$ into the $C$-sized chunks $\{1, \dots, C\}$, $\{C+1, \dots, 2C\}$, $\dots$ $\{N-(C-1), \dots, N\}$ as the \emph{layers} of the instance.
+Assume that there are $L = N/C$ such layers.
+We will sometimes sub-address a core $c$ on the $n$th node in layer $l$ using the tuple $(l, n, c) \in [L] \times [C] \times [C]$.
+In this case, we call $l$ the processor's \emph{layer} and $n$ the processor's \emph{layer offset}. 
+The same core can be addressed using $((l-1)C + n, c) \in [N] \times [C]$, as above.
+
+Each protocol proceed in a series of \emph{exchanges}.
+An exchange consists of a subset of processes passing messages between themselves.
+All messages due to each destination core, as well as any messages routed through said core, are aggretated into a single message and transmitted.
+Each member of an exchange may be responsible for forwarding communication in a later exchange.
+We call these forwarding processes intermediaries.
+At the end of an exchange phase, we assume that each process holds all outbound messages intended either for it or for one of the exterior processes for which it is an intermediary.
+Exchanges are triggered upon entering a communication context in a distributed program, either due to reaching a maximum number of out
+In this document we consider two types of exchanges: \emph{local} and \emph{remote}.
+
+A local exchange consists of all of the processes on a single compute node, and occurs in shared memory. 
+There are $N$ such exchanges.
+Figure~\ref{fig:local_exchange} illustrates a local exchange where $C=4$.
+A particular exchange involves the transmission of at most ${C \choose 2}$ messages.
+An implementation might utilize MPI, or instead handle the information exchange directly in shared memory.
+
+A simple remote exchange consists of all of the processors that share a given core offset, and involves remote communication.
+There are $C$ such exchanges.
+Figure~\ref{fig:remote_exchange} illustrates a remote exchange for core offset 1 where $N = C = 4$.
+A particular remote exchange involves the transmission of at most ${N \choose 2}$ messages.
+An implementation must utilize MPI or a similar remote message passing protocol.
+
+%These processes partition the remote processes in the global protocol, such that every remote process has a unique local intermediary.
+%A local exchange phase consists of each participating process's forwarding each message it holds to its destination or intermediary if its destination is remote.
+
+\begin{figure}
+	\begin{center}
+		\begin{subfigure}{0.44\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{local}}
+			\caption{Local exchange \label{fig:local_exchange}}
+		\end{subfigure}%
+		\hspace{1em}%
+		\begin{subfigure}{0.53\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{remote}}
+			\caption{Remote exchange \label{fig:remote_exchange}}
+		\end{subfigure}
+		\caption{Local and remote exchange diagrams where $N = C = 4$. \label{fig:exchange}}
+	\end{center}
+\end{figure}
+
+
+\bigskip
+\noindent
+\textbf{Node Local}
+
+\noindent
+We call the protocol consisting of a local exchange on each node, followed by $C$ remote exchanges that occur in parallel \emph{Node Local}.
+%Assume that a message has source $(c_1, n_1)$ and destination $(c_2, n_2)$. 
+%In the remote exchange it will be transmit remotely to intermediary $(c_1, n_2)$.
+%In the local exchange, it will be transmit locally to its destination. 	
+%
+%
+%The node local strategy consists of a local exchange on each node, followed by $C$ remote exchanges which occur in parallel. 
+At the beginning of the local exchange, the process on core $(n,c)$ holds a set of messages to be transmitted.
+Each message with destination $(n^\prime, c^\prime)$ is forwarded to $(n, c^\prime)$ in a local exchange, unless $c^\prime = c$, in which case the process holds onto the message.
+At the end of this local exchange, each core $(n,c)$ holds messages with addresses of the form $(n^\prime, c)$.
+If $n^\prime = n$, then the message has arrived at its destination and is processed. 
+Otherwise, it is to be communication in a subsequent remote exchange.
+%At the end of this exchange, each message is held by a process matching the destination's core offset.
+
+Once the processor on $(n, c)$ completes its local communication phase, it enters the program context for a remote exchange.
+This remote exchange consists of all of the cores with local offset $c$, each of which also hold, or will hold, messages bound for some participant in the exchange.
+Once a process has sent all messages routed through it and received all messages sent to it during this ``round'' of communication, it is finished. 
+It can safely move on to a different program context, even if others are still working. 
+
+In total, the node local protocol consists of $N$ local exchanges and $C$ remote exchanges, which occur in parallel. 
+All messages destined for a particular remote process are accumulated at a single intermediary at each node prior to remote transmission, saving on remote overhead.
+
+While this local aggregate, remote send policy appears adequate for handling point-to-point messages, it is not robust to one-to-many broadcasts.
+Such a broadcast results in a total of $NC$ remote messages, which can clearly be improved. 
+
+\bigskip
+\noindent
+\textbf{Node Remote}
+
+\noindent
+Consider the reverse protocol, which we call \emph{Node Remote}.
+That is, each process participates in a remote exchange with all cores matching its core offset in the first round of communication, followed by a local exchange at each node in the second. 
+For each message held by the process at $(n, c)$ with destination $(n^\prime, c^\prime)$, the process forwards the message to $(n^\prime, c)$ in the remote exchange.
+Once all remote exchanges have completed, each message is held on a node matching its destination node offset. 
+A local exchange in the second phase ensures that each message arrives at its destination core. 
+
+Whereas the node local protocol accumulates all messages to a particular process in a single intermediary before remote transmission, the node remote protocol instead forwards all messages from a particular process destined for the same \emph{node}, allowing for a similar bundling of messages in shared memory.
+If the distribution over sender-receiver pairs is roughly uniform in an application, then the two protocols should exhibit similar performance.
+However, node remote performs much better in the presence of a large number of broadcasts. 
+In node remote, a broadcast generates only $N-1$ remote messages.
+This means that Node Remote uses less bandwidth per broadcast than Node Local, at a gain of $O \left (\frac{1}{C} \right )$
+The broadcasting work is pushed onto the (typically much faster) shared memory local exchanges. 
+However, the opposite relationship is true for many-to-one communications, such as those of a gather or reduce operation.
+We will illustrate these relationships in greater detail in Section~\ref{async:sec:experiments}.
+
+\bigskip
+\noindent
+\textbf{NLNR}
+
+\noindent
+Both the Node Local and Node Remote protocols exhibit some weaknesses depending upon the distribution of message recipients.
+Moreover, each round of each protocol results in $O \left (N^2 \right )$ remote messages, as each processor has $N-1$ possible remote communication partners.
+These messages are sent along $C$ parallel communication channels, each including $N$ participating processors.
+%We have detailed two protocols thus far, each of which depend upon $C$ independent communication channels, each including $N$ participating cores. 
+%As we have discussed, different applications might prefer either the message  node local and node remote protocols.
+%However, is it possible to retain qualities of both?
+
+The final protocol we discuss in this document improves upon both the messages per round as well as the communication channel size.
+The NLNR protocol reduces the number of remote communication channels to the theoretical minimum, while still allowing each node to communicate directly with every other node by eliminating redundancy.
+Consider that the a message originating at node $n_1$ to might be transmitted along any of $C$ different remote channels to node $n_2$ using node local or node remote.
+In NLNR, there is only one channel connecting each such pair of nodes. 
+
+\begin{figure}
+	\begin{center}
+		\begin{subfigure}{0.45\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{intra_layer_nlnr}}
+			\caption{Intra-layer communication \label{fig:intra_exchange}}
+		\end{subfigure}%
+		\hspace{1em}%
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{inter_layer_nlnr}}
+			\caption{Inter-layer communication \label{fig:inter_exchange}}
+		\end{subfigure}
+		\caption{Intra- and inter-layer exchange diagrams where $N = 8$ and $C = 4$. \label{fig:nlnr}}
+	\end{center}
+\end{figure}
+
+
+In order to facilitate this reduction in channels, the protocol need occur in three stages: an initial local exchange, a more complex remote exchange, and a final local exchange.
+This more complex remote exchange can be described by taking a clique connecting each node to every other node and assigns to each edges a single core on each incident node.
+It is helpful to separate this clique 
+Figure~\ref{fig:nlnr} illustrates a sample
+
+It is helpful to visualize how the topology of the remote exchange to explain the whole process. 
+We must ensure that each node has an intermediary core responsible for each remote node, so that when viewed as a graph the topology of and subset of nodes and their communication channels forms a clique. 
+This constraint leads to a natural ``layering'' of the nodes, where each notional layer consists of $C$ nodes. 
+For convenience, in addition to their node offset $n \in [N]$, we assign to each node a \emph{layer offset} $\ell = n \mod C$.
+Further, we enforce the rule that for $(n,c) \in [N] \times [C]$ is an intermediary for all cores on node $n^\prime$, where $c = n^\prime \mod C$ with corresponding intermediaries $(n^\prime, c^\prime)$ where $c^\prime = n \mod C$. 
+Fig.~\ref{fig:intra_layer_nlnr} depicts such a topology for a single layer, whose connections form a clique. 
+Note that cores with addresses of the form $(n, c)$ where $c = n \mod C$ do not participate in any communication within a layer. 
+These cores only communicate with their corresponding cores in nodes whose layer offsets match their own. 
+Fig.~\ref{fig:inter_layer_nlnr} depicts an example inter-layer communication topology  for two layers. 
+Intra-layer edges are suppressed for clarity. 
+The edges in Fig.~\ref{fig:inter_layer_nlnr} mirror those of Fig.~\ref{fig:intra_layer_nlnr} aside from the addition of the self-offset edges missing from Fig.~\ref{fig:intra_layer_nlnr}.
+Note that by adding the edges from Fig.~\ref{fig:intra_layer_nlnr} to both layers, we have a clique.
+
+
+\begin{figure}[htbp] 
+\centerline{\includegraphics[width=0.6\columnwidth]{intra_layer_nlnr}}
+\caption{Example of the remote communication topology within a single layer of 4-core machines in the nlnr protocol.
+\label{fig:intra_layer_nlnr}}
+\end{figure}
+
+\begin{figure}[htbp] 
+\centerline{\includegraphics[width=0.6\columnwidth]{inter_layer_nlnr}}
+\caption{Example of the remote communication topology between two layers of 4-core machines in the nlnr protocol.
+\label{fig:inter_layer_nlnr}}
+\end{figure}
+
+In the first local exchange on node $n$, a message from $(n, c)$ with destination $(n^\prime, c^\prime)$ is forwarded to $(n, n^\prime \mod C)$.
+In the remote exchange, this message is sent to $(n^\prime, n \mod C)$.
+In the final local exchange, the message arrives at $(n^\prime, c^\prime)$.
+If any of these intermediate cores are the destination, it is received there and not forwarded. 
+
+If a process needs to broadcast to all other processes, then it sends this message to each of its local neighbors, who forward it along to each of their local partners, who in turn distribute it on each remote node.
+Like the node remote protocol, a broadcast over NLNR results in $N-1$ remote messages. 
+
+While point to point messages are transmitted at most twice in node local and node remote, they might be transmitted up to 3 times in NLNR. 
+While the local shared memory transmissions are less costly than remote transmissions over a wire, they are still not trivial and so this can result in overhead not seen in the other two protocols. 
+However, in exchange we significantly reduce the number of channels over which remote messages traverse.
+Recall that node local and node remote each require $C$ communication channels, each of which includes the $N$ cores with matching core offset $c$ for each $c \in [C]$. 
+NLNR, however, requires ${C \choose 2} + C$ channels, each including $2\frac{N}{C}$ cores (aside from the self-offset channels, which include $\frac{N}{C}$ cores each).
+Such a channel consists of all the address pairs $(n, c)$, $(n^\prime, c^\prime)$ where $c = \ell^\prime = n^\prime \mod C$ and $c^\prime = \ell = n \mod C$ for some $(\ell, \ell^\prime) \in [C]^2$.
+
+It turns out that this is, in fact, the minimum achievable channel size  given our constraint that each node communications directly with each other node.
+
 
 %----------------------------------------------------------------------------------------
 \section{Experiments} \label{async:sec:experiments}
@@ -2080,7 +2432,7 @@ For $x,y, z \in \mathcal{V}$, suppose that $\lambda_{y,z}$ is the number of shor
 Then the betweenness centrality of $x$ is calculated as
 %
 \begin{equation} \label{eq:bc}
-\textrm{BC}(x) = \sum\limits_{\substack{x \not\in \{y,z\} \\ \lambda_{y,z} \neq 0}} \frac{\lambda_{y,z}(x)}{\lambda_{y,z}}.
+\textnormal{BC}(x) = \sum\limits_{\substack{x \not\in \{y,z\} \\ \lambda_{y,z} \neq 0}} \frac{\lambda_{y,z}(x)}{\lambda_{y,z}}.
 \end{equation}
 %
 An implementation of betweenness centrality must solve the all pairs \emph{all} shortest paths problem, which is strictly more difficult than the all pairs shortest paths solution required by closeness centrality.
@@ -2115,7 +2467,7 @@ Finally, $\kappa$-Path centrality is desirable in that it depends only on $\kapp
 %----------------------------------------------------------------------------------------
 
 It is unclear how to sublinearize approximating the betweenness centrality of a vertex.
-%Indeed, it is known that the worst-case complexity of computing $\textrm{BC}(x)$ for $x \in V$ is $O(nm)$, no better than computing $BC(G)$. 
+%Indeed, it is known that the worst-case complexity of computing $\textnormal{BC}(x)$ for $x \in V$ is $O(nm)$, no better than computing $BC(G)$. 
 %It is known that computing the betweenness centrality of one vertex has the same worst-case complexity of computing it for the entire graph. 
 Indeed, each solution to the \algoname{SSSP} problem requires $\Omega(m)$ memory.
 As this is the basis of the on- and off-line  betweenness centrality approximation algorithms discussed in Section \ref{sec:bc}, variations on their approach is unlikely to yield a semi-streaming solution.
@@ -2145,7 +2497,7 @@ Such methods certainly allow for randomly sampling trees (or, with some minor mo
 The $\kappa$-path centrality approximation algorithm given by Kourtellis et al. is a simple Monte Carlo simulation, which affords a loose additive error.
 It may well be that a modified algorithm, or indeed a slightly different measure of centrality, suffices to easily sublinearize the approximation problem.
 
-Even in this best case, however, it is important to note that the best we can hope is a semi-streaming algorithm that solves \algoname{UBApproxCentral}$(\textrm{BC}, \mathcal{G})$ well in practice. 
+Even in this best case, however, it is important to note that the best we can hope is a semi-streaming algorithm that solves \algoname{UBApproxCentral}$(\textnormal{BC}, \mathcal{G})$ well in practice. 
 A solution to \algoname{UBApproxTopCentral}$(C, \mathcal{G}, k)$ is also desirable, but would require a single-pass algorithm that simultaneously maintains a heap - similar to the \algoname{CountSketch} heap algorithm discussed in Section \ref{sec:countsketch}. 
 Hence, even once such an algorithm is derived it will require extensive empirical evaluation on both real and synthetic data.
 Similar to the evaluation proposed in Section \ref{sec:asdc}, we propose an extensive performance comparison between such an algorithm once derived and existing techniques. 
