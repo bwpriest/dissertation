@@ -51,6 +51,30 @@
 %\usepackage{cleveref}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 
+
+% declaration of the new block
+\algblock{ParFor}{EndParFor}
+% customising the new block
+\algnewcommand\algorithmicparfor{\textbf{parallel for}}
+\algnewcommand\algorithmicpardo{\textbf{do}}
+\algnewcommand\algorithmicendparfor{\textbf{end parfor}}
+\algrenewtext{ParFor}[1]{\algorithmicparfor\ #1\ \algorithmicpardo}
+\algrenewtext{EndParFor}{\algorithmicendparfor}
+
+% supprese EndParFor
+\makeatletter
+\ifthenelse{\equal{\ALG@noend}{t}}%
+  {\algtext*{EndParFor}}
+  {}%
+\makeatother
+
+
+\newcommand{\push}[1]{\text{push} \left ( #1 \right )}
+\newcommand{\pop}{\text{pop}()}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
 \newcommand{\algoname}[1]{\textnormal{\textsc{#1}}}
 
 \newcommand{\E}{\mathbb{E}}
@@ -59,8 +83,8 @@
 \newcommand{\Bias}{\mathrm{Bias}}
 \newcommand{\med}{\mathrm{median}}
 \newcommand{\mean}{\mathrm{mean}}
-\newcommand{\argmax}{\mathrm{argmax}}
-\newcommand{\argmin}{\mathrm{argmin}}
+%\newcommand{\argmax}{\mathrm{argmax}}
+%\newcommand{\argmin}{\mathrm{argmin}}
 \newcommand{\poly}{\mathrm{poly}}
 \newcommand{\polylog}{\, \mathrm{polylog} \,}
 \newcommand{\el}{\mathrm{else}}
@@ -288,16 +312,16 @@ This is usually known as the \emph{semi-streaming model}, although some authors 
 
 \noindent
 \textbf{The frequency vector}:
-A stream $\sigma$ is often thought of as updates to a hypothetical frequency vector $f(\sigma)$, which holds a counter for each element in $\mathcal{U}$.
-We will drop the parameterization of $f$ where it is clear.
-We will sometimes parameterize $f(t)$ to refer to $f$ after reading $t \in [m]$ updates from $\sigma$.
-$\mathcal{D}$ can be thought of as a lossy compression of $f$ that only preserves some statistic thereof.
+A stream $\sigma$ is often thought of as updates to a hypothetical frequency vector $\mathbf{f}(\sigma)$, which holds a counter for each element in $\mathcal{U}$.
+We will drop the parameterization of $\mathbf{f}$ where it is clear.
+We will sometimes parameterize $\mathbf{f}(t)$ to refer to $\mathbf{f}$ after reading $t \in [m]$ updates from $\sigma$.
+$\mathcal{D}$ can be thought of as a lossy compression of $\mathbf{f}$ that approximately preserves some statistic thereof.
 
 \noindent
 \textbf{Dynamic streams}:
-If $f$ is subject to change, then we call $\sigma$ a \emph{turnstile} or \emph{dynamic} stream.
-Such a $\sigma$'s elements are of the form $(i, c)$, where $i$ is an index of $f$ (an element of $\mathcal{U}$), $c \in [-L, \dots, L]$ for some integer $L$, and $(i,c)$ indicates that $f_i \gets f_i + c$.
-In the \emph{cash register} model only positive updates are permitted, whereas in the \emph{strict} turnstile model all elements of $f$ are guaranteed to retain nonnegativity.
+If $\mathbf{f}$ is subject to change, then we call $\sigma$ a \emph{turnstile} or \emph{dynamic} stream.
+Such a $\sigma$'s elements are of the form $(i, c)$, where $i$ is an index of $\mathbf{f}$ (an element of $\mathcal{U}$), $c \in [-L, \dots, L]$ for some integer $L$, and $(i,c)$ indicates that $\mathbf{f}_i \gets \mathbf{f}_i + c$.
+In the \emph{cash register} model only positive updates are permitted, whereas in the \emph{strict} turnstile model all elements of $\mathbf{f}$ are guaranteed to retain nonnegativity.
 
 \noindent
 \textbf{Data sketching}:
@@ -311,15 +335,15 @@ For $\mathcal{A}$ a streaming algorithm, we call its data structure $\mathcal{S}
 
 \noindent
 \textbf{Linear sketching}:
-A sketch $\mathcal{S}$ is a \emph{linear sketch} if it is a linear function of $f(\sigma)$ of fixed dimension.
+A sketch $\mathcal{S}$ is a \emph{linear sketch} if it is a linear function of $\mathbf{f}(\cdot)$ of fixed dimension.
 %Typically $\mathcal{S}$ is drawn from a distribution $\Pi$ over such transforms.
 %We will abuse terminology by referring to sketch distributions, sketch transforms, and sketch data structures as sketches where it is clear which is referenced.
 %In particular, any turnstile streaming algorithm uses a linear sketch as a data structure \cite{li2014turnstile}.
 %
-For streams $\sigma_1$ and $\sigma_2$ with frequency vectors $f_1$ and $f_2$, scalars $a$ and $b$, and linear sketch transform $\mathcal{S}$, 
+For streams $\sigma_1$ and $\sigma_2$ with frequency vectors $\mathbf{f}_1$ and $\mathbf{f}_2$, scalars $a$ and $b$, and linear sketch transform $\mathcal{S}$, 
 %
 \begin{equation} \label{eq:linearity}
-a\mathcal{S}(f_1) + b\mathcal{S}(f_2) = \mathcal{S}(af_1 + bf_2).
+a\mathcal{S}(\mathbf{f}_1) + b\mathcal{S}(\mathbf{f}_2) = \mathcal{S}(a\mathbf{f}_1 + b\mathbf{f}_2).
 \end{equation}
 %
 
@@ -358,12 +382,14 @@ Indeed, indegree centrality is known to correlate well with PageRank, and so can
 We demonstrate streaming $(1+\varepsilon, \delta)$-approximations for degree centrality of a graph that recovers the degree centrality heavy hitters.
 
 These algorithms are a straightforward application of \algoname{CountMinSketch}, where we interpolate a graph stream as updates to a vector $\mathbf{d} \in \mathbb{R}^n$ of the degrees of the vertices.
-The algorithms accept a threshold fraction $\phi$ and attempt to recover all vertices $x \in \mathcal{V}$ such that $\mathbf{d}_x \geq \phi \|d\|_1$.
-In a cash register stream, we demonstrate an algorithm that recovers every vertex with degree $\geq \phi \|d\|_1$, and avoids returning any vertices with degree $< (\phi - \varepsilon) \|d\|_1$ with probability $(1-\delta))$.
+The algorithms accept a threshold fraction $\phi \in (0,1)$ and attempt to recover all vertices $x \in \mathcal{V}$ such that $\mathbf{d}_x \geq \phi \|\mathbf{d}\|_1$.
+We obtain the following results:
+\begin{enumerate}
+	\item In a cash register stream, we demonstrate an algorithm that recovers every vertex with degree $\geq \phi \|\mathbf{d}\|_1$, and avoids returning any vertices with degree $< (\phi - \varepsilon) \|\mathbf{d}\|_1$ with probability $(1-\delta))$.
 This algorithm requires space $O(\varepsilon^{-1} \log \frac{n}{\delta})$ with update time $O(\log \frac{n}{\delta})$.
-We also give an algorithm that accepts strict turnstile streams. 
-This algorithm returns every vertex with degree $\geq (\phi + varepsilon) \|d\|_1$, and avoids returning any vertices with degree $< \phi \|d\|_1$ with probability $1 - \delta$. 
+	\item In a strict turnstile stream, we demonstrate an algorithm that returns every vertex with degree $\geq (\phi + \varepsilon) \|\mathbf{d}\|_1$, and avoids returning any vertices with degree $< \phi \|\mathbf{d}\|_1$ with probability $1 - \delta$. 
 The turnstile algorithm has the increased requirements of $O(\varepsilon^{-1} \log n \log \frac{2 \log n}{\phi \delta})$ space and $O(\log n \log \frac{2\log n}{\phi \delta})$ update time.
+\end{enumerate}
 
 
 
@@ -493,19 +519,21 @@ For an almost-linear runtime, we can instead employ the fast, scalable algorithm
 
 \noindent
 \textbf{Hybrid pseudo-asynchronous communication for vertex-centric distributed algorithms}:
-Modern distributed graph algorithms partition the vertices of input graphs to processors, which communicate as required.
+Modern distributed graph algorithms must partition the adjacency matrix to processors, which communicate as required. 
+The most natural partitioning involves assigning vertices to processors, which can be thought of as partitioning columns of the adjacency matrix.
+\cite{mccune2015thinking} summarizes much of the associated literature.
 The iconic Pregel system executes communication as global rounds of communication between all processors \cite{malewicz2010pregel}.
 However, Pregel-like systems have trouble with scale-free graphs, as high-degree vertices create storage, processing, and communication imbalances.
-Meanwhile, fully asynchronous approaches address this concern by sub-partitioning high-degree vertices across processors \cite{pearce2014faster}.
+Meanwhile, one successful approach addresses this concern by sub-partitioning high-degree vertices across processors \cite{pearce2014faster}.
 However, this approach introduces development and computational overhead due to the nature of peer-to-peer routing in implementations, such as MPI.
-We propose a hybrid ``pseudo-asynchronous'' approach where rounds of point-to-point communication occur over partitions of processors, taking advantage of modern hybrid distributed-shared memory architectures.
+We implement a hybrid ``pseudo-asynchronous'' approach where rounds of point-to-point communication occur over partitions of processors, taking advantage of modern hybrid distributed-shared memory architectures.
 Once a node's participation in its partitions is complete, it can drop out of the communication exchange and continue computation.
 We propose three protocols that route messages from source to destination over MPI. 
 %
 \begin{enumerate}
-	\item \textbf{Node Local Routing}. Cores on the same compute node exchange messages destined for the target core offset, followed by cores at the same core offset but different nodes exchanging messages to their final destinations.
-	\item \textbf{Node Remote Routing}. Cores with the same core offset but different nodes exchange messages destined for the target node, followed by cores at the same core offset but different nodes exchanging messages.
-	\item \textbf{Node Local Node Remote Routing}. Cores locally exchange messages, followed by a remote exchange via a lattice, followed by a second local exchange. 
+	\item \textbf{Node Local Routing}. Cores exchange messages in shared memory then forward messages to other nodes.
+	\item \textbf{Node Remote Routing}. Cores forward messages to other nodes then exchange messages in shared memory.
+	\item \textbf{Node Local Node Remote Routing} (\textbf{NLNR}). Cores locally exchange messages, followed by a remote exchange via a lattice, followed by a second local exchange. 
 \end{enumerate}
 %
 We show in rigorous experiments that these routing exchanges exhibit better scaling characteristics than Pregel- or fully-asynchronous-style communication protocols on distributed algorithms over large graphs.
@@ -521,22 +549,28 @@ We examine a different line of analysis altogether: utilizing \emph{cardinality 
 We discuss trade-offs between different estimators of the intersection of cardinality sketches, as well as different cardinality sketches themselves.
 We develop \algoname{DegreeSketch}, a distributed sketch data structure composed of cardinality sketches that can answer point queries about unions and intersections of vertex neighborhoods in a manner reminiscent of \algoname{CountSketch}.
 
+We implement \algoname{DegreeSketch} using the famous \algoname{HyperLogLog} sketch \cite{flajolet2007hyperloglog}. 
+We explore various algorithmic optimizations to \algoname{HyperLogLog}, including improved estimators \cite{heule2013hyperloglog, qin2016loglog, lang2017back, ertl2017new}, sparse register implementation \cite{heule2013hyperloglog}, and compressed registers \cite{xiao2017better}.
+We introduce novel improvements to the compressed register implementation described in \cite{xiao2017better}, affording lossless merging of compressed sketches.
+We also discuss the tradeoffs of using different cardinality sketches in implementations, such as \algoname{MinCount} \cite{giroire2009order}.
+
 We demonstrate DegreeSketch as a tool for estimating the edge- and vertex-local triangle count heavy hitters of large graphs. 
 %
 \begin{enumerate}
 	\item \textbf{Edge-local triangle count heavy hitters}. We recover the edge-local triangle count heavy hitters of a graph using linear time and $O(n (\varepsilon^{-2} \log\log n + \log n))$ worst-case distributed memory
-	\item \textbf{Vertex-local triangle counts}. We recover the verte-local triangle counts (or, alternately, the heavy hitters) of a graph using linear time and \\$O(n (\varepsilon^{-2} \log\log n + \log n))$ worst-case distributed memory
+	\item \textbf{Vertex-local triangle counts}. We recover the verte-local triangle counts (or, alternately, the heavy hitters) of a graph using the same asymptotic time and memory requirements.
+%	linear time and \\$O(n (\varepsilon^{-2} \log\log n + \log n))$ worst-case distributed memory
 \end{enumerate}
 %
 We analyze the performance of these algorithms on numerous large graphs, and discuss many practical optimizations to the underlying algorithms. 
 We also discuss the limitations of the approach relating to high variance on small intersections.
 
 \noindent
-\textbf{Distributed sampling of random walks, simple paths, and subtrees via fast $\ell_p$-sampling sketches}:
+\textbf{Distributed sampling of random walks and simple paths via fast $\ell_p$-sampling sketches}:
 The sampling of random walks is a core subroutine in many graph algorithms.
 However, random walks suffer from sampling from high degree vertices in scale-free graphs. 
 Very large vertex neighborhoods stored in RAM can overwhelm the space and computation constraints of a graph partitioning in a Pregel-like system, whereas each sampling incurs nontrivial communication overhead in a delegated subpartitioning. 
-We address this problem by applying Fast $\ell_p$ sampling sketches to high degree vertices in scale free graphs. 
+We address this problem by applying fast $\ell_p$ sampling sketches to high degree vertices in scale free graphs. 
 While the adjacency neighborhoods of most vertices are small enough to be stored explicitly in a vertex-centric distributed graph, we record substreams of high degree vertices in fast memory, e.g. NVRAM. 
 We make the following contributions:
 %
@@ -563,9 +597,9 @@ We make the following contributions:
 	\item \textbf{Hybrid sublinear random simple path sampling}.
 	In a manner similar to random walk sampling, we construct $\ell_p$ sampling sketches on demand, while forwarding sampled path histories.
 	We use these path histories when accumulating sampling sketches so as to ignore edges that would result in loops.
-	\item \textbf{Hybrid sublinear random subtree sampling}.
-	In a manner similar to random simple path sampling, we construct $\ell_p$ sampling sketches of sparse column vectors of the vertex-edge incidence matrix. 
-	Exact or sketched columns are transmitted along with walk histories so that they can be summed together with the next sampled column, allowing us to sample from tree neighbors without forming loops.
+%	\item \textbf{Hybrid sublinear random subtree sampling}.
+%	In a manner similar to random simple path sampling, we construct $\ell_p$ sampling sketches of sparse column vectors of the vertex-edge incidence matrix. 
+%	Exact or sketched columns are transmitted along with walk histories so that they can be summed together with the next sampled column, allowing us to sample from tree neighbors without forming loops.
 \end{enumerate}
 %
 
@@ -1179,26 +1213,27 @@ We will improve upon this constraint using the famous \algoname{CountMinSketch},
 \algoname{CountMinSketch} maintains 
 $t = O(\log (1/\delta))$ sets of 
 $r = O(\varepsilon^{-1})$ counters, using 2-universal hash functions $h_1, \dots, h_t: [n] \rightarrow [r]$.
-These function define a matrices $C^{(1)}, \dots, C^{(t)} \in \mathbb{R}^{r \times n}$ as follows.
+These function define matrices $C^{(1)}, \dots, C^{(t)} \in \mathbb{R}^{r \times n}$ as follows.
 Initialize $C^{(1)} = \cdots = C^{(t)} = \{0\}^{tr \times n}$.
 Then, for each $i \in [t]$ and each $j \in [n]$, set $C^{(i)}_{h_i(j),j} = 1$. 
 $C^{(1)}, \dots, C^{(t)}$ are sparse matrices with 1 nonzero entry in every column. 
-For $v \in \mathbb{R}^n$ let $\mathcal{S}(v) \in \mathbb{R}^{t \times r}$ be the matrix whose $i$th column is given by $C^{(i)}v$.
-$\mathcal{S}(v)$ is the CountMinSketch object, and can be computed in $\widetilde{O}(\nnz(v))$ time. 
+For streaming frequency vector $\mathbf{f} \in \mathbb{R}^n$ let $\mathcal{S}(\mathbf{f}) \in \mathbb{R}^{t \times r}$ be the matrix whose $i$th column is given by $C^{(i)}\mathbf{f}$.
+We will drope the parameterization of $\mathcal{S}$ where it is obvious.
+$\mathcal{S}$ is the \algoname{CountMinSketch} object, and can be computed in $\widetilde{O}(\nnz(\mathbf{f}) \log (1 /\delta))$ time. 
 %Moreover, $(Cv)_{h(j)}$ is a biased estimator of $v_j$. 
 
-Theorem \ref{thm:cms:err} shows that the minimum of $\{\mathcal{S}_{1,h_1(j)}, \mathcal{S}_{2,h_2(j)}, \dots \mathcal{S}_{t,h_t(j)}\}$ is a biased estimator of $v_j$ with bounded error.
-Given a vector $v \in \mathbb{R}^n$, we use the notation $v_{-i}$ to denote the vector whose elements are all the same as $v$ aside from the $i$th element, which is zero.
+Theorem \ref{thm:cms:err} shows that the minimum of $\{\mathcal{S}_{1,h_1(j)}, \mathcal{S}_{2,h_2(j)}, \dots \mathcal{S}_{t,h_t(j)}\}$ is a biased estimator of $\mathbf{f}_j$ with bounded error.
+Given a vector $\mathbf{f} \in \mathbb{R}^n$, we use the notation $\mathbf{f}_{-i}$ to denote the vector whose elements are all the same as $\mathbf{f}$ aside from the $i$th element, which is zero.
 %
 \begin{theorem}[Theorem 1 of \cite{cormode2005improved}] \label{thm:cms:err}
-Let $v \in \mathbb{R}^n$ be the frequency vector of a strict turnstile stream and let $\mathcal{S}$ be its accumulated \algoname{CountMinSketch} with parameters $(\varepsilon, \delta)$.
+Let $\mathbf{f} \in \mathbb{R}^n$ be the frequency vector of a strict turnstile stream and let $\mathcal{S}$ be its accumulated \algoname{CountMinSketch} with parameters $(\varepsilon, \delta)$.
 % and $C_1, \dots, C_t \in \mathbb{R}^{r \times n}$ be \algoname{CountMinSketch} matrices.
 %For every $j \in [n]$ let $\widetilde{v}_j \coloneqq \min_{i \in [t]} \{\mathcal{S}_{i, h_i(j)}\}$.
 %If $r= O(\varepsilon^{-2})$ and $t=O(\log(1/\delta))$, then f
 For all $j \in [n]$ the following holds with probability at least $1-\delta$:
 %
 \begin{equation*}
-0 \leq \widetilde{v}_j - v_j \leq \varepsilon \|v_{-j}\|_1
+0 \leq \widetilde{\mathbf{f}}_j - \mathbf{f}_j \leq \varepsilon \|\mathbf{f}_{-j}\|_1
 \end{equation*}
 %
 \end{theorem}
@@ -1250,53 +1285,57 @@ All of the results in the following are stated in terms of \algoname{CountMinSke
 %------------------------------------------------------------------------------------------
 
 
-Given a stream updating adjacency matrix $A$, it is a simple to interpolate it as a stream updating a vector $d$ storing the degree of every vertex in the graph. 
-If computing indegree, simply convert an update $(x,y,c)$ to $(y,c)$, where $(y,c)$ is interpreted as ``add $c$ to $d_y$''. 
-Outdegree is similar, and if $\mathcal{G}$ is undirected the two measures are equivalent. 
+Given a stream updating adjacency matrix $A$, it is a simple to interpolate it as a stream updating a vector $\mathbf{d}$ storing the degree of every vertex in the graph. 
+If computing indegree, simply convert an update $(x,y,c)$ to $(y,c)$, where $(y,c)$ is interpreted as ``add $c$ to $\mathbf{d}_y$''. 
+Outdegree instead converts $(x,y,c)$ to $(x,c)$, and if $\mathcal{G}$ is undirected one applies both $(x,c)$ and $(y,c)$. 
 Here $c \in \{1, -1\}$ in all cases if $\mathcal{G}$ is unweighted, where $c=1$ implies an edge insertion and $c=-1$ implies an edge deletion.
 We assume a strict turnstile model where each edge can only be inserted or deleted, possibly more than once.
-Thus accumulated vector $d$ is such that $d_x$ is exactly the degree centrality of vertex $x$. 
+Thus accumulated vector $\mathbf{d}$ is such that $\mathbf{d}_x = \mathcal{C}^{\algoname{Deg}}_{\mathcal{G}}(x)$.
 
 We can generalize this model to account for weighted $\mathcal{G}$.
-In this case edge weights could change after insertion, and the vector $d$ is such that $d_x = \|A_{x,:}\|_1$ or $d_x = \|A_{x,:}\|_1$.
-Rather than the number of edges incident upon $x$, $d_x$ denotes the amount of weight incident upon $x$. 
+In this case edge weights could change after insertion, and the vector $\mathbf{d}$ is such that $\mathbf{d}_x = \|A_{:,x}\|_1$ for indegree centrality, or $\mathbf{d}_x = \|A_{x,:}\|_1$ for outdegree centrality.
+If $\mathcal{G}$ is unweighted, both versions are equivalent.
+Rather than the number of edges incident upon $x$, $\mathbf{d}_x$ denotes the amount of weight incident upon $x$. 
 As the treatment for weighted and unweighted $\mathcal{G}$ is the same, we will not distinguish in the following. 
 
 An immediate consequence of this formulation is that one can accumulate \algoname{CountMinSketch} on a strict turnstile graph stream to obtain $\mathcal{S}$ and perform point queries as to the degrees of vertices.
-However, the error guarantees of Theorem \ref{thm:cms:err} are tight only for $x \in \mathcal{V}$ where $d_x \geq \phi \|d\|_1$ for a nontrivial fraction $\phi$.
+However, the error guarantees of Theorem \ref{thm:cms:err} are tight only for $x \in \mathcal{V}$ where $\mathbf{d}_x \geq \phi \|d\|_1$ for a nontrivial fraction $\phi$.
 It is desirable in particular to compute and return these heavy hitters.
-While this can be achieved trivially with a second pass, single pass algorithms suffice.
+While this can be achieved trivially with a second pass, we show that single pass algorithms suffice.
+In the following we assume that $\mathcal{G}$ in undirected. 
+Simple modifications suffice for directed $\mathcal{G}$.
 
 \textbf{Cash Register Model}.
 We describe an algorithm similar to the algorithm of Theorem 6 of \cite{cormode2005improved}.
-We maintain a heap $H$ of candidate heavy hitters and $\|d(t)\|$ for update $t$.
+We maintain a heap $H$ of candidate heavy hitters and $\|\mathbf{d}(t)\|$ for update $t$.
 The latter is monotonically increasing because the stream is insert only. 
-Upon receiving $(x_t, y_t, c_t)$, update $\mathcal{S}(t)$ as usual and then query it for $\widetilde{d(t)}_x$ and $\widetilde{d(t)}_y$.
-Instead perform these updates for only the head or tail in out or in degree centrality, respectively.
-If $\widetilde{d(t)}_x \geq \phi\|d(t)\|_1$, add $\left ( x, \widetilde{d(t)}_x \right )$ to $H$, and similarly for $y$.
-Let $\left ( z, \widetilde{d(t^*)}_z \right ) = \min (H)$ and remove it from $H$ if $\widetilde{d(t^*)}_z < \phi \|d(t)\|_1$.
+Upon receiving $(x_t, y_t, c_t)$ from the graph stream $\sigma$, update $\mathcal{S}(t)$ as usual using updates $(x_t, c_t)$ and $(y_t, c_t)$ and then query it for $\widetilde{\mathbf{d}(t)}_x$ and $\widetilde{\mathbf{d}(t)}_y$.
+%Instead perform these updates for only the head or tail in out or in degree centrality, respectively.
+If $\widetilde{\mathbf{d}(t)}_x \geq \phi\|\mathbf{d}(t)\|_1$, add $\left ( x, \widetilde{\mathbf{d}(t)}_x \right )$ to $H$, and similarly for $y$.
+Let $\left ( z, \widetilde{\mathbf{d}(t^*)}_z \right ) = \min (H)$ and remove it from $H$ if $\widetilde{\mathbf{d}(t^*)}_z < \phi \|\mathbf{d}(t)\|_1$.
 %Repeat until the minimum element of $H$ is not removed.
-Once done, we iterate through $z \in H$ and using $\mathcal{S}$ output $z$ such that $\widetilde{d}_z \geq \phi \|d\|_1$.
+Once done reading $\sigma$, we iterate through $\left ( z, \widetilde{\mathbf{d}}_z \right ) \in H$ and using $\mathcal{S}$ output $z$ such that $\widetilde{\mathbf{d}}_z \geq \phi \|d\|_1$.
 
 \begin{theorem} \label{thm:dchh:cashregister}
-Let $\mathcal{G}$ with degree vector $d$ be given in a cash register stream.
-An algorithm can return every vertex with degree $\geq \phi \|d\|_1$, and avoid returning any vertices with degree $< (\phi - \varepsilon)\|d\|_1$ with probability $1-\delta$.
+Let $\mathcal{G}$ with degree vector $\mathbf{d}$ be given in a cash register stream.
+An algorithm can return every vertex with degree $\geq \phi \|\mathbf{d}\|_1$, and avoid returning any vertices with degree $< (\phi - \varepsilon)\|\mathbf{d}\|_1$ with probability $1-\delta$.
 The algorithm requires space $O \left ( \varepsilon^{-1}\log \frac{n}{\delta} \right )$ and update time $O \left ( \log \frac{n}{\delta} \right )$.
 \end{theorem}
 
 \begin{proof}
-Recall that $\|d(t)\|_1$ increases monotonically with $t$. 
-If $t < t^*$ and a vertex's estimate is smaller than $\phi \|d(t)\|_1$, it cannot be larger than $\phi \|d(t)^*\|_1$ without its estimate due to $\mathcal{S}$ increasing by time $t^*$.
+Note that $\|\mathbf{d}(t)\|_1$ increases monotonically with $t$ in a cash register stream. 
+If $t < t^*$ and a vertex's estimate is smaller than $\phi \|\mathbf{d}(t)\|_1$, it cannot be larger than $\phi \|\mathbf{d}(t^*)\|_1$ without its estimate due to $\mathcal{S}$ increasing by time $t^*$.
 We check the estimate for each vertex when an incident edge is updated and the estimates do not underestimate, so no heavy hitters are omitted.
 
 %Assume that $z \in \mathcal{V}$ is not a heavy hitter.
-Call the event where $\widetilde{d}_x > \phi \|d_{-x}\|_1 \wedge d_x < (\phi - \varepsilon) \|d\|_1$ for some $x \in \mathcal{V}$ a \emph{miss}.
+Call the event where $\widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}_{x}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1$ for some $x \in \mathcal{V}$ a \emph{miss}.
+If $x \in \mathcal{V}$ participates in a miss, it is falsely output as a heavy hitter by the algorithm.
 By Theorem \ref{thm:cms:err}, an accumulated \algoname{CountMinSketch} data structure $\mathcal{S}$ with parameters $\varepsilon$ and $\delta^*$ guarantees that 
 %
 \begin{align*}
 n\delta^* 
 &>
-\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - d_x > \varepsilon \|d_{-x}\|_1 \right ] 
+\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x - d_x > \varepsilon \|\mathbf{d}_{-x}\|_1 \right ] 
 & \\
 %&>
 %\sum_{z \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - d_x > \varepsilon \|d\|_1 \right ] \\
@@ -1304,13 +1343,13 @@ n\delta^*
 %\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - d_x > \varepsilon \|d\|_1 \wedge d_x < (\phi - \varepsilon) \|d\|_1 \right ] 
 %& \\
 &\geq
-\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - (\phi - \varepsilon)\|d\|_1 > \varepsilon \|d\|_1 \wedge d_x < (\phi - \varepsilon) \|d\|_1 \right ] 
+\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x - (\phi - \varepsilon)\|\mathbf{d}\|_1 > \varepsilon \|d\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ] 
 & \\
 &=
-\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{d}_x > \phi \|d\|_1 \wedge d_x < (\phi - \varepsilon) \|d\|_1 \right ] 
+\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ] 
 & \text{i.e. sum of misses}  \\
 &\geq
-\Pr \left [ \bigvee_{x \in \mathcal{V}} \widetilde{d}_x > \phi \|d\|_1 \wedge d_x < (\phi - \varepsilon) \|d\|_1 \right ].
+\Pr \left [ \bigvee_{x \in \mathcal{V}} \widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ].
 & \text{Union bound} \\
 \end{align*}
 We have shown that the probability that \emph{any} miss occurs is less than $n\delta^*$.
@@ -1320,13 +1359,14 @@ This also fixes the space and update time complexities.
 
 
 \textbf{Strict Turnstile Model}.
-The presence of negative updates necessitates a more complex algorithm, as $\|d(t)\|_1$ is no longer monotonic.
+The presence of negative updates necessitates a more complex algorithm, as $\|\mathbf{d}(t)\|_1$ is no longer monotonic.
 We describe an algorithm similar to Theorem 7 of \cite{cormode2005improved}.
 Assume that $n$ is a power of two for convenience of notation.
-For $j \in \{0, 1, \dots, \log n\}$ a \algoname{CountMinSketch} sketch $\mathcal{S}^{(\ell)}$.
+For $j \in \{0, 1, \dots, \log n\}$ we maintain a \algoname{CountMinSketch} sketch $\mathcal{S}^{(j)}$.
 For each degree update $(x, c)$, apply the update $\left ( \left \lfloor \frac{x}{2^j} \right \rfloor, c \right )$ to $\mathcal{S}^{(j)}$ for each $j$.
 Note that $\mathcal{S}^{(j)}$ receives at most $2^{\log n - j}$ distinct elements, which correspond to the dyadic ranges $\{1, \dots, 2^j\}$, $\{2^j + 1, \dots, 2 \cdot 2^j\}$, $\dots$, $\{(2^{\log n - j} - 1) 2^j, \dots, 2^{\log n - j} \cdot 2^j\}$. 
-Moreover the sketches form a hierarchy, where the range elements of $\mathcal{S}^{(j)}$ subdivide those of $\mathcal{S}^{(j+1)}$, forming a natural binary search structure, allowing us to query for heavy hitters.
+Moreover the sketches form a hierarchy, where the range elements of $\mathcal{S}^{(j)}$ subdivide those of $\mathcal{S}^{(j+1)}$, forming a natural binary search structure.
+This structure will allow us to query for heavy hitters.
 
 
 \begin{algorithm}[htbp] 
@@ -1365,7 +1405,7 @@ Moreover the sketches form a hierarchy, where the range elements of $\mathcal{S}
 		\State $\widetilde{d}_r \gets $ query $\mathcal{S}^{(j)}$ for $r$
 		\If {$\widetilde{d}_r \geq thresh$}
 			\If {$j = 0$}
-				\State \Return $(r, \widetilde{d}_r)$
+				\State \Return $\left ( r, \widetilde{d}_r \right )$
 			\Else 
 				\State $\algoname{AdaptiveSearch}(j - 1, 2r, thresh)$
 				\State $\algoname{AdaptiveSearch}(j - 1, 2r + 1, thresh)$
@@ -1377,35 +1417,37 @@ Moreover the sketches form a hierarchy, where the range elements of $\mathcal{S}
 
 Algorithm~\ref{alg:dc:turnstile} summarizes this approach.
 We perform a recursive binary search, starting with $\mathcal{S}^{\log n}$.
-For the dyadic range sums at layer $j$ that are greater than $(\phi + \varepsilon) \|d\|_1$, we query the partitioned halves of the dyadic ranges at layer $j-1$, until we obtain the heavy hitters at layer $0$.  
+For the dyadic range sums at layer $j$ that are greater than $(\phi + \varepsilon) \|\mathbf{d}\|_1$, we query the partitioned halves of the dyadic ranges at layer $j-1$, until we obtain the heavy hitters at layer $0$.  
 If a queried range sum is below the threshold, it is discarded. 
 Elements are only returned when a recursive chain of queries makes it all the way to layer $0$, which is a normal $\algoname{CountMinSketch}$ over the stream.
 
 
 \begin{theorem} \label{thm:dchh:turnstile}
-Let $\mathcal{G}$ with degree vector $d$ be given in a strict turnstile stream.
-Algorithm~\ref{alg:dc:turnstile} can return every vertex with degree $\geq (\phi + \varepsilon)\|d\|_1$, and avoid returning any vertices with degree $< \phi\|d\|_1$ with probability $1-\delta$.
+Let $\mathcal{G}$ with degree vector $\mathbf{d}$ be given in a strict turnstile stream.
+Algorithm~\ref{alg:dc:turnstile} can return every vertex with degree $\geq (\phi + \varepsilon)\|\mathbf{d}\|_1$, and avoid returning any vertices with degree $< \phi\|\mathbf{d}\|_1$ with probability $1-\delta$.
 The algorithm requires space $O \left ( \varepsilon^{-1} \log n \log \frac{2 \log n}{\phi\delta} \right )$ and update time $O \left ( \log n \log \frac{2 \log n}{\phi \delta} \right )$.
 \end{theorem}
 
 \begin{proof}
-First note that for each $x \in \mathcal{V}$ where $d_x \geq (\phi + \varepsilon) \|d\|_1$, each dyadic range of which it is a part must have a sum no less than $(\phi + \varepsilon) \|d\|_1$. 
+First note that for each $x \in \mathcal{V}$ where $\mathbf{d}_x \geq (\phi + \varepsilon) \|d\|_1$, each dyadic range of which it is a part must have a sum no less than $(\phi + \varepsilon) \|\mathbf{d}\|_1$. 
 Consequently, Algorithm~\ref{alg:dc:turnstile} must return this vertex as \algoname{CountSketches} cannot underestimate any of these sums.
 
-Call the event where $\widetilde{d}_x > (\phi + \varepsilon) \|d_{-x}\|_1 \wedge d_x < \phi \|d\|_1$ for some $x \in \mathcal{V}$ a \emph{miss}.
-Clearly, for each $j \in \{0, 1, \dots, \log n\}$ there are at most $1/\phi$ range sums greater than $\phi \|d\|_1$. 
+Call the event where $\widetilde{\mathbf{d}}_x > (\phi + \varepsilon) \|\mathbf{d}_{x}\|_1 \wedge \mathbf{d}_x < \phi \|\mathbf{d}\|_1$ for some $x \in \mathcal{V}$ a \emph{miss}.
+Again, if $x \in \mathcal{V}$ participates in a miss Algorithm~\ref{alg:dc:turnstile} falsely reports it as a heavy hitter.
+Clearly, for each $j \in \{0, 1, \dots, \log n\}$ there are at most $1/\phi$ true range sums greater than $\phi \|\mathbf{d}\|_1$. 
 Consequently the algorithm makes at most twice this number of queries at any particular layer, assuming there are no misses. 
 This makes for a maximum of $\frac {2 \log n}{\phi}$ queries in total. 
 The sketches are independent, so these queries all have the same probability of failure $\delta^*$.
 %Assume that $z \in \mathcal{V}$ is not a heavy hitter.
-Assume that $\widetilde{d}_x^{(j)}$ is the queried output of some range $x$ from $\mathcal{S}^{(j)}$ in a run of Algorithm~\ref{alg:dc:turnstile}, and 
+Assume that $\widetilde{\mathbf{d}}_x^{(j)}$ is the queried output of some range $x$ from $\mathcal{S}^{(j)}$ in a run of Algorithm~\ref{alg:dc:turnstile}, and 
 let $Q = \{(x, j) \mid \mathcal{S}^{(j)} \text{ is queried for $x$}\}$.
+Recall from the above that $|Q| = \frac{2 \log n}{\phi}$.
 By Theorem \ref{thm:cms:err}, the \algoname{CountMinSketch} data structures guarantee that
 %
 \begin{align*}
-\frac{\phi \delta^*}{2\log n}
+\frac{2\log n}{\phi}\delta^*
 &>
-\sum_{(x, j) \in Q} \Pr \left [ \widetilde{d}_x^{(j)} - d_x > \varepsilon \|d_{-x}\|_1 \right ] 
+\sum_{(x, j) \in Q} \Pr \left [ \widetilde{\mathbf{d}}_x^{(j)} - d_x > \varepsilon \|\mathbf{d}_{-x}\|_1 \right ] 
 & \\
 %&>
 %\sum_{z \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - d_x > \varepsilon \|d\|_1 \right ] \\
@@ -1413,17 +1455,17 @@ By Theorem \ref{thm:cms:err}, the \algoname{CountMinSketch} data structures guar
 %\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - d_x > \varepsilon \|d\|_1 \wedge d_x < (\phi - \varepsilon) \|d\|_1 \right ] 
 %& \\
 &\geq
-\sum_{(x, j) \in Q} \Pr \left [ \widetilde{d}_x^{(j)} - \phi\|d\|_1 > \varepsilon \|d\|_1 \wedge d_x < \phi \|d\|_1 \right ] 
+\sum_{(x, j) \in Q} \Pr \left [ \widetilde{\mathbf{d}}_x^{(j)} - \phi\|\mathbf{d}\|_1 > \varepsilon \|\mathbf{d}\|_1 \wedge \mathbf{d}_x < \phi \|\mathbf{d}\|_1 \right ] 
 & \\
 &=
-\sum_{(x, j) \in Q} \Pr \left [ \widetilde{d}_x^{(j)} > (\phi + \varepsilon) \|d\|_1 \wedge d_x < \phi \|d\|_1 \right ] 
+\sum_{(x, j) \in Q} \Pr \left [ \widetilde{\mathbf{d}}_x^{(j)} > (\phi + \varepsilon) \|\mathbf{d}\|_1 \wedge \mathbf{d}_x < \phi \|\mathbf{d}\|_1 \right ] 
 & \text{i.e. sum of misses}  \\
 &\geq
-\Pr \left [ \bigvee_{(x, j) \in Q} \widetilde{d}_x^{(j)} > (\phi + \varepsilon) \|d\|_1 \wedge d_x < \phi \|d\|_1 \right ].
+\Pr \left [ \bigvee_{(x, j) \in Q} \widetilde{\mathbf{d}}_x^{(j)} > (\phi + \varepsilon) \|\mathbf{d}\|_1 \wedge \mathbf{d}_x < \phi \|\mathbf{d}\|_1 \right ].
 & \text{Union bound} \\
 \end{align*}
-We have shown that the probability that \emph{any} miss occurs is less than $\frac{\phi\delta^*}{2\log n}$.
-By setting $\delta^* = \frac{2\log n}{\phi}$ we guarantee that a miss occurs with probability at most $\delta$, obtaining our desired result.
+We have shown that the probability that \emph{any} miss occurs is less than $\frac{2\log n}{\phi}\delta^*$.
+By setting $\delta^* = \frac{\phi\delta}{2\log n}$ we guarantee that a miss occurs with probability at most $\delta$, obtaining our desired result.
 This also fixes the space and update time complexities.
 \end{proof}
 
@@ -1507,10 +1549,10 @@ A vertex with high closeness can be thought of as one that can communicate with 
 Put precisely, one calculates the closeness centrality of a vertex $x$ as
 %
 \begin{equation} \label{eq:cc}
-\textnormal{CC}(x) = \frac{1}{\sum\limits_{y \in \mathcal{V} \setminus \{x\}} d(x,y)}.
+\mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x) = \frac{1}{\sum\limits_{y \in \mathcal{V} \setminus \{x\}} d(x,y)}.
 \end{equation}
 %
-Consequently, an implementation of exact closeness centrality requires one to solve the \algoname{AllSourcesAllShortestPaths} problem, making it  expensive to compute on a large dense graph.
+Consequently, an implementation of exact closeness centrality requires one to solve the \algoname{AllSourcesShortestPaths} problem, making it  expensive to compute on a large dense graph.
 Consequently, on a large evolving graph maintaining up-to-date measures of closeness centrality requires a more sophisticated approach. 
 It is worth pointing out that Eq.~(\ref{eq:cc}) is not defined if the underlying graph is not strongly connected, and indeed it was probably not intended for such graphs \cite{boldi2014axioms}. 
 While there are generalizations to the definition that account for disconnected graphs, their details are out of the scope of this document .
@@ -1523,14 +1565,14 @@ Thus, it might be expected that a solution for betweenness centrality can be ada
 However, computing closeness centrality is strictly easier than betweenness centrality, so some solutions that work for closeness centrality in pass- or space-constrained settings may not generalize to betweenness centrality.
 
 Cohen et al. describe the best known approximation algorithm for $\mathcal{C}^{\algoname{Cloes}}$ in terms of speed, producing approximations in  nearly linear time \cite{cohen2014computing}. 
-Like many approximation algorithms for path-based centrality indices, their algorithm depends upon solving \algoname{SingleSourceShortestPaths} for a $k = O(\log n)$ uniformly sampled source vertices, $C \subseteq \mathcal{V}$.
-For $x \in \mathcal{V}$, we can estimate closeness centrality using $\widetilde{\mathcal{C}}^{\algoname{Close}}(x) = \sum_{y \in C \setminus} \frac{d(x,y)}{k}$.
+Like many approximation algorithms for path-based centrality indices, their algorithm depends upon solving \algoname{SingleSourceShortestPaths} for a set of $k = O(\log n)$ uniformly sampled source vertices, $C \subseteq \mathcal{V}$.
+For $x \in \mathcal{V}$, we can estimate closeness centrality using $\widetilde{\mathcal{C}}^{\algoname{Close}}(x) = \sum_{y \in C \setminus \{x \}} \frac{d(x,y)}{k}$.
 However, this estimate can have high variance.
 In order to improve error bounds, Cohen et al. use the \emph{pivot} of $v$ for $v$ that are ``far'' from $C$ , $c(v) = \argmin_{u \in C} d(uv)$ to estimate $\mathcal{C}^{\algoname{Close}}(v)$, as $\widetilde{\mathcal{C}}^{\algoname{Close}}(v) \coloneqq \widetilde{\mathcal{C}}^{\algoname{Close}}(c(v)) + d(u, c(v))$. 
 Their algorithm satisfies the following theorem:
 %
-\begin{theorem}{Theorem 2.1 of \cite{cohen2014computing}} \label{thm:cc:approx}
-There is an algorithm (Algorithm 1 of \cite{cohen2014computing}) that produces, for every $x \in \mathcal{V}$, an approximation of closeness centrality satisfying $\widetilde{\mathcal{C}}^{Close}(x) - \mathcal{C}^{Close}(x) \leq O(\varepsilon) \mathcal{C}^{Close}(x)$ with high probability.
+\begin{theorem}{(Theorem 2.1 of \cite{cohen2014computing}).} \label{thm:cc:approx}
+There is an algorithm (Algorithm 1 of \cite{cohen2014computing}) that produces, for every $x \in \mathcal{V}$, an approximation of closeness centrality satisfying $|\mathcal{C}^{Close}(x) - \widetilde{\mathcal{C}}^{Close}(x)| \leq O(\varepsilon) \mathcal{C}^{Close}(x)$ with high probability.
 This algorithm requires $O((m + n \log n) \log \frac{n}{\varepsilon^{3}})$ time and $O(m)$ memory.
 \end{theorem}
 
@@ -1547,9 +1589,9 @@ First, we define a $\ell_p$-sampling sketch on vector $v \in \mathbb{R}^n$ as fo
 %
 \begin{definition}
 Let $\Pi$ be a distribution on real $r \times n$ matrices, where $r = \poly(1/\varepsilon, \log(1/\delta))$. 
-Suppose $v \in \mathbb{R}^n$ and sample $S \sim \Pi$. 
-Suppose further that there is a procedure that, given $Sv$, can output $(i,P)$ where $i \in [n]$ is an index of $v$ sampled with probability $P = (1 \pm \varepsilon)\frac{|v_i|^p}{\|v\|^p_p}$, failing with probability at most $\delta$. 
-Then $\Pi$ is an $\ell_p$ sampling sketch distribution, $S \sim \Pi$ is an $\ell_p$ sketch transform, and $Sv$ is an $\ell_p$ sampling sketch.
+Suppose $\mathbf{f} \in \mathbb{R}^n$ is a streaming frequency vector and sample $S \sim \Pi$. 
+Suppose further that there is a procedure that, given $S\frac{2\log n}{\phi}\delta^*$, can output $(i,P)$ where $i \in [n]$ is an index of $\mathbf{f}$ sampled with probability $P = (1 \pm \varepsilon)\frac{|\mathbf{f}_i|^p}{\|\mathbf{f}\|^p_p}$, failing with probability at most $\delta$. 
+Then $\Pi$ is an $\ell_p$ sampling sketch distribution, $S \sim \Pi$ is an $\ell_p$ sketch transform, and $S\mathbf{f}$ is an $\ell_p$ sampling sketch.
 \end{definition}
 %
 %Here $\|\cdot\|_p$ is the $\ell_p$-norm operator, and $(1 \pm \varepsilon)a = \left [ (1-\varepsilon)a, (1+\varepsilon)a \right]$. 
@@ -1558,7 +1600,7 @@ Monemizadeh and Woodruff proved the existence of such sampling sketches and prov
 Jowhari et al. \cite{jowhari2011tight} improved upon these space bounds.
 In particular, they proved that $\ell_0$ and $\ell_1$ sampling sketches require $O(\log^2 n \log \delta^{-1})$ and $O(\varepsilon^{-1} \log \varepsilon^{-1} \log^2 n \log \delta^{-1})$ space, respectively.
 Note that both have only a polylogarithmic dependence on $n$, and $\ell_0$-sampling sketches can achieve arbitrary sampling precision at no additional cost. 
-Vu improves these sampling sketches with algorithms that allow the simultaneous accumulation of $s$ sampling sketches for a single vector $\mathbf{f}$ the same asymptotic update times, i.e. without dependence upon $s$ so long as $s = o(\|\mathbf{f}\|_0)$.
+Vu improves these sampling sketches with algorithms that allow the simultaneous accumulation of $s$ sampling sketches for a single vector $\mathbf{f}$ in the same asymptotic update times, i.e. without dependence upon $s$ so long as $s = o(\|\mathbf{f}\|_0)$.
 %Interestingly, the main ingredients in these sketches are applications of the famous \algoname{Tug-of-War} and \algoname{CountSketch} sketches.
 %\algoname{Tug-of-War} is a sketch family that can return approximations of $\|\mathbf{f}\|_p$ for $p \in (0, 2]$ using $\widetilde{O}(\varepsilon^{-2}\log (1/\delta))$ space.
 %\algoname{CountSketch} is related to the \algoname{CountMinSketch} we used in Chapter~\ref{chap:dc}, but is robust to fully turnstile streams using $\widetilde{O}(\varepsilon^{-2}\log (1/\delta))$ space.
@@ -1580,7 +1622,7 @@ The full details are verbose and out of the scope of this document, as we will b
 %See \cite{jowhari2011tight} for a full treatment of the algorithm and its analysis. 
 %
 It is important to note that as these sampling sketches are linear, they can be added together. 
-That is, if we have two vectors of the same length $\mathbf{v}, \mathbf{v}^\prime \in \mathbb{R}^n$ and $S$ is a sketch mat    rix drawn from such a sampling distribution, then $S\mathbf{v} + S\mathbf{v}^\prime = S(\mathbf{v}+\mathbf{v}^\prime)$. 
+That is, if we have two vectors of the same length $\mathbf{f}, \mathbf{f}^\prime \in \mathbb{R}^n$ and $S$ is a sketch matrix drawn from such a sampling distribution, then $S\mathbf{f} + S\mathbf{f}^\prime = S(\mathbf{f}+\mathbf{f}^\prime)$. 
 This observation is key for many sublinear graph sparsification algorithms, such as the spanner construction discussed in  Section~\ref{sec:spanner}. 
 
 
@@ -1671,18 +1713,19 @@ Note that if $\mathcal{H}$ is an $\alpha$-spanner of $\mathcal{G}$, then for any
 \begin{align*}
 \mathcal{C}^{\algoname{Close}}_\mathcal{H}(x) 
 &= \frac{1}{\sum\limits_{y \in \mathcal{V} \setminus \{x\}} d_\mathcal{H}(x,y)}
-&\textnormal{Eq. (\ref{eq:cc}})\\
+&\textnormal{Eq.~(\ref{eq:cc}})\\
 &\geq \frac{1}{\sum\limits_{y \in \mathcal{V} \setminus \{x\}} \alpha d_\mathcal{G}(x,y)}
-&\textnormal{Eq. (\ref{eq:spanner}})\\
+&\textnormal{Eq.~(\ref{eq:spanner}})\\
 &= \frac{1}{\alpha}\mathcal{C}^{\algoname{Close}}_\mathcal{G}(x).
 \end{align*}
-This immediately implies Eq. (\ref{eq:spanner:cc}).
+Furthermore, an $\alpha$-spanner cannot underestimate distances by construction, as it only prunes edges.
+This implies Eq.~(\ref{eq:spanner:cc}).
 \end{proof}
 %
 
 %Since $\mathcal{H}$ is a spanning subgraph of $\mathcal{G}$, this implies that for all $x \in \mathcal{V}$, $\mathcal{C}^{\algoname{Close}}_\mathcal{H}(x) \in [\frac{1}{\alpha},1]\mathcal{C}^{\algoname{Close}}_\mathcal{G}(x)$. 
 %Hence, $\mathcal{C}^{\algoname{Close}}_\mathcal{H}(x)$ is an $\alpha$-approximation of $\mathcal{C}^{\algoname{Close}}_\mathcal{G}(x)$ for all $x \in \mathcal{V}$. 
-Lemma~\ref{lem:spanner:cc} immediately implies that the algorithm corresponding to Theorem \ref{thm:spanner} can be used to approximate the closeness centrality of $\mathcal{G}$ up to a factor of $1- \frac{1}{k^{\log 5}}$.
+Lemma~\ref{lem:spanner:cc} immediately implies that the algorithm corresponding to Theorem \ref{thm:spanner} can be used to approximate the closeness centrality of $\mathcal{G}$ up to a multiplicative factor of $\left ( 1- \frac{1}{k^{\log 5} - 1} \right )$.
 As $k$ increases, the guaranteed bound becomes less tight, but the space complexity of $\mathcal{H}$ improves. 
 As the spanner and analysis applies for both weighted and unweighted graphs, we have the following Theorem.
 
@@ -1693,7 +1736,7 @@ Let $\mathcal{H}$ be the subgraph spanner of $\mathcal{G}$ output by the algorit
 Then for all $x \in \mathcal{V}$
 %
 \begin{equation} \label{eq:spanner:cc}
-\mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x) - \mathcal{C}^{\algoname{Close}}_{\mathcal{H}}(x) \leq \left ( 1 - \frac{1}{k^{\log 5}} \right ) \mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x).
+\mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x) - \mathcal{C}^{\algoname{Close}}_{\mathcal{H}}(x) \leq \left ( 1 - \frac{1}{k^{\log 5} - 1} \right ) \mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x).
 \end{equation}
 %
 The implicit algorithm uses $\log k$ passes over $\mathcal{G}$ and $\widetilde{O}(n^{1 + 1/k})$ space.
@@ -1719,7 +1762,7 @@ Then for all $x \in \mathcal{V}$,
 \end{equation}
 %
 The implicit algorithm uses $\log k$ passes over $\mathcal{G}$ and $\widetilde{O}(n^{1 + 1/k})$ space.
-Computing $\widetilde{\mathcal{C}}^{\algoname{Close}}_{\mathcal{H}}(\mathcal{V})$ requires $\widetilde{O}(n^{1 + 1/k} \log \frac{n}{\varepsilon^3})$ time.
+Computing $\widetilde{\mathcal{C}}^{\algoname{Close}}_{\mathcal{H}}(\mathcal{V})$ requires $\widetilde{O} \left ( \left (n^{1 + 1/k} + n \log n \right )\log \frac{n}{\varepsilon^3} \right )$ time.
 \end{theorem}
 
 %Unfortunately, this algorithm is not especially practical, even with the reduced computation time afforded by 
@@ -2321,24 +2364,681 @@ It turns out that this is, in fact, the minimum achievable channel size  given o
 
 
 
+
+
+
+
+
+
+
+
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
-\chapter{DegreeSketch and local triangle count heavy hitters}
+\chapter{\algoname{DegreeSketch} and local triangle count heavy hitters}
  \label{chap:DS}
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
 
+
+In this chapter we present \algoname{DegreeSketch}, a semi-streaming distributed sketch datastructure and demonstrate its utility for estimating local triangle count heavy hitters.
+\algoname{DegreeSketch} consists of vertex-centric cardinality sketches distributed across a set of processors. 
+While other semi-streaming approaches to estimating local triangle counts depend on sampling, \algoname{DegreeSketch} is a persistent queryable data structure.
+We discuss the advantages and limitations of this approach, and present empirical results.
 
 %----------------------------------------------------------------------------------------
 \section{Introduction and Related Work}
  \label{DS:sec:DS}
 %----------------------------------------------------------------------------------------
 
+Counting the number of triangles in graphs is a canonical problem in both the RAM and streaming models.
+A ``triangle'' is a trio of co-adjacent vertices, and is the smallest nontrivial community structure.
+Consequently, triangles and triangle counting arise often in applications.
+Both the global count of triangles and the vertex-local counts, i.e. the number of triangles incident upon each vertex, are key to network analysis and graph theory topics such as cohesiveness \cite{lim2015mascot}, global and local clustering coefficients \cite{tsourakakis2008fast}, and trusses \cite{cohen2008trusses}.
+These counts are also directly useful in many applications, such as spam detection \cite{becchetti2010efficient},  community discovery \cite{wang2010triangulation, berry2011tolerating}, and protein interaction analysis \cite{milo2002network}.
+
+Although not traditionally considered a centrality index, one can think of the number of triangles incident upon a vertex as a generalization of its degree centrality. 
+To wit, we define the \emph{triangle count centrality} of a vertex $x \in \mathcal{V}$ as
+%
+\begin{equation}
+	\mathcal{C}^{\algoname{Tri}}(x) = |\{yz \in \mathcal{E} \mid xy, zx \in \mathcal{E} \wedge |\{x, y, z\}| = 3\}|.
+\end{equation}
+%
+Similarly, we can consider the triangle count centrality of edges as well, defined similarly as
+%
+\begin{equation}
+	\mathcal{C}^{\algoname{Tri}}(xy) = |\{z \in \mathcal{V} \setminus \{x,y\} \mid yz, zx \in \mathcal{E}\}|.
+\end{equation}
+%
+
+Although many exact algorithms have been proposed for the triangle counting problem \cite{tsourakakis2008fast, becchetti2010efficient, chu2011triangle, suri2011counting, wolf2017fast}, their time complexity is necessarily superlinear in the number of edges, $\Omega(m^{
+\frac{3}{2}})$.
+Consequently, these analyses are expensive on very large graphs, particularly if they are dense.
+While there is a rich literature centered on the exact global and local triangle counting problem, we will not exhaustively recall it in this document.
+
+In order to avoid the dreaded $\Omega(m^{\frac{3}{2}})$ scaling of exact algorithms, many researchers have turned to approximation.
+Several streaming local triangle counting algorithms have been proposed in recent years.
+These serial streaming algorithms  maintain a limited number of sampled edges from an edge stream.
+Streaming global triangle estimation algorithms have arisen that sample edges with equal probability \cite{tsourakakis2009doulion}, sample edges with probability relative to counted adjacent sampled edges and incident triangles \cite{ahmed2017sampling}, and sample edges along with paths of length two \cite{jha2013space}. 
+The first proposed semi-streaming local triangle estimation algorithm relies upon min-wise independent permutations accumulated over a logarthmic number of passes \cite{becchetti2008efficient}. 
+More recently, true single-pass algorithms have arisen such as \algoname{Mascot} \cite{lim2015mascot}, which maintains local estimates that are updated whether an observed edge is sampled or not.
+Similarly, \algoname{Tri\'est} \cite{stefani2017triest} utilizes reservoir sampling, possibly disposing of sampled edges when a new edge is observed if system memory is saturated.
+This affords robustness to dynamic streams, as well as reducing variance.
+None of these algorithms perform edge-local triangle counting.
+
+While many distributed global and vertex-local triangle counting algorithms have been proposed, the overwhelming majority store the graph in distributed memory and return exact solutions using \algoname{MapReduce} \cite{suri2011counting} or distributed memory \cite{arifuzzaman2013patric, pearce2017triangle}.
+Recently, the study of distributed streaming vertex-local triangle counting was intiated in earnest with the presentation of \algoname{Try-Fly} \cite{shin2018tri}, which maintains parallel instantiations of \algoname{Tri\'est$_{\algoname{Impr}}$}.
+A controller node feeds partitions of the graph stream to each of these instances in order to boost estimation accuracy and speed.
+\algoname{DiSLR} \cite{shin2018dislr} improves upon \algoname{Try-Fly} by introducing limited redundancy into the graph stream partitions.
+Although \algoname{Try-Fly} and \algoname{DiSLR} are the most similar examples in the literature to our approach, our methods are fundamentally different.
+
+Our approach is fundamentally different, depending upon sketching rather than sampling as its core primitive. 
+While the sampling approaches produce estimates, we produce a leave-behind queryable data structure similar in interface to \algoname{CountMinSketch}.
+
+%These algorithms depends upon sampling edges from an edge stream in order to assemble a sparse graph, whose triangles are then used to estimate the true local triangle counts.
+%The most successful recent algorithm \algoname{Tri\'est} utilizes reservoir sampling to afford dynamic graph streams as well as to affect a reduction in variance.
+%Very recent distributed streaming algorithms boost the performance of underlying sampling algorithms such as \algoname{Tri\'est} by utilizing parallel machines operating on partitions of the input graph \cite{shin2018tri, shin2018dislr}.
 
 %----------------------------------------------------------------------------------------
-\section{DegreeSketch via Distributed Cardinality Sketches}
+\section{\algoname{DegreeSketch} via Distributed Cardinality Sketches}
  \label{DS:sec:DS}
 %----------------------------------------------------------------------------------------
+
+We take a different approach to estimating local triangle counts, relying upon sketches instead of sampling.
+We introduce \algoname{DegreeSketch}, a cardinality sketch-based distributed data structure trained on graph streams.
+We will first describe \algoname{DegreeSketch} at a high level, and then discuss the cardinality sketches that it depends on.
+
+In addition to estimating vertex-local triangle counts, \algoname{DegreeSketch} affords an analysis of edge-local triangle counts, which is not true of the sampling-based streaming algorithms. 
+Edge-local triangle counts, i.e. the number of triangles in which each edge participate, can be thought of as a generalization of vertex-local triangle counts. 
+Indeed, given the edge-local triangle counts for each edge incident upon a vertex, we can easily compute its vertex-local triangle count.
+The reverse is not true. 
+
+Edge-local triangle counts have understandably not received much attention in the streaming literature, considering that even enumerating them requires $\Omega(m)$ space. 
+\algoname{DegreeSketch} overcomes this problem by maintaining a data structure that can be queried for an estimate of an edge's local triangle count, similar in behavior to the celebrated CountSketch \cite{charikar2002finding}.
+This data structure is not unlike the sampling sketch approach to graph sparsification discussed in Section~\ref{sec:spanner}.
+For each $x \in \mathcal{V}$ we maintain a cardinality sketch, which affords the approximation of $\mathbf{d}_x$, the degree of $x$. 
+We obtain estimates of local triangle counts by comparing the sketches of adjacent vertices.
+
+It is known that any data structure that provides relative error guarantees for the cardinality of a multiset with $n$ unique elements requires $O(n)$ space \cite{alon1999space}.
+Consequently, investigators have developed many so-called \emph{cardinality sketches} that provide such relative error guarantees while admitting a small probability of failure, such as PCSA \cite{flajolet1985probabilistic}, MinCount \cite{bar2002counting},  LogLog \cite{durand2003loglog}, Multiresolution Bitmap \cite{estan2003bitmap}, HyperLogLog \cite{flajolet2007hyperloglog}, and the space-optimal solution of \cite{kane2010optimal}.
+While all these cardinality sketches have a natural union operation that allows one to combine the sketches of two multisets into a sketch of their union, most have no closed intersection operation.
+
+Let $\mathcal{D}$ be an instance of \algoname{DegreeSketch} as described, so that for $x \in \mathcal{V}$, $\mathcal{D}[x]$ is a cardinality sketch of the adjacency set of $x$.
+Assume that there are approximate union and intersection operators $\widetilde{\cup}$ and $\widetilde{\cap}$, respectively.
+Then degree sketch enables many types of nontrivial local queries. 
+For example, if we have $A_{:,x}$, we can compute an estimate of $x$'s second-degree neighborhood $\mathcal{N}^2(x)$, the number of vertices whose distance from $x$ is at most 2, by computing 
+%
+\begin{equation} \label{eq:tri:edge}
+	\widetilde{\mathcal{N}}^2(x) 
+	= \widetilde{\bigcup}_{y: A_{y,x} \neq 0} \mathcal{D}[y].
+\end{equation}
+%
+Meanwhile, for $xy \in \mathcal{E}$ we can estimate $\mathcal{C}^{\algoname{Tri}}(xy)$ using 
+%
+\begin{equation} \label{eq:tri:edge}
+	\widetilde{\mathcal{C}}^{\algoname{Tri}}(xy) 
+	= \mathcal{D}[x] \widetilde{\cap} \mathcal{D}[y].
+\end{equation}
+%
+Furthermore, again given access to $A_{:,x}$, we can compute an estimate of $\mathcal{C}^{\algoname{Tri}}(x)$ using
+%
+\begin{equation} \label{eq:tri:edge}
+	\widetilde{\mathcal{C}}^{\algoname{Tri}}(x) 
+	= \frac{1}{2} \sum_{y: A_{y,x} \neq 0} \widetilde{\mathcal{C}}^{\algoname{Tri}}(xy)  
+	= \frac{1}{2} \sum_{y: A_{y,x} \neq 0} \mathcal{D}[x] \widetilde{\cap} \mathcal{D}[y].
+\end{equation}
+%
+
+Merge operations described by Eq.~(\ref{eq:tri:edge}) form the core of the \algoname{HyperANF} algorithm \cite{boldi2011hyperanf}.
+\algoname{HyperANF} uses HyperLogLog sketches similar to \algoname{DegreeSketch} to estimate the $n$-hop neighborhood sizes of all vertices by way of a iterative sketch merging procedure, which is useful for applications such as edge prediction in social networks \cite{gupta2013wtf} and probabilistic distance calculations \cite{boldi2011hyperanf, myers2014information}.
+However, \algoname{HyperANF} also requires storing the whole graph in memory in addition to the \algoname{DegreeSketch} data structure, and is optimized for shared but not distributed memory. 
+It also does not take advantage of recent advances in HyperLogLog joint estimation that permit reasonable estimation of sketch intersections as well as unions.
+
+We will describe \algoname{DegreeSketch} on a universe of processors $\mathcal{P}$, without going into detail about the underlying cardinality sketches. 
+We only assume that the sketches support an \algoname{Insert} operation to add elements, a \algoname{Merge} operation to combine sketches, an \algoname{Estimate} operation to estimate cardinalities, and an \algoname{EstimateIntersection} operation to estimate intersection cardinalities.
+We assume that the graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ is given by a stream $\boldsymbol{\sigma}$ that is partitioned by some unknown means into $|\mathcal{P}|$ substreams.
+We assume that each processor $P \in \mathcal{P}$ has send and receive buffers $\mathcal{S}[P]$ and $\mathcal{R}[P]$, respectively.
+We further assume that there is some partitioning of vertices to processors $f : \mathcal{V} \rightarrow \mathcal{P}$. 
+
+Algorithm~\ref{alg:ds:accumulation} describes the distributed accumulation of a \algoname{DegreeSketch} instance.
+In a distributed pass over the partitioned stream, processors use the partition function $f$ to send edges to the cognizant processors. 
+These processors each maintain cardinality sketches for their assigned vertices.
+When $P \in \mathcal{P}$ receives an edge $xy \in \mathcal{E}$ where $f(x) = P$, it performs $\algoname{Insert}(\mathcal{D}[x], y)$.
+Once all processors are done reading and communicating, $\mathcal{D}$ is accumulated.
+
+\begin{algorithm}[htbp] 
+\caption{\algoname{DegreeSketch} Accumulation}\label{alg:ds:accumulation}
+\begin{flushleft}
+        \textbf{Input:} 		$\boldsymbol{\sigma}$ - edge stream divided into $|\mathcal{P}|$ substreams\\
+        	\hspace{2.65em}	$\mathcal{P}$ - universe of processors	 \\
+        	\hspace{2.65em}	$\mathcal{S}$ - distributed dictionary mapping $\mathcal{P}$ to send queues	 \\
+        	\hspace{2.65em}	$\mathcal{R}$ - distributed dictionary mapping $\mathcal{P}$ to receive queues	 \\
+        	\hspace{2.65em}	$f$ - function mapping $\mathcal{V} \rightarrow \mathcal{P}$	 \\
+        \textbf{Output:} $\mathcal{D}$ - accumulated DegreeSketch
+\end{flushleft}
+\begin{flushleft}
+\begin{algorithmic}[1]
+	\Statex \textbf{Accumulation}:
+		\State $\mathcal{D} \gets \text{empty dictionary mapping $\mathcal{V}$ to sketches}$
+		\ParFor {$P \in \mathcal{P}$}
+			\While{$\sigma_P$ has unread element $uv$}
+  				\State $U \gets f(u)$, $V \gets f(v)$
+ 	 			\State $\mathcal{S}[P].\push{U, uv}$, $\mathcal{S}[P].\push{V, vu}$
+			\EndWhile
+%			\State \algoname{Read}$(P)$		
+		\EndParFor
+		\State \Return $\mathcal{D}$
+	\Statex \textbf{Send Context}:
+		\While{$\mathcal{S}[P]$ is not empty}
+  			\State $(W, xy) \gets \mathcal{S}[P].\pop$
+			\State $\mathcal{R}[W].\push{xy}$
+  		\EndWhile
+	\Statex \textbf{Receive Context}:
+		\While{$\mathcal{R}[P]$ is not empty}
+  			\State $xy \gets \mathcal{R}[P].\pop$
+  			\If {$!\exists \mathcal{D}[x]$} 
+				\State $\mathcal{D}[x] \gets \text{empty sparse HLL}(h, p)$
+			\EndIf
+	  		\State $\algoname{Insert}(\mathcal{D}[x], y)$
+  		\EndWhile
+\end{algorithmic}
+\end{flushleft}
+\end{algorithm}
+
+
+Unfortunately, while most cardinality sketches have a native and closed $\widetilde{\cup}$ operation, they all lack a satisfactory intersection operation.
+This is not surprising, as sketches are in effect lossy compressions. 
+Indeed, it is known that the detection of a trivial intersection is impossible in sublinear memory. 
+Hence, we must instead make use of unsatisfactory intersection operations in practice, which has been a focus of recent research \cite{ting2016towards, cohen2017minimal, ertl2017new}.
+
+We focus on the well-known \algoname{HyperLogLog} or \algoname{HLL} cardinality sketches throughout the rest of this chapter, while noting that \algoname{DegreeSketch} can be implemented with any cardinality sketch that admits some form of union and intersection estimation.
+We use \algoname{HLL}s for implementation due to several attractive features:
+\begin{enumerate}
+	\item Small register size
+	\item Simple merge operation
+	\item Sparse register representation
+	\item Adequate intersection estimator
+\end{enumerate}
+
+We introduce \algoname{HLL} and discuss these features in greater detail in Section~\ref{DS:sec:hll}.
+
+%----------------------------------------------------------------------------------------
+\subsection{\algoname{HyperLogLog} Cardinality Sketches}
+ \label{DS:sec:hll}
+%----------------------------------------------------------------------------------------
+
+While many different cardinality sketches have been proposed, the HyperLogLog sketch is undoubtedly the most popular of these data structures in practice, and has attained widespread adoption \cite{flajolet2007hyperloglog}.
+The sketch relies on the key insight that the binary representation of a random machine word  starts with $0^{j-1} 1$ with probability $2^{-j}$. 
+Thus, if the maximum number of leading zeros in a set of random words is $j-1$, then $2^j$ is a good estimate of the cardinality of the set \cite{flajolet1985probabilistic}.
+However, this estimator clearly has high variance. 
+The variance is traditionally minimized using stochastic averaging to simulate parallel random trials \cite{flajolet1985probabilistic}.
+
+Assume we have a stream $\sigma$ of random machine words of a fixed size $W$.
+For a $W=(p + q)$-bit word $w$, let $\xi(w)$ be the first $p$ bits of $w$, and let $\rho(w)$ be the number of leading zeros plus one of its remaining $q$ bits.
+We pseudorandomly partition elements $e$ of $\sigma$ into $r = 2^p$ substreams of the form $\sigma_i = \{ e \in \sigma | \xi(e) = i \}$.
+For each of these approximately equally-sized streams, we maintain an independent estimator of the above form.
+Each register $\mathbf{r}_i$, $i \in [m]$, accumulates the value
+%
+\begin{equation} \label{eq:register}
+\mathbf{r}_i = \max\limits_{x \in \sigma_i} \rho(x).
+\end{equation}
+%
+
+After accumulation, $\mathbf{r}_i$ stores the maximum number of leading zeroes in the substream $\sigma_i$, plus one. 
+The authors of HyperLogLog show in \cite{flajolet2007hyperloglog} that the normalized bias corrected harmonic mean of these registers,
+%
+\begin{equation} \label{eq:estimator}
+\widetilde{D} = \alpha_r r^2 \left ( \sum_{i=0}^{r-1} 2^{-\mathbf{r}_i} \right) ^{-1},
+\end{equation}
+%
+where the bias correction term $\alpha_r$ is given by
+%
+%
+\begin{equation} \label{eq:alpha}
+\alpha_r :=  \left( r \int_{0}^\infty \left( \log_2 \left( \frac{2 + u}{1 + u} \right) \right)^r du \right) ^{-1},
+\end{equation}
+is a good estimator of the number of unique elements in $\sigma$.
+If the true cardinality of the streamed multiset is $D$, the error of estimate $\widetilde{D}$, $|D - \widetilde{D}|$, has standard error $\approx 1.04 / \sqrt{r}$. 
+In expectation, $\widetilde{D}$ satisfies
+%
+\begin{equation} \label{eq:error_bound}
+|D - \widetilde{D}| \leq (1.04/\sqrt{r}) D.
+\end{equation}
+%
+ with high probability.
+A comprehensive analysis of the properties of the \algoname{HLL} sketch,  the quality of \eqref{eq:estimator}, and a proof of \eqref{eq:error_bound}  can be found in \cite{flajolet2007hyperloglog}.
+In particular, if $N$ is the number of possible machine words, a HyperLogLog sketch satisfied Eq.~(\ref{eq:error_bound}) using space $O(\varepsilon^{-2} \log\log N + \log N)$, where $r = \Theta(\varepsilon^2)$.
+
+Of course, practical streams do not consist of random 64-bit numbers. 
+In practice, we simulate this randomness by way of hash functions, of which there are many alternatives. 
+The fast, non-cryptographic hash functions Murmurhash3 \cite{?} and xxhash \cite{?} are often utilized in implementations. 
+We will assume throughout that algorithms have access to such a hash function $h : 2^{64} \rightarrow 2^{64}$.
+
+A particular HyperLogLog sketch, $S$, consists of such a hash function $h$, a prefix size $p$ (typically between 4 and 16), a maximum register value $q$, and an array of $r=2^p$ registers, $\mathbf{r}$, all of which are initialized to zero. 
+We summarize references to such a sketch as $\algoname{HLL}(p,q,h)$.
+%Machine words must be of size $(p + q)$, and so typically in implementations $p + q = 64$.
+%Consequently, we will opt for the simpler $\algoname{HLL}(p,h)$ reference in our discussion.
+Algorithm~\ref{alg:hll:vanilla} describes the accumulation and functions supported by the vanilla \algoname{HyperLogLog} sketch. 
+We will add features in the next few sections. 
+
+\begin{algorithm}[htbp] 
+\caption{$\algoname{HLL}(p,q,h)$ Operations}\label{alg:hll:vanilla}
+\begin{flushleft}
+        \textbf{State Variables} for $\algoname{HLL}(p, q, h)$ $S$ :		\\
+        	\hspace{2.65em}	$p$ \,\,\, integral prefix size	 \\
+        	\hspace{2.65em}	$q$ \,\,\, integral maximum register value	 \\
+        	\hspace{2.65em}  $h$ \,\,\, hash function mapping universe $U \rightarrow [0,2^{64}-1]$\\
+        	\hspace{2.65em}	$r \,\,\, \coloneqq 2^p$	 \\
+    		\hspace{2.65em}	$\mathbf{r}$  \, array of $m$ registers, initially all zeroes \\		
+\end{flushleft}
+\begin{algorithmic}[1]
+\Statex \textbf{Accumulation:}
+	\State $S \gets $ empty $\algoname{HLL}(p,q,h)$
+	\For{$e \in \sigma$}
+		\State $x \gets h(e)$
+		\State $\algoname{Insert}(S, \xi(x), \rho(x))$
+	\EndFor
+\Statex \textbf{Functions:}
+	\Function{Insert}{$S, j, z$}
+		\State $\mathbf{r}_j \gets \max ( \mathbf{r}_j, z)$
+	\EndFunction
+%
+%
+	\Function{Merge}{$S^{(0)}, S^{(1)}, \dots, S^{(\ell)}$}
+		\State $S^* \gets \text{empty $\algoname{HLL}(p, q, h)$}$
+		\For{$j \in [0,r)$} 
+			\State $\mathbf{r}^*_j \gets \max\limits_{ i \in [0, \ell]} \mathbf{r}^{(i)}_j$
+		\EndFor
+		\State \Return $S^*$
+	\EndFunction
+%
+	\Function{Estimate}{$S$}
+		\State \Return $\alpha_r r^2 \left ( \sum\limits_{j=0}^{r-1} 2^{-\mathbf{r}_j} \right) ^{-1}$
+	\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+
+Note that \algoname{HLL}s support a natural merge operation: taking the element-wise maximum of each index of a pair register vectors.
+This requires that the two sketches were generated using the same hash function.
+We will assume that all sketches share a hash function throughout the rest of the chapter.
+ 
+
+%----------------------------------------------------------------------------------------
+\vspace{1em}
+\textbf{Sparse Register Format}.
+Heule et al. suggest a sparse representation for \algoname{HyperLogLog} sketches consisting of a list of the set index-value pairs of a \algoname{HLL}'s register list \cite{heule2013hyperloglog}.
+Mathematically, the sparsification procedure is tantamount to maintaining the set $R = \left \{(i, \mathbf{r}_i) | \mathbf{r}_i \neq 0 \right \}$.
+$R$ requires less memory than $\mathbf{r}$ when the cardinality of the underlying multiset is small. 
+Moreover, it is straightforward to saturate a sparse sketch into a dense one once it is no longer cost effective to maintain it by instantiating $\mathbf{r}$ while assuming all registers not set in $R$ are zero. 
+We will assume that $R$ is implemented as a map, where an element $R[j] = z$ if $(j, z) \in R$ and is zero otherwise.
+Algorithm~\ref{alg:hll:sparse} describes the changes and additions to Algorithm~\ref{alg:hll:vanilla} needed to implement sparse registers.
+
+
+\begin{algorithm}[htbp] 
+\caption{$\algoname{HLL}(p,q,h)$ Operations  Update - sparsification}\label{alg:hll:sparse}
+\begin{flushleft}
+        \textbf{State Variables} for $\algoname{HLL}(p, q, h)$ $S$ :		\\
+    		\hspace{2.65em}	$\nu$  \,\,\, mode $\in \{\algoname{sparse}, \algoname{dense}\}$, initially $\algoname{sparse}$ \\
+    		\hspace{2.65em}	$R$  \, sparse register set, initially $\emptyset$
+\end{flushleft}
+\begin{algorithmic}[1]
+	\Function{Insert}{$S, j, z$}
+		\If {$\nu = \algoname{dense}$}
+			\State $\mathbf{r}_j \gets \max ( \mathbf{r}_j, z)$
+		\ElsIf {$\nu = \algoname{sparse}$}
+			\State $R[j] \gets \max \{z, R[j]\}$ (see Figures 6 \& 7 of \cite{heule2013hyperloglog})
+			\If {$|R| > 6*r$}
+				\State $\algoname{Saturate}(S)$
+			\EndIf
+		\EndIf
+	\EndFunction
+%
+	\Function{Saturate}{$S$}
+		\State $\nu \gets \algoname{dense}$
+		\For {$(j, z) \in R$} 
+			\State $\algoname{Insert}(S, j, z)$
+		\EndFor
+		\State $R \gets \emptyset$
+	\EndFunction
+%
+	\Function{Merge}{$S^{(0)}, S^{(1)}, \dots, S^{(\ell-1)}$}
+		\State $S^* \gets \text{empty $\algoname{HLL}(p, q, h)$}$
+		\For{$j \in [0,r)$} 
+			\State $z \gets  \max\limits_{ i \in [0, \ell)} \left ( \max \left \{ \mathbf{r}^{(i)}_j, R^{(i)}[j] \right \} \right )$
+			\If {$z \neq 0$} 
+				\State $\algoname{Insert}(S^*, j, z)$
+			\EndIf
+		\EndFor
+		\State \Return $S^*$
+	\EndFunction
+%
+	\Function{Estimate}{$S$}
+		\If{$\nu = \algoname{dense}$}
+			\State \Return $\alpha_r r^2 \left ( \sum\limits_{j=0}^{r-1} 2^{-\mathbf{r}_j} \right) ^{-1}$
+		\Else
+			\State \Return $\alpha_r r^2 \left ( \sum\limits_{(j, z) \in R} 2^{-z} \right) ^{-1}$
+		\EndIf
+	\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+
+We use sparse registers in our algorithms, although we will not go into the details of their maintenance in the interest of clarity.
+The sparse sketch representation $R$ can be implemented efficiently by maintaining a list sorted by register index, containing at most one entry per register, and a set of unsorted pairs that is periodically folded into the sorted list.
+In a practical implementation, these pairs are encoded into a single value that must be decoded when read.
+We obfuscate the details of the efficient implementation in our algorithms for the sake of clarity, and invite the interested reader to investigate Figures 6 \& 7 of \cite{heule2013hyperloglog}.
+
+The authors of \cite{heule2013hyperloglog} also describe a procedure by which the sparse elements of $R$ might be stored at higher precision than the elements of $\mathbf{r}$.
+Although this method may be practical for applications we will avoid it in our work to avoid unnecessary confusion.
+
+
+
+
+
+
+
+%----------------------------------------------------------------------------------------
+\vspace{1em}
+\textbf{Reduced Register Size}.
+In practice, $N= 2^{64}$, and so the registers require 6 bits apiece.
+This small register size is one of the advantages of \algoname{HLL}s over other cardinality sketches.
+For example, \algoname{MinCount} requires the storage of the same number of 64-bit hashes for the same universe size. 
+Cardinality sketches are known to require $\Omega(\varepsilon^{-2} + \log N)$ space, although the known optimal algorithm is not considered practical \cite{kane2010optimal}.
+This reliance upon $\Omega(\varepsilon^{-2})$ registers implies that \algoname{HLL}s are about as optimal as we can get in implementations without sacrificing performance.
+
+The authors of \algoname{HyperLogLog-TailCut} reduced the footprint of the \algoname{HyperLogLog} algorithm by reducing the registers to 4 bits \cite{xiao2017better}.
+In order to avoid overflow, \algoname{HyperLogLog-TailCut} adds a base register $b$, initialized to zero, and changes the update rule \eqref{eq:register} and estimator \eqref{eq:estimator} so that each register $\mathbf{r}_j$ stores notional value $\mathbf{r}_j + b$. 
+When $\mathbf{r}_j$ would experience an overflow event, \algoname{HyperLogLog-TailCut} instead increases $b$ to the minimum set register value and decreases all registers by the same quantity. 
+This yields an insert rule given by Algorithm \ref{alg:hll:tailcut_insert}.
+%%
+\begin{algorithm}
+\caption{\algoname{HyperLogLog-TailCut} Insert}\label{alg:hll:tailcut_insert}
+\begin{algorithmic}[1]
+	\State $e \gets \text{next element of $\sigma$}$
+	\State $x \gets h(e)$
+%\State $\ell \gets \langle x_0, x_1, \dots, x_{p-1} \rangle$, $r \gets \langle x_p, x_{p+1}, \dots x_{63} \rangle$
+	\If {$\rho(x) - b > 15$} 
+		\State $\Delta b \gets \min\limits_{i \in [0, r)} \mathbf{r}_i$
+		\If {$\Delta b > 0$}
+			\State $b \gets b + \Delta b$
+			\For {$j \in [0,r)$}
+				\State $\mathbf{r}_j \gets \mathbf{r}_j - \Delta b$
+			\EndFor
+		\EndIf
+	\EndIf
+	\State $\mathbf{r}_{\xi(x)} \gets \max ( \mathbf{r}_{\xi(x)}, \min ( \rho(x) - b, 15))$
+\end{algorithmic}
+\end{algorithm}
+%%
+
+Note that this modification to the register update procedure is lossy. 
+If $\rho(x) - b > 15$ even after updating $b$, then the algorithm notionally stores $b + 15$ in $\mathbf{r}_{\xi(x)}$. 
+We henceforward refer to this event as a "tail cut".
+The authors show that tail cuts occur infrequently enough that it does not impact the Monte Carlo $1.04/\sqrt{m}$ error bound using the following modification to \eqref{eq:estimator}:
+%
+\begin{equation} \label{eq:compact_estimator}
+\tilde{D} = \alpha_r r^2 \left ( \sum_{i=0}^{r-1} 2^{-(b + \mathbf{r}_i)} \right) ^{-1}.
+\end{equation}
+%
+However, this tail-cutting introduces bias when performing merge operations on sketches.
+Concatenations of two streams may not yield the same answer as merging their individual sketches, which violates  Eq.~(\ref{eq:merge}).
+Furthermore, tail-cutting is order dependent, so sketches accumulated over the same reordered stream may not agree, which violates a core assumption one usually makes about sketches.
+%We address this problem and introduce a correction in Section \ref{sec:merge_bias}.
+%
+%The authors of HyperLogLog-TailCut also describe HyperLogLog-TailCut+, which further reduces the register size to 3 bits apiece using similar techniques. 
+%However, this technique relies upon a maximum likelihood estimator optimization problem, which makes it a less attractive candidate for our algorithms as described in Section \ref{sec:sparse}. 
+%Furthermore, tail cutting events are much more frequent in HyperLogLog-TailCut+, amplifying the combination problem observed in HyperLogLog-TailCut.
+%
+%%----------------------------------------------------------------
+%\subsection{Bias Correction When Merging Compressed Registers} \label{sec:merge_bias}
+%%----------------------------------------------------------------
+
+The validity of the estimator based upon the union of sketches depends upon the property that the element-wise maximum of a set of sketches over streams is identical to the sketch accumulated from their concatentation. 
+The tail-cutting procedure introduced in Algorithm \ref{alg:hll:tailcut_insert} violates this property, as some hashes can be cut in the operands that would not be cut in the sketch over the concatenated stream.
+For a small number of sketches, the resulting error is small enough that it might go without notice.
+However, when merging many sketches, the additional error introduced by the tail cuts results in an estimator that does not maintain the desired error bound property \eqref{eq:error_bound}.
+
+We solve this problem by maintaining a set $E$ of these cut elements. 
+This set is of the same (index, value) form as the set of sparse registers $R$ discussed above, and in practice is small as tail cutting events are uncommon.
+Where $b$ is set, the probability of generating a hash $x$ that causes an overflow is given by 
+%
+\begin{equation}
+	\Pr [\rho(x) - b > 15] = 2^{-15 - b}
+\end{equation}
+%
+using an idealized hash function.
+The probability that this hash gets cut is more difficult to characterize, and depends on the elements read thus far. 
+We found approximately 4 tail cut events per $10^9$ distinct element insertions in our experiments.
+
+We add a subroutine that attempts to reinsert the cut elements into the registers. 
+This subroutine gets called whenever the base register increases, the estimate procedure is called, the sketch is merged with another, or the set reaches a given size bound. 
+These changes result in the updated \algoname{Insert}, \algoname{Merge}, and \algoname{Estimate} procedures given in Algorithm \ref{alg:hll:tc}.
+Note that these procedures are able to coexist with the sparse register format, allowing us to combine the two approaches. 
+%
+\begin{algorithm}[htbp] 
+\caption{$\algoname{HLL}(p,q,h)$ Operations - sparsification + tail cut}\label{alg:hll:tc}
+\begin{flushleft}
+        \textbf{State Variables} for $\algoname{HLL}(p, q, h)$ $S$ :		\\
+%        	\hspace{2.65em}	$p$ \,\,\, integral prefix size	 \\
+%        	\hspace{2.65em}	$q$ \,\,\, integral maximum register value	 \\
+%        	\hspace{2.65em}  $h$ \,\,\, hash function mapping universe $U \rightarrow [0,2^{64}-1]$\\
+%        	\hspace{2.65em}	$r \,\,\, \coloneqq 2^p$	 \\
+%    		\hspace{2.65em}	$\mathbf{r}$  \,\, array of $m$ registers, initially all zeroes \\		
+%    		\hspace{2.65em}	$\nu$  \,\,\, mode $\in \{\algoname{sparse}, \algoname{dense}\}$, initially $\algoname{sparse}$ \\
+%    		\hspace{2.65em}	$R$  \, sparse register set, initially $\emptyset$ \\
+        	\hspace{2.65em}	$b$ \,\,\, base register, initially 0	 \\
+    		\hspace{2.65em}	$E$  \, cut set, initially $\emptyset$ \\
+%        \textbf{Output:} $S$ - accumulated $\algoname{HLL}(p, h)$ 
+\end{flushleft}
+\begin{algorithmic}[1]
+%\Statex \textbf{Accumulation:}
+%	\State $S \gets $ empty $\algoname{HLL}(p,q,h)$
+%	\For{$e \in \sigma$}
+%		\State $x \gets h(e)$
+%		\State $\algoname{Insert}(S, \xi(x), \rho(x))$
+%	\EndFor
+\Statex \textbf{Functions:}
+	\Function{Insert}{$S, j, z$}
+		\If {$\nu = \algoname{dense}$}
+			\State $\mathbf{r}_j \gets \max ( \mathbf{r}_j, z)$
+			\If {$z - b > 15$} 
+				\State $\Delta b \gets \min\limits_{i \in [0, r)} \mathbf{r}_i$
+				\If {$\Delta b > 0$}
+					\State $b \gets b + \Delta b$
+					\For {$i \in [0,r)$}{ $\mathbf{r}_i \gets \mathbf{r}_i - \Delta b$}
+					\EndFor
+					\State $\algoname{FlushCuts}(S)$
+				\EndIf
+			\EndIf
+			\State $\mathbf{r}_{j} \gets \max ( \mathbf{r}_{j}, \min ( z - b, 15))$
+			\If {$z - b > 15$} 
+				\State $E[j] \gets \max \{z, E[j]\}$
+			\EndIf
+		\ElsIf {$\nu = \algoname{sparse}$}
+			\State $R[j] \gets \max \{z, R[j]\}$ (see Figures 6 \& 7 of \cite{heule2013hyperloglog})
+			\If {$|R| > 4*r$}
+				\State $\algoname{Saturate}(S)$
+			\EndIf
+		\EndIf
+	\EndFunction
+%
+	\Function{FlushCuts}{S}
+		\For {$(j, z) \in E$}
+			\State $E \gets E \setminus \{(j, z)\}$
+			\State $\algoname{Insert}(j, z)$
+		\EndFor
+	\EndFunction
+%
+%
+	\Function{Merge}{$S^{(0)}, S^{(1)}, \dots, S^{(\ell)}$}
+		\State $S^* \gets \text{empty $\algoname{HLL}(p, q, h)$}$
+		\For{$j \in [0,r)$} 
+			\State $b^* \gets \max\limits_{i \in [0, \ell]} b^{(i)}$
+			\State $z \gets  \max\limits_{ i \in [0, \ell]} \left ( \max \left \{ \mathbf{r}^{(i)}_j + b^{(i)} - b^{*}, E^{(i)}[j], R^{(i)}[j] \right \} \right )$
+			\If {$z \neq 0$} 
+				\State $\algoname{Insert}(S^*, j, z)$
+			\EndIf
+		\EndFor
+		\State \Return $S^*$
+	\EndFunction
+%
+	\Function{Estimate}{$S$}
+		\If{$\nu = \algoname{dense}$}
+			\State \Return $\alpha_r r^2 \left ( \sum\limits_{j=0}^{r-1} 2^{-\max \{ \mathbf{r}_j + b, E[j]\}} \right) ^{-1}$
+		\Else
+			\State \Return $\alpha_r r^2 \left ( \sum\limits_{(j, z) \in R} 2^{-z} \right) ^{-1}$
+		\EndIf
+	\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+
+%%
+Algorithm~\ref{alg:hll:tc} guarantees order-invariance in the produced sketches, as well as maintaining a true sketch merge.
+These results come at the cost of some additional space, as the cut set $E$ must be stored.
+In a pathological stream $E$ could hold as many as $m-1$ elements, i.e. there is one holdout register index that prevents $b$ from growing in spite of cut insertions. 
+Fortunately, the likelihood of such an event is vanishingly unlikely. 
+Furthermore, even this worst case at most doubles the size of the sketch, as so maintains the same asymptotic bounds as the vanilla \algoname{HLL}.
+
+
+%----------------------------------------------------------------------------------------
+\vspace{1em}
+\textbf{Maximum Likelihood Estimation}
+The estimator \eqref{eq:estimator} is known to have several practical problems, many of which are discussed at length in \cite{flajolet2007hyperloglog} and \cite{heule2013hyperloglog}.
+Subsequent work has refined HyperLogLog by modifying the estimator \eqref{eq:estimator} to reduce bias on high and low values \cite{flajolet2007hyperloglog, heule2013hyperloglog, qin2016loglog},  reducing the register size by a constant \cite{xiao2017better}, and replacing the estimator \eqref{eq:estimator} entirely with a maximum likelihood estimator \cite{xiao2017better, lang2017back, ertl2017new}.
+%We will briefly discuss how we used a few of these modifications.
+We adopt the latter of these approaches, which yields the added benefit of a maximum likelihood estimator for the intersection of two sketches. 
+We will sketch the ideas for the estimators here, although the full treatment is somewhat involved.
+We direct the interested reader to \cite{ertl2017new} for details.
+
+The maximum likelihood estimator in \cite{ertl2017new} uses a Poisson model, assuming that the cardinality itself is drawn from a Poisson distribution with parameter $\lambda$, and that the observed register values after accumulation are independent.
+This yields the following loglikelihood function for $\lambda$ given the observed register list $\mathbf{r}$:
+%
+\begin{equation} \label{eq:poisson}
+\mathcal{L}(\lambda \mid \mathbf{r}) 
+= -\frac{\lambda}{r} \sum_{k=0}^q \frac{\mathbf{c}_k}{2^k} + \sum_{k=1}^q \mathbf{c}_k \log \left ( 1 - e^{-\frac{\lambda}{r2^k}} \right )
++ \mathbf{c}_{q+1} \log \left ( 1 - e^{-\frac{\lambda}{r2^q}} \right ).
+\end{equation}
+%
+Here 
+%
+\begin{equation} \label{eq:c}
+\mathbf{c}_k = |\{\mathbf{r}_i = k \mid i \in \{0, \dots, p-1\} \}|
+\end{equation}
+%
+is the count of occurrences of the value $k$ in the register list $\mathbf{r}$ for $k \in \{0, 1, \dots, q+1\}$.
+The author shows in \cite{ertl2017new} that given an unbiased estimator $\hat{\lambda}$ for $\lambda$, we can leverage depoissonization \cite{jacquet1998analytical} to yield an estimator for the fixed-size set.
+That is, $\mathbb{E}[\hat{\lambda} \mid D] = D$, where $D$ is the cardinality of the input set.
+The count statistic $\mathbf{c}$ suffices to iteratively find the optimum of \eqref{eq:poisson}, yielding a maximum likelihood estimator. 
+See Algorithm 8 of \cite{ertl2017new} for the full algorithm description. 
+
+%----------------------------------------------------------------------------------------
+\vspace{1em}
+\textbf{Maximum Likelihood Intersection Estimation}
+A na\"ive approach to estimating an intersection of two sets $A$ and $B$ using cardinality sketches might involve computing the intersection via the inclusion-exclusion principle:
+%
+\begin{equation} \label{eq:inclusion-exclusion}
+	|A \cap B| = |A \cup B| - |A| - |B|.
+\end{equation}
+%
+Given sketches $S^{(A)}$ and $S^{(B)}$ for $A$ and $B$, we might be tempted to estimate the intersection via
+%
+\begin{equation} \label{eq:intersection:naive}
+	\widetilde{|A \cap B|} 
+	= \algoname{Estimate} \left ( S^{(A)} \right ) 
+	+ \algoname{Estimate} \left ( S^{(B)} \right ) 
+	- \algoname{Estimate} \left ( \algoname{Merge} \left ( S^{(A)}, S^{(B)} \right ) \right ).
+\end{equation}
+%
+However, the approach in Eq.~(\ref{eq:intersection:naive}) suffers from several failings.
+In particular, it might be negative!
+Furthermore, due to the error noise in each estimate, if the true intersection is small relative to the set sizes, or if one set is much larger than the other, the variance of Eq.~(\ref{eq:intersection:naive}) will be quite high.
+
+We describe a better intersection estimator due to Ertl \cite{ertl2017new}.
+This estimator is similar to the maximum likelihood estimator Eq.~(\ref{eq:poisson}), instead focusing on the joint distribution of a pair of sketched sets A and B.
+Accordingly, the estimator yields estimates of $|A \setminus B|$, $|B \setminus A|$, and $|A \cap B|$. 
+The algorithm depends on a similar optimization of a Poisson model application, where it is assumed that $|A \setminus B|$ is drawn from a Poisson distribution with parameter $\lambda_a$, and similarly $|B \setminus A|$ and $|A \cap B|$ use Poisson parameters $\lambda_b$ and $\lambda_x$. These parameters can be related to the observed HyperLogLog register lists corresonding to $A$ and $B$, $\mathbf{r}^{(A)}$ and $\mathbf{r}^{(B)}$, via a loglikelihood function $\mathcal{L}(\lambda_a, \lambda_b, \lambda_x \mid \mathbf{r}^{(A)}, \mathbf{r}^{(B)})$. 
+This is Eq.~(70) in \cite{ertl2017new}, which we reproduce in Eq.~(\ref{eq:poisson:joint}) in this work. 
+%
+\begin{equation} \label{eq:poisson:joint}
+	\begin{aligned}
+		\mathclap{\mathcal{L}(\lambda_a, \lambda_b, \lambda_x \mid \mathbf{r}^{(A)}, \mathbf{r}^{(B)}) =} \\
+		&\sum_{k=1}^q \log \left ( 1 - e^{-\frac{\lambda_a + \lambda_x}{r2^k}} \right ) \mathbf{c}^{(A), <}_k 
+		+ \log \left ( 1 - e^{-\frac{\lambda_b + \lambda_x}{r2^k}} \right ) \mathbf{c}^{(B), <}_k\\
+		+ &\sum_{k=1}^{q+1} \log \left ( 1 - e^{-\frac{\lambda_a}{r2^{\min\{k,q\}}}} \right ) \mathbf{c}^{(A), >}_k
+		+ \log \left ( 1 - e^{-\frac{\lambda_b}{r2^{\min\{k,q\}}}} \right ) \mathbf{c}^{(B), >}_k \\
+		+ &\sum_{k=1}^{q+1} \log \left ( 1 - e^{-\frac{\lambda_a + \lambda_x}{r2^{\min\{k,q\}}}} 
+				- e^{-\frac{\lambda_b + \lambda_x}{r2^{\min\{k,q\}}}} + e^{-\frac{\lambda_a + \lambda_b + \lambda_x}{r2^{\min\{k,q\}}}} \right ) \mathbf{c}^{=}_k \\
+		- &\frac{\lambda_a}{r} \sum_{k=0}^q \frac{\mathbf{c}^{(A),<}_k + \mathbf{c}^{=}_k + \mathbf{c}^{(A),>}_k}{2^k}
+		- \frac{\lambda_b}{r} \sum_{k=0}^q \frac{\mathbf{c}^{(B),<}_k + \mathbf{c}^{=}_k + \mathbf{c}^{(B),>}_k}{2^k}
+		- \frac{\lambda_x}{r} \sum_{k=0}^q \frac{\mathbf{c}^{(A),<}_k + \mathbf{c}^{=}_k + \mathbf{c}^{(B),<}_k}{2^k}
+	\end{aligned}
+\end{equation}
+%
+Like Eq. \eqref{eq:poisson}, this function depends on the statistics:
+%
+\begin{equation} \label{eq:cs}
+	\begin{alignedat}{2}
+		&\mathbf{c}^{(A),<}_k &= |\{i \mid k = \mathbf{r}^{(A)}_i < \mathbf{r}^{(B)}_i \}|, \\
+		&\mathbf{c}^{(A),>}_k &= |\{i \mid k = \mathbf{r}^{(A)}_i > \mathbf{r}^{(B)}_i \}|, \\
+		&\mathbf{c}^{(B),<}_k &= |\{i \mid k = \mathbf{r}^{(B)}_i < \mathbf{r}^{(A)}_i \}|, \\ 
+		&\mathbf{c}^{(B),>}_k &= |\{i \mid k = \mathbf{r}^{(B)}_i > \mathbf{r}^{(A)}_i \}|, \\
+		&\mathbf{c}^{=}_k &= |\{i \mid k = \mathbf{r}^{(A)}_i = \mathbf{r}^{(B)}_i \}|,
+  \end{alignedat}
+\end{equation} 
+%
+which capture the differences in register list distribution.
+The Na\"ive inclusion-exclusion estimator implemented using the maximum likelihood optimization of Eq.~(\ref{eq:poisson}) depends on the count statistics %
+\begin{equation} \label{eq:naivecs}
+	\begin{alignedat}{2}
+		&\mathbf{c}^{(A)} &= \mathbf{c}^{(A),<} + \mathbf{c}^= + \mathbf{c}^{(A),>}\mathbf{c}, \\
+		&\mathbf{c}^{(B)} &= \mathbf{c}^{(B),<} + \mathbf{c}^= + \mathbf{c}^{(B),>}\mathbf{c}, \\
+		&\mathbf{c}^{(A \cup B)} &= \mathbf{c}^{(A),>} + \mathbf{c}^= + \mathbf{c}^{(B),>}\mathbf{c}, \\
+  \end{alignedat}
+\end{equation} 
+%
+which loses information present in the statistic Eq.~\eqref{eq:cs}.
+%and Jaccard difference estimators do not utilize the information in the statistic \eqref{eq:cs}.
+Algorithm 9 of \cite{ertl2017new} describes the estimation of $|A \setminus B|$, $|B \setminus A|$, and $|A \cap B|$ by accumulating the sufficient statistic \eqref{eq:cs} and using it to find the maximum of Eq.~\eqref{eq:poisson:joint} via maximum likelihood estimation.
+The author shows extensive simulation evidence indicating that this method significantly improves upon the estimation error of a na\"ive estimator.
+They also show evidence suggesting that this estimator can be used to obtain a better estimate of $|A \cup B|$ than the na\"ive method, which involves composing a new sketch by computing the elementwise maximum of each register and taking its estimate.
+In the parlance of Algorithm~\ref{alg:hll:vanilla} this is tantamount to computing $\algoname{Estimate} \left ( \algoname{Merge} \left ( S^{(A)}, S^{(B)} \right ) \right )$. 
+We reaffirm these conclusion with our findings in Section \ref{DS:sec:experiments}, where we use this algorithm to estimate the intersection of sets underlying pairs of sketches.
+
+Algorithm~\ref{alg:hll:estimation} summarizes the various estimation procedures that we have described. 
+
+
+%
+\begin{algorithm}[htbp] 
+\caption{\algoname{HyperLogLog} Maximum Likelihood Estimators}\label{alg:hll:estimation}
+\begin{algorithmic}[1]
+%
+	\Function{Estimate}{$S$}
+		\State Compute a statistic $\mathbf{c}$ of form Eq.~\eqref{eq:c}
+		\State \Return MLE of \eqref{eq:cs} (e.g. Algorithm 8 of \cite{ertl2017new})
+	\EndFunction
+%
+	\Function{Na\"iveIntersection}{$S^{(A)}, S^{(B)}$}
+		\State \Return $\algoname{Estimate} \left( S^{(A)} \right ) + \algoname{Estimate} \left ( S^{(B)} \right )$ \par
+			\hskip\algorithmicindent $\quad -  \algoname{Estimate} \left ( \algoname{Merge} \left ( S^{(A)}, S^{(B)} \right ) \right )$
+	\EndFunction
+%
+%	\Function{Na\"iveIntersection}{$S^{(A)}, S^{(B)}$}
+%		\State \Return $\algoname{Estimate} \left( S^{(A)} \right ) + \algoname{Estimate} \left ( S^{(B)} \right )$ \par
+%			\hskip\algorithmicindent $\quad -  \algoname{EstimateUnion} \left ( S^{(A)}, S^{(B)} \right )$
+%	\EndFunction
+%
+	\Function{EstimateUnion}{$S^{(A)}, S^{(B)}$}
+		\State Compute statistics $\mathbf{c}^{(A), <}, \mathbf{c}^{(A), >}, \mathbf{c}^{(B), <}, \mathbf{c}^{(>), >}$ and $\mathbf{c}^{=}$  of form (\ref{eq:cs})
+		\State \Return sum of MLEs of \eqref{eq:poisson:joint} (e.g. Algorithm 9 of \cite{ertl2017new})
+	\EndFunction
+%
+	\Function{EstimateIntersection}{$S^{(A)}, S^{(B)}$}
+		\State Compute statistics $\mathbf{c}^{(A), <}, \mathbf{c}^{(A), >}, \mathbf{c}^{(B), <}, \mathbf{c}^{(>), >}$ and $\mathbf{c}^{=}$  of form (\ref{eq:cs})
+		\State \Return Intersection MLE of \eqref{eq:poisson:joint} (e.g. Algorithm 9 of \cite{ertl2017new})
+	\EndFunction
+\end{algorithmic}
+\end{algorithm}
 
 
 %----------------------------------------------------------------------------------------
