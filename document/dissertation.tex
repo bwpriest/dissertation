@@ -2139,7 +2139,7 @@ This unequal distribution of labor poses problems for handling communication tha
 Consider, for example, the famous Google Pregel framework \cite{malewicz2010pregel}.
 Pregel was the first proposed vertex-centric processing frameworks, where communication is handled in a series of synchronous communication rounds.
 Others have noted that this synchronicity results in poor performance in practice, as processing moves at the speed of the slowest processor \cite{pearce2014faster, junghanns2017management}.
-In some degenerate cases synchronous implementations of algorithms are entirely unable to complete in reasonable amounts of time compared to asynchronous implementations \cite{junghanns2017management}.
+In some pathological cases synchronous implementations of algorithms are entirely unable to complete in reasonable amounts of time compared to asynchronous implementations \cite{junghanns2017management}.
 Consequently, not only is bandwidth not utilized during processing rounds, but many processors may remain idle while waiting for communication.
 
 A different approach uses fully asynchronous communication, wherein processors communicate with one another in a point-to-point fashion as required by the algorithm.
@@ -2185,7 +2185,7 @@ We use the term \emph{local} to refer to communications wherein the source and d
 We meanwhile use \emph{remote} to refer to the converse situation, where the endpoints of a message exist on different nodes. 
 
 The key insight to this analysis is that remote communication requires the transmission of messages over a wire, whereas local communication is handled in shared memory of a single machine. 
-The latter is generally more costly.
+The former is generally more costly.
 Consequently, we seek to minimize the number of discrete remote messages and channels.
 Aggregating messages improves bandwidth utilization and reduces overhead, while  partitioning routing into channels increases asynchronicity. 
 %We also seek to constrain the maximum number of direct communication partners for each processor, meaning that most messages are received by at least one intermediary during transmission. 
@@ -2211,7 +2211,8 @@ All messages due to each destination core, as well as any messages routed throug
 Each member of an exchange may be responsible for forwarding communication in a later exchange.
 We call these forwarding processes intermediaries.
 At the end of an exchange phase, we assume that each process holds all outbound messages intended either for it or for one of the exterior processes for which it is an intermediary.
-Exchanges are triggered upon entering a communication context in a distributed program, either due to reaching a maximum number of out
+Exchanges are triggered upon entering a communication context in a distributed program.
+This occurs either due to reaching a maximum number of batched messages, or is manually flushed by the high level program.
 In this document we consider two types of exchanges: \emph{local} and \emph{remote}.
 
 A local exchange consists of all of the processes on a single compute node, and occurs in shared memory. 
@@ -2290,10 +2291,10 @@ Whereas the node local protocol accumulates all messages to a particular process
 If the distribution over sender-receiver pairs is roughly uniform in an application, then the two protocols should exhibit similar performance.
 However, node remote performs much better in the presence of a large number of broadcasts. 
 In node remote, a broadcast generates only $N-1$ remote messages.
-This means that Node Remote uses less bandwidth per broadcast than Node Local, at a gain of $O \left (\frac{1}{C} \right )$
+This means that Node Remote uses less bandwidth per broadcast than Node Local, at a gain of $O \left (\frac{1}{C} \right )$.
 The broadcasting work is pushed onto the (typically much faster) shared memory local exchanges. 
-However, the opposite relationship is true for many-to-one communications, such as those of a gather or reduce operation.
-We will illustrate these relationships in greater detail in Section~\ref{async:sec:experiments}.
+%However, the opposite relationship is true for many-to-one communications, such as those of a gather or reduce operation.
+%We will illustrate these relationships in greater detail in Section~\ref{async:sec:experiments}.
 
 \bigskip
 \noindent
@@ -2309,7 +2310,7 @@ These messages are sent along $C$ parallel communication channels, each includin
 
 The final protocol we discuss in this document improves upon both the messages per round as well as the communication channel size.
 The NLNR protocol reduces the number of remote communication channels to the theoretical minimum, while still allowing each node to communicate directly with every other node by eliminating redundancy.
-Consider that the a message originating at node $n_1$ to might be transmitted along any of $C$ different remote channels to node $n_2$ using node local or node remote.
+Consider that a message originating at node $n_1$ might be transmitted along any of $C$ different remote channels to node $n_2$ using node local or node remote.
 In NLNR, there is only one channel connecting each such pair of nodes. 
 
 \begin{figure}
@@ -2329,15 +2330,15 @@ In NLNR, there is only one channel connecting each such pair of nodes.
 
 
 In order to facilitate this reduction in channels, the protocol need occur in three stages: an initial local exchange, a more complex remote exchange, and a final local exchange.
-This more complex remote exchange can be described by taking a clique connecting each node to every other node and assigns to each edges a single core on each incident node.
-It is helpful to separate this clique 
-Figure~\ref{fig:nlnr} illustrates a sample
+This more complex remote exchange can be described by taking a clique connecting each node to every other node and assigning to each edge a single core on each incident node.
+%It is helpful to separate this clique 
+Figure~\ref{fig:nlnr} illustrates an example remote exchange where $N=8$, $C=4$ and $L=2$.
 
-It is helpful to visualize how the topology of the remote exchange to explain the whole process. 
-We must ensure that each node has an intermediary core responsible for each remote node, so that when viewed as a graph the topology of and subset of nodes and their communication channels forms a clique. 
+It is helpful to visualize the topology of the remote exchange to explain the whole process. 
+We must ensure that each node has an intermediary core responsible for each remote node, so that when viewed as a graph the topology of any subset of nodes and their communication channels forms a clique. 
 This constraint leads to a natural ``layering'' of the nodes, where each notional layer consists of $C$ nodes. 
 For convenience, in addition to their node offset $n \in [N]$, we assign to each node a \emph{layer offset} $\ell = n \mod C$.
-Further, we enforce the rule that for $(n,c) \in [N] \times [C]$ is an intermediary for all cores on node $n^\prime$, where $c = n^\prime \mod C$ with corresponding intermediaries $(n^\prime, c^\prime)$ where $c^\prime = n \mod C$. 
+Further, we enforce the rule that $(n,c) \in [N] \times [C]$ is an intermediary for all cores on node $n^\prime$, where $c = n^\prime \mod C$ with corresponding intermediaries $(n^\prime, c^\prime)$ where $c^\prime = n \mod C$. 
 Fig.~\ref{fig:intra_layer_nlnr} depicts such a topology for a single layer, whose connections form a clique. 
 Note that cores with addresses of the form $(n, c)$ where $c = n \mod C$ do not participate in any communication within a layer. 
 These cores only communicate with their corresponding cores in nodes whose layer offsets match their own. 
@@ -2374,8 +2375,9 @@ Recall that node local and node remote each require $C$ communication channels, 
 NLNR, however, requires ${C \choose 2} + C$ channels, each including $2\frac{N}{C}$ cores (aside from the self-offset channels, which include $\frac{N}{C}$ cores each).
 Such a channel consists of all the address pairs $(n, c)$, $(n^\prime, c^\prime)$ where $c = \ell^\prime = n^\prime \mod C$ and $c^\prime = \ell = n \mod C$ for some $(\ell, \ell^\prime) \in [C]^2$.
 
-It turns out that this is, in fact, the minimum achievable channel size  given our constraint that each node communications directly with each other node.
-
+%It turns out that this is, in fact, the minimum achievable channel size  given our constraint that each node communications directly with each other node.
+It is worth noting that there are many other specific assignments of cores to channels possible. 
+We did not find that other assignments exhibited sufficiently different behavior, and so we will forgo a discussion thereof. 
 
 %----------------------------------------------------------------------------------------
 \section{Experiments} \label{async:sec:experiments}
