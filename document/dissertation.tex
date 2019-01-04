@@ -330,16 +330,22 @@ In the \emph{cash register} model only positive updates are permitted, whereas i
 \noindent
 \textbf{Data sketching}:
 Let $\circ$ be the concatenation operator on streams.
-For $\mathcal{A}$ a streaming algorithm, we call its data structure $\mathcal{S}$ a \emph{sketch} if there is an operator $\oplus$ such that, for any streams $\sigma_1$ and $\sigma_2$, 
+For $\mathcal{A}$ a streaming algorithm, we call its data structure $\mathcal{S}$ a \emph{sketch transform} if there is an operator $\oplus$ such that, for any streams $\sigma_1$ and $\sigma_2$, 
 %
 \begin{equation} \label{eq:merge}
 \mathcal{S}(\sigma_1) \oplus \mathcal{S}(\sigma_2) = \mathcal{S}(\sigma_1 \circ \sigma_2).
 \end{equation}
 %
+$\mathcal{S}$ is usually determined by sampling hash functions from a suitable hash family. 
+We will call the distribution over such samples $\Pi$ a \emph{sketch distribution}.
+The accumulated object $\mathcal{S}(\sigma)$ is a sketch data structure.
+We will sometimes abuse terms and refer to $\Pi$, $\mathcal{S}$, and $\mathcal{S}(\sigma)$ as \emph{sketches}.
+The space of all possible sketch data structures given a sketch transform $\mathcal{S}$ is the sketch space $\mathbb{S}_\mathcal{S}$.
+$(\mathbb{S}_\mathcal{S}, \oplus)$ forms a commutative monoid, where the operator identity is the result of applying $\mathbb{S}$ to an empty stream.
 
 \noindent
 \textbf{Linear sketching}:
-A sketch $\mathcal{S}$ is a \emph{linear sketch} if it is a linear function of $\mathbf{f}(\cdot)$ of fixed dimension.
+A sketch distribution $\Pi$ is a \emph{linear sketch} distribution if $\mathcal{S} \sim \Pi$ is a linear function of frequency vectors $\mathbf{f}(\cdot)$ of fixed dimension.
 %Typically $\mathcal{S}$ is drawn from a distribution $\Pi$ over such transforms.
 %We will abuse terminology by referring to sketch distributions, sketch transforms, and sketch data structures as sketches where it is clear which is referenced.
 %In particular, any turnstile streaming algorithm uses a linear sketch as a data structure \cite{li2014turnstile}.
@@ -350,11 +356,13 @@ For streams $\sigma_1$ and $\sigma_2$ with frequency vectors $\mathbf{f}_1$ and 
 a\mathcal{S}(\mathbf{f}_1) + b\mathcal{S}(\mathbf{f}_2) = \mathcal{S}(a\mathbf{f}_1 + b\mathbf{f}_2).
 \end{equation}
 %
+The sketch space and the $+$ operator form a commutative group, where the operator identity is the sketch transform applied to a zero vector.
 
 \noindent
 \textbf{The graph stream model}:
-In this model, the stream $\sigma$ consists of edge insertions on $n$ vertices. 
-The \emph{dynamic graph stream model} also allows edge deletions,
+In this model, the stream $\sigma$ consists of $m$ edge insertions on $n$ vertices. 
+This is sometimes termed the \emph{insert only} model in the literature.
+The \emph{dynamic graph stream model} also allows edge deletions.
 If the graph is weighted, the stream updates the weight of the corresponding edge, possibly bringing it into existence or, in the case of dynamic streams, deleting it.
 
 
