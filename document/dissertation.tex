@@ -1611,7 +1611,7 @@ Jowhari et al. \cite{jowhari2011tight} improved upon these space bounds.
 In particular, they proved that $\ell_0$ and $\ell_1$ sampling sketches require $O(\log^2 n \log \delta^{-1})$ and $O(\varepsilon^{-1} \log \varepsilon^{-1} \log^2 n \log \delta^{-1})$ space, respectively.
 Note that both have only a polylogarithmic dependence on $n$, and $\ell_0$-sampling sketches can achieve arbitrary sampling precision at no additional cost. 
 Further note that we make use of the convention that $0^0 = 0$ in Definition~\ref{def:lp-sample}.
-Vu improves these sampling sketches with algorithms that allow the simultaneous accumulation of $s$ sampling sketches for a single vector $\mathbf{f}$ in the same asymptotic update times, i.e. without dependence upon $s$ so long as $s = o(\|\mathbf{f}\|_0)$.
+Vu improves these sampling sketches with algorithms that allow the simultaneous accumulation of $s$ sampling sketches for a single vector $\mathbf{f}$ in the same asymptotic update times, i.e. without dependence upon $s$ so long as $s = o(\|\mathbf{f}\|_0)$ \cite{vu2018data}.
 %Interestingly, the main ingredients in these sketches are applications of the famous \algoname{Tug-of-War} and \algoname{CountSketch} sketches.
 %\algoname{Tug-of-War} is a sketch family that can return approximations of $\|\mathbf{f}\|_p$ for $p \in (0, 2]$ using $\widetilde{O}(\varepsilon^{-2}\log (1/\delta))$ space.
 %\algoname{CountSketch} is related to the \algoname{CountMinSketch} we used in Chapter~\ref{chap:dc}, but is robust to fully turnstile streams using $\widetilde{O}(\varepsilon^{-2}\log (1/\delta))$ space.
@@ -2385,7 +2385,7 @@ It turns out that this is, in fact, the minimum achievable channel size  given o
 
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
-\chapter{\algoname{DegreeSketch} and Local Triangle Count Heavy Hitters}
+\chapter{\algoname{DegreeSketch} with Applications to Neighborhood Approximation and Local Triangle Count Heavy Hitter Estimation}
  \label{chap:DS}
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
@@ -3567,7 +3567,7 @@ If the ground truth intersection is small relative to $|A|$ and $|B|$, however, 
 
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
-\chapter{Sublinear Distributed sampling of random walks via fast $\ell_p$-sampling sketches}
+\chapter{Distributed Sublinear Random Walk Simulation with Applications to Betweenness Centrality Heavy Hitter Recovery}
  \label{chap:walks}
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
@@ -3577,6 +3577,9 @@ We extend this analysis to include random walk variants, with a focus on random 
 We employ the same fast $\ell_p$ sampling sketches introduced in Section~\ref{sec:lp-sample} to bound the amount of working memory required to  sample from each vertex. 
 By storing the adjacency stream for each hub in fast storage, we can accumulate $\ell_p$ sampling sketches on demand.
 We are then able to afford the distributed, parallel sampling of random walks using sublinear distributed memory at the cost of I/O access. 
+
+We also demonstrate how this distributed framework can be applied to estimating $\kappa$-path centrality.
+$\kappa$-path centrality is notable for its empirical agreement with betweenness centrality on heavy hitters, as well as its relative ease of computation compared to the notoriously resource-hungry betweenness centrality. 
 
 
 
@@ -3617,53 +3620,82 @@ The authors also demonstrate an algorithm requiring $\widetilde{O}(\sqrt{ktD} + 
 As these bounds depend on the diameter of $\mathcal{G}$, they are practical only when $t \gg D$. 
 Furthermore, although these algorithms reduce the maximum number of \emph{sequential} computations required to sample random walks in such a situation, they may result in much more actual bandwidth usage than the na\"ive approach. 
 
+
 We will instead focus on augmenting the na\"ive distributed random walk sampling algorithm, by reducing the amount of working memory demanded by hub vertices.
-We do so by leveraging
-
-
-%%----------------------------------------------------------------------------------------
-%\subsection{Fast $\ell_p$ sampling sketches}
-% \label{walks:sec:sampling}
-%%----------------------------------------------------------------------------------------
-
+We do so by leveraging reservoir sampling and the $\ell_p$ sampling sketches discussed in Section~\ref{sec:lp-sample} in a distributed scheme similar to \algoname{DegreeSketch}, discussed in Chapter~\ref{chap:DS} utilizing an asynchronous communication protocol such as \algoname{YGM} discussed in Chapter~\ref{chap:async}.
 
 %----------------------------------------------------------------------------------------
-\section{Distributed Sublinear Sampling of Random Walks}
- \label{walks:sec:walks}
+\subsection{Streaming Random Walks}
+ \label{walks:sec:streaming:rw}
 %----------------------------------------------------------------------------------------
 
 The hop probabilities Eq.~\eqref{eq:walk:unweighted} and Eq.~\ref{eq:walk:weighted} naturally correspond to $\ell_p$ sampling, as discussed in Section~\ref{sec:lp-sample}.
-Hence, it might be natural to 
+Recall that a single $\ell_p$ sampling sketch of a frequency vector $\mathbf{f}$ can be used to obtain $i$, where $i$ is sampled with probability $(1 \pm \varepsilon)\frac{|\mathbf{f}_i|^p}{\|\mathbf{f}\|_p}$ with failure probability $\delta$, where $\ell_0$ sampling sketches require $O \left ( \log^2 n \log \frac{1}{\delta} \right)$ space and $\ell_1$ sampling sketches require $O \left ( \frac{1}{\varepsilon} \log \frac{1}{\varepsilon} \log^2 n \log \frac{1}{\delta} \right )$ space.
+Hence, it is natural to apply $\ell_p$ sampling sketches to the problem of simulating random walks.
 
-%----------------------------------------------------------------------------------------
-\section{Distributed Sublinear Sampling of Random Simple Paths}
- \label{walks:sec:paths}
-%----------------------------------------------------------------------------------------
+As discussed in Section~\ref{sec:lp-sample}, each sketch can be used to obtain one sample only. 
+Subsequent samples require ``fresh'' sketches.
+So, consider the na\"ive algorithm that accepts a turnstile graph stream $\sigma$ defining $\mathcal{G}$.
+Consider that each update $(x, y, c)$ to $\sigma$ can be interpreted as an update to $A_{x,y}$.
+Sample $t = \widetilde{O}(1)$ $\ell_0$ sketch transforms $S_1, \dots, S_t$. 
+In a pass over $\sigma$ accumulate $S_1A_{:,x}, \dots, S_t A_{:,x}$ For each $x \in \mathcal{V}$.
+Given start vertex $x_1$, then, sample $x_{i+1}$ from $S_i A_{:, x_i}$.
 
-
-%----------------------------------------------------------------------------------------
-\section{Distributed Sublinear Sampling of Random Subtrees}
- \label{walks:sec:trees}
-%----------------------------------------------------------------------------------------
-
-
-
-
-%----------------------------------------------------------------------------------------
-%----------------------------------------------------------------------------------------
-\chapter{Sublinear distributed $\kappa$-path centrality}
- \label{chap:kpath}
-%----------------------------------------------------------------------------------------
-%----------------------------------------------------------------------------------------
+One might expect that this procedure obtains a path $(x_1, \dots, x_t)$, however each sample suffers from a $\delta$ probability of failure. 
+Accounting for this failure yields the following theorem.
 
 
-%----------------------------------------------------------------------------------------
-\section{Introduction and Related Work}
- \label{kpath:sec:intro}
-%----------------------------------------------------------------------------------------
+\begin{theorem} \label{thm:dchh:cashregister}
+Let $\mathcal{G}$ be an unweighted graph given in a turnstile stream.
+An algorithm can return every vertex with degree $\geq \phi \|\mathbf{d}\|_1$, and avoid returning any vertices with degree $< (\phi - \varepsilon)\|\mathbf{d}\|_1$ with probability $1-\delta$.
+The algorithm requires space $O \left ( \varepsilon^{-1}\log \frac{n}{\delta} \right )$ and update time $O \left ( \log \frac{n}{\delta} \right )$.
+\end{theorem}
+
+\begin{proof}
+Note that $\|\mathbf{d}(t)\|_1$ increases monotonically with $t$ in a cash register stream. 
+If $t < t^*$ and a vertex's estimate is smaller than $\phi \|\mathbf{d}(t)\|_1$, it cannot be larger than $\phi \|\mathbf{d}(t^*)\|_1$ without its estimate due to $\mathcal{S}$ increasing by time $t^*$.
+We check the estimate for each vertex when an incident edge is updated and the estimates do not underestimate, so no heavy hitters are omitted.
+
+%Assume that $z \in \mathcal{V}$ is not a heavy hitter.
+Call the event where $\widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}_{x}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1$ for some $x \in \mathcal{V}$ a \emph{miss}.
+If $x \in \mathcal{V}$ participates in a miss, it is falsely output as a heavy hitter by the algorithm.
+By Theorem \ref{thm:cms:err}, an accumulated \algoname{CountMinSketch} data structure $\mathcal{S}$ with parameters $\varepsilon$ and $\delta^*$ guarantees that 
+%
+\begin{align*}
+n\delta^* 
+&>
+\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x - d_x > \varepsilon \|\mathbf{d}_{-x}\|_1 \right ] 
+& \\
+%&>
+%\sum_{z \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - d_x > \varepsilon \|d\|_1 \right ] \\
+%&\geq
+%\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - d_x > \varepsilon \|d\|_1 \wedge d_x < (\phi - \varepsilon) \|d\|_1 \right ] 
+%& \\
+&\geq
+\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x - (\phi - \varepsilon)\|\mathbf{d}\|_1 > \varepsilon \|d\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ] 
+& \\
+&=
+\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ] 
+& \text{i.e. sum of misses}  \\
+&\geq
+\Pr \left [ \bigvee_{x \in \mathcal{V}} \widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ].
+& \text{Union bound} \\
+\end{align*}
+We have shown that the probability that \emph{any} miss occurs is less than $n\delta^*$.
+By setting $\delta^* = \frac{\delta}{n}$ we guarantee that a miss occurs with probability at most $\delta$, obtaining our desired result.
+This also fixes the space and update time complexities.
+\end{proof}
+
+
+
+These algorithms are similar to others recently described by Jin \cite{jin2018simulating}. 
+
+Reservoir sampling is a sublinear memory sampling scheme defined on insert-only streams.
+
 
 %----------------------------------------------------------------------------------------
-\subsection{Betweenness Centrality} \label{sec:bc}
+\subsection{Betweenness Centrality} 
+\label{sec:bc}
 %----------------------------------------------------------------------------------------
 
 Betweenness Centrality is a popular centrality index that is related to closeness centrality \cite{freeman1977set}. 
@@ -3697,7 +3729,8 @@ Indeed, directly approximating betweenness centrality seems likely to be infeasi
 
 
 %----------------------------------------------------------------------------------------
-\subsection{$\kappa$-Path Centrality} \label{sec:kpc}
+\subsection{$\kappa$-Path Centrality} 
+\label{sec:kpc}
 %----------------------------------------------------------------------------------------
 
 Kourtellis et al. attempt to approximate the top-$k$ betweenness central vertices by way of relaxing its computation with the related $\kappa$-path centrality \cite{alahakoon2011k, kourtellis2013identifying}.
@@ -3717,8 +3750,35 @@ Moreover, this algorithm is much more efficient than other attempts to approxima
 Finally, $\kappa$-Path centrality is desirable in that it depends only on $\kappa$-local features of the graph when considering any particular vertex.
 
 
+%%----------------------------------------------------------------------------------------
+%\subsection{Fast $\ell_p$ sampling sketches}
+% \label{walks:sec:sampling}
+%%----------------------------------------------------------------------------------------
+
+
 %----------------------------------------------------------------------------------------
-\subsection{Semi-Streaming Approximation of Betweenness Centrality Heavy Hitters via $\kappa$-Path Centrality} \label{sec:sskpc}
+\section{Distributed Sublinear Sampling of Random Walks}
+ \label{walks:sec:walks}
+%----------------------------------------------------------------------------------------
+
+We will first discuss a serial algorithm, and then extend a distributed version.
+
+
+%----------------------------------------------------------------------------------------
+\section{Distributed Sublinear Sampling of Random Simple Paths}
+ \label{walks:sec:paths}
+%----------------------------------------------------------------------------------------
+
+
+%----------------------------------------------------------------------------------------
+\section{Distributed Sublinear Sampling of Random Subtrees}
+ \label{walks:sec:trees}
+%----------------------------------------------------------------------------------------
+
+
+%----------------------------------------------------------------------------------------
+\section{Application: Semi-Streaming Approximation of Betweenness Centrality Heavy Hitters via $\kappa$-Path Centrality} 
+\label{sec:sskpc}
 %----------------------------------------------------------------------------------------
 
 It is unclear how to sublinearize approximating the betweenness centrality of a vertex.
@@ -3763,6 +3823,8 @@ Even if the empirical accuracy is substandard compared to state-of-the-art techn
 \section{Sublinear Distributed $\kappa$-Path Centrality}
  \label{kpath:sec:alg}
 %----------------------------------------------------------------------------------------
+
+
 
 
 
