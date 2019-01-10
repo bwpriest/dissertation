@@ -185,8 +185,9 @@ Massamilano Albanese,
 Roger Pearce,
 Geoffrey Sanders,
 Keita Iwabuchi, 
-and
-Trevor Steil.
+Trevor Steil,
+and 
+Jordan Katz.
 I would especially like to thank Roger Pearce and Geoffrey Sanders for their mentorship during my time at Lawrence Livermore National Laboratory. 
 
 I must extend my sincere gratitude to Ellen Woerta for her administrative assistance, without whom I would have been lost and confused during much of my time at Dartmouth.
@@ -303,6 +304,7 @@ For $t \in [m]$, we will sometimes refer to the state of $\sigma$ after reading 
 A streaming algorithm $\mathcal{A}$ accumulates a data structure $\mathcal{S}$ while reading over $\sigma$. 
 We will sometimes use the notation $\mathcal{D}(\sigma)$ to indicate the data structure state after $\mathcal{A}$ has accumulated $\sigma$. 
 Authors generally assume $|\mathcal{D}| = \widetilde{O}(1) = O(\log m + \log n)$, where here the tilde suppresses logarithmic factors.
+We will also adopt the convention that, except where noted otherwise, we present space complexities in terms of machine words rather than bits.
 Except where noted otherwise, we will assume the base 2 logarithm in our presentation.
 
 \noindent
@@ -659,6 +661,7 @@ For convenience of reference and indexing, we will often assume that $\mathcal{V
 %For convenience, we will usually assume that $\mathcal{V} = \{ 0, 1, \dots, n -1 \}$ and use elements of $V$ as subscripts.
 We denote an edge connecting $x, y \in \mathcal{V}$ as $xy \in \mathcal{E}$. 
 In general we will assume that $\mathcal{G}$ is an  undirected graph, except where noted otherwise. 
+When we want to specify a direction on an edge, we will use the tuple notation $(x, y)$ for $x, y \in \mathcal{V}$.
 If $\mathcal{G}$ is a weighted graph, then $\mathbf{w} \in \mathbb{R}^{{n \choose 2}}$ is the vector of edge weights. 
 For $x, y \in \mathcal{V}$, $\mathbf{w}_{xy} \in \mathbb{R}_{\geq 0}$ is the weight associated with the edge $xy$ if $xy \in \mathcal{E}$, and is zero otherwise.
 If $\mathcal{G}$ is unweighted, then $\mathbf{w}_e = 1$ for every $e \in \mathcal{E}$. 
@@ -1754,7 +1757,7 @@ As the spanner and analysis applies for both weighted and unweighted graphs, we 
 Let $\mathcal{H}$ be the subgraph spanner of $\mathcal{G}$ output by the algorithm corresponding to Theorem \ref{thm:spanner}.
 Then for all $x \in \mathcal{V}$
 %
-\begin{equation} \label{eq:spanner:cc}
+\begin{equation} \label{eq:spanner:cc:heavy}
 \mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x) - \mathcal{C}^{\algoname{Close}}_{\mathcal{H}}(x) \leq \left ( 1 - \frac{1}{k^{\log 5} - 1} \right ) \mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x).
 \end{equation}
 %
@@ -1776,7 +1779,7 @@ Let $\mathcal{H}$ be the subgraph spanner of $\mathcal{G}$ output by the algorit
 For $x \in \mathcal{V}$, let $\widetilde{\mathcal{C}}^{\algoname{Close}}_{\mathcal{H}}(x)$ be the approximation output by the algorithm of Theorem~\ref{thm:cc:approx}. 
 Then for all $x \in \mathcal{V}$,
 %
-\begin{equation} \label{eq:spanner:cc}
+\begin{equation} \label{eq:spanner:cc:light}
 \mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x) - \widetilde{\mathcal{C}}^{\algoname{Close}}_{\mathcal{H}}(x) \leq \left ( 1 - \frac{1 - O(\varepsilon)}{k^{\log 5}} \right ) \mathcal{C}^{\algoname{Close}}_{\mathcal{G}}(x).
 \end{equation}
 %
@@ -2408,7 +2411,7 @@ We discuss the advantages and limitations of this approach, and present empirica
 
 %----------------------------------------------------------------------------------------
 \section{Introduction and Related Work}
- \label{DS:sec:DS}
+ \label{DS:sec:intro}
 %----------------------------------------------------------------------------------------
 
 Counting the number of triangles in graphs is a canonical problem in both the RAM and streaming models.
@@ -2872,7 +2875,7 @@ We will explore this problem in Section~\ref{DS:sec:intersections} and provide e
 
 Given access to a trained \algoname{DegreeSketch} $\mathcal{D}$ and $A_{:,x}$, we can compute an estimate of $\mathcal{C}^{\algoname{Tri}}(x)$ using
 %
-\begin{equation} \label{eq:tri:edge}
+\begin{equation} \label{eq:tri:vertex}
 	\widetilde{\mathcal{C}}^{\algoname{Tri}}(x) 
 	= \frac{1}{2} \sum_{y: A_{y,x} \neq 0} \widetilde{\mathcal{C}}^{\algoname{Tri}}(xy)  
 	= \frac{1}{2} \sum_{y: A_{y,x} \neq 0} \mathcal{D}[x] \widetilde{\cap} \mathcal{D}[y].
@@ -3620,6 +3623,22 @@ In a weighted graph, the neighbors are sampled with probability relative to thei
 These definitions are equivalent whether $\mathcal{G}$ is directed or undirected.
 Typically in applications a length $t$ and a start vertex $x_0$ are given, after which $t$ samples of the form Eq.~\eqref{eq:walk:unweighted} or Eq.~\ref{eq:walk:weighted} occur.
 
+The total probability of a particular random walk of length $t$ starting from $s \in \mathcal{V}$ is given by 
+%
+\begin{equation} \label{eq:walk:prob}
+\Pr_{\textnormal{rw}(s,t)} [(x_0, x_1, \dots, x_t)] = \mathbf{1}_{[x_1 = s]} \prod\limits_{i = 0}^{t-1} \frac{A_{x_{i+1}, x_i}}{\|A_{:,x_i}\|_1}.
+\end{equation}
+%
+For two distributions $P$ and $Q$ over the same set $\mathcal{U}$, their $\ell_1$ distance is given by
+%
+\begin{equation} \label{eq:distribution:distance}
+\|P - Q\|_1 = \sum_{u \in \mathcal{U}} | P(u) - Q(u)|.
+\end{equation}
+%
+Let $\widetilde{\Pr}_{\textnormal{rw}(s,t)}$  be the output distribution over $\mathcal{V}^{t+1}$ of a randomized algorithm $\mathcal{A}$ simulating $t$-length random walks starting from $s$.
+We say that $\mathcal{A}$  simulates random walks within error $\varepsilon$ if $\|\widetilde{\Pr}_{\textnormal{rw}(s,t)} - \Pr_{\textnormal{rw}(s,t)}\|_1 \leq \varepsilon$.
+If $\varepsilon = 0$, we way $\mathcal{A}$ is a \emph{perfect} simulation.
+
 In distributed memory na\"ive implementation of random walk sampling using some vertex partitioning generates $O(t)$ communications, where each communication consists of the path generated thus far and is sent to the owner of the most recently sampled vertex. 
 If we are locked in a Pregel-style synchronous communication scheme, this corresponds to $O(t)$ rounds required to sample any number of walks of length $t$. 
 Das Sarma et al. proposed distributed algorithms for performing random walks in fewer rounds \cite{das2013distributed}.
@@ -3639,68 +3658,321 @@ We do so by leveraging reservoir sampling and the $\ell_p$ sampling sketches dis
  \label{walks:sec:streaming:rw}
 %----------------------------------------------------------------------------------------
 
-The hop probabilities Eq.~\eqref{eq:walk:unweighted} and Eq.~\ref{eq:walk:weighted} naturally correspond to $\ell_p$ sampling, as discussed in Section~\ref{sec:lp-sample}.
-Recall that a single $\ell_p$ sampling sketch of a frequency vector $\mathbf{f}$ can be used to obtain $i$, where $i$ is sampled with probability $(1 \pm \varepsilon)\frac{|\mathbf{f}_i|^p}{\|\mathbf{f}\|_p}$ with failure probability $\delta$, where $\ell_0$ sampling sketches require $O \left ( \log^2 n \log \frac{1}{\delta} \right)$ space and $\ell_1$ sampling sketches require $O \left ( \frac{1}{\varepsilon} \log \frac{1}{\varepsilon} \log^2 n \log \frac{1}{\delta} \right )$ space.
+Das Sarma et al. demonstrated the first random walk sampling algorithm in the literature, using $O(n)$ memory and $O(\sqrt{t})$ passes over the graph \cite{sarma2011estimating}. 
+The authors questioned whether random walks could be simulated using fewer passes in the semi-streaming model. 
+
+If $\mathcal{G}$ is given in a dynamic stream, the hop probabilities Eq.~\eqref{eq:walk:unweighted} and Eq.~\ref{eq:walk:weighted} naturally correspond to $\ell_p$ sampling on the columns of $A$, as discussed in Section~\ref{sec:lp-sample}.
+Recall that a single $\ell_p$ sampling sketch of a frequency vector $\mathbf{f}$ can be used to obtain $(i, P)$, where $i$ is sampled with probability $P = (1 \pm \varepsilon)\frac{|\mathbf{f}_i|^p}{\|\mathbf{f}\|_p}$ with failure probability $\delta$, where $\ell_0$ sampling sketches require $O \left ( \log^2 n \log \frac{1}{\delta} \right)$ space and $\ell_1$ sampling sketches require $O \left ( \frac{1}{\varepsilon} \log \frac{1}{\varepsilon} \log^2 n \log \frac{1}{\delta} \right )$ space.
 Hence, it is natural to apply $\ell_p$ sampling sketches to the problem of simulating random walks.
 
+
 As discussed in Section~\ref{sec:lp-sample}, each sketch can be used to obtain one sample only. 
-Subsequent samples require ``fresh'' sketches.
+%Furthermore, if the sketch transform $S$ is applied to each vertex, only \emph{one} independent sample can be obtained from any of the resulting sketch data structures. 
+Subsequent samples require ``fresh'' sketches in order to maintain the independence of the samples.
 So, consider the na\"ive algorithm that accepts a turnstile graph stream $\sigma$ defining $\mathcal{G}$.
 Consider that each update $(x, y, c)$ to $\sigma$ can be interpreted as an update to $A_{x,y}$.
 Sample $t = \widetilde{O}(1)$ $\ell_0$ sketch transforms $S_1, \dots, S_t$. 
 In a pass over $\sigma$ accumulate $S_1A_{:,x}, \dots, S_t A_{:,x}$ For each $x \in \mathcal{V}$.
 Given start vertex $x_1$, then, sample $x_{i+1}$ from $S_i A_{:, x_i}$.
 
-One might expect that this procedure obtains a path $(x_1, \dots, x_t)$, however each sample suffers from a $\delta$ probability of failure. 
-Accounting for this failure yields the following theorem.
-
-
-\begin{theorem} \label{thm:dchh:cashregister}
-Let $\mathcal{G}$ be an unweighted graph given in a turnstile stream.
-An algorithm can return every vertex with degree $\geq \phi \|\mathbf{d}\|_1$, and avoid returning any vertices with degree $< (\phi - \varepsilon)\|\mathbf{d}\|_1$ with probability $1-\delta$.
-The algorithm requires space $O \left ( \varepsilon^{-1}\log \frac{n}{\delta} \right )$ and update time $O \left ( \log \frac{n}{\delta} \right )$.
+One might expect that this procedure obtains a path $(x_1, \dots, x_t)$, however each sample suffers from a probability of failure. 
+Accounting for these failures by applying a union bound solves this problem at the cost of inflating the memory overhead of each sketch.
+We formalize this result in Theorem~\ref{thm:rw:sampling:turnstile}.
+%
+\begin{theorem} \label{thm:rw:sampling:turnstile}
+Let unweighted $\mathcal{G}$ with adjacency matrix $A$ be given in a strict turnstile stream.
+A randomized algorithm can perfectly simulate a random walk of length $t$  starting at vertex $v_0$, which need not be known ahead of time, using $O(nt\log^2 n \log (t/\delta))$ space, where $\delta$ is the probability of failure.
+% memory for an unweighted graph and $O((1/\varepsilon) nt \log (1/\varepsilon) \log^2 n \log (t/\delta))$ memory for a weighted graph
 \end{theorem}
 
 \begin{proof}
-Note that $\|\mathbf{d}(t)\|_1$ increases monotonically with $t$ in a cash register stream. 
-If $t < t^*$ and a vertex's estimate is smaller than $\phi \|\mathbf{d}(t)\|_1$, it cannot be larger than $\phi \|\mathbf{d}(t^*)\|_1$ without its estimate due to $\mathcal{S}$ increasing by time $t^*$.
-We check the estimate for each vertex when an incident edge is updated and the estimates do not underestimate, so no heavy hitters are omitted.
+%We will describe the proof for unweighted graphs. 
+%The weighted graph proof is similar.
+As described above, sample $t$ $\ell_0$ sampling transforms $S^{(0)}, S^{(1)}, \dots, S^{(t-1)}$, each having failure probability $\delta^*$ to be specified later.
+In a pass over $\mathcal{G}$, accumulate $S^{(0)}A_{:,x}, S^{(1)}A_{:,x}, \dots, S^{(t-1)}A_{:,x}$ sketches for each vertex $x \in \mathcal{V}$.
+Note that if a sparse representation of $A_{:,x}$ is smaller than the size of these sketches, then we can store that instead and not bother with the sketches. 
+After accumulation, we sample from a specified starting vertex's first sketch, sample from the resulting vertex's second sketch, and so on. 
 
-%Assume that $z \in \mathcal{V}$ is not a heavy hitter.
-Call the event where $\widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}_{x}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1$ for some $x \in \mathcal{V}$ a \emph{miss}.
-If $x \in \mathcal{V}$ participates in a miss, it is falsely output as a heavy hitter by the algorithm.
-By Theorem \ref{thm:cms:err}, an accumulated \algoname{CountMinSketch} data structure $\mathcal{S}$ with parameters $\varepsilon$ and $\delta^*$ guarantees that 
+Call an event where some sampled sketch of $x \in \mathcal{V}$ outputs FAIL a \emph{failure}. 
+This can only happen when $d_x$ is sufficiently large, but as this depends on the degree distribution of the graph we will forgo this detail in the subsequent analysis.
+We will adopt the assumption in this proof that the random variables $(v_0, v_1, \dots, v_j) \in \mathcal{V}^{k+1}$ are sampled in a simulation until either $j = t$ or $v_j$ fails.
+We say that $x \in \mathcal{V}$ is \emph{chosen} if $v_i = x$ for some $0 \leq i < t$ during a simulation.
+Notably, $x$ can fail only if it is chosen, as otherwise its sketch will never be queried.
+If a failure occurs during the simulation of a random walk starting at $v_0$ we output the path so far accumulated and FAIL. 
+We know that the probability that a particular vertex $x$ fails on a random walk simulation starting at vertex $s$ is given by
+%
+\begin{align}
+\nonumber
+\Pr [\textnormal{$x$ fails} \mid v_0 = s ]
+&=
+\Pr [\textnormal{$x$ fails and $x$ is chosen} \mid v_0 = s ]
+\\
+\nonumber
+&=
+\Pr [\textnormal{$x$ fails} \mid \textnormal{$v_0 = s$ and $x$ is chosen} ] \cdot \Pr [\textnormal{$x$ is chosen} \mid v_0 = s ]
+\\
+\nonumber
+&\leq
+\Pr [\textnormal{$x$ fails}] \cdot \Pr [\textnormal{$x$ is chosen} \mid v_0 = s ]
+\\
+\label{eq:sample:fail:prob}
+&\leq
+\delta^* \cdot \Pr [\textnormal{$x$ is chosen} \mid v_0 = s ].
+\end{align}
+
+We have shown that the probability that a particular vertex fails is at most $\delta$ times the probability that it occurs as a non-final vertex in a simulated walk.
+We extend this result to obtain the probability that \emph{any} failure occurs on a random walk starting with $s$.
 %
 \begin{align*}
-n\delta^* 
-&>
-\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x - d_x > \varepsilon \|\mathbf{d}_{-x}\|_1 \right ] 
-& \\
+\Pr [\textnormal{a failure occurs} \mid v_0 = s]
+&\leq 
+\Pr \left [ \bigvee_{x \in \mathcal{V}} \textnormal{$x$ fails} \mid v_0 = s \right ]
+&\\
+&\leq
+\sum_{x \in \mathcal{V}} \Pr [\textnormal{$x$ fails} \mid v_0 = s ] 
+& \textnormal{Union bound}\\
+&\leq
+\delta^* \sum_{x \in \mathcal{V}} \Pr [\textnormal{$x$ is chosen} \mid v_0 = s ] 
+& \textnormal{Eq.~\ref{eq:sample:fail:prob}}\\
+%&=
+%\delta^* \E [|\{v_0, v_1, \dots, v_{t-1} \} | \mid v_0 = s ] 
+%& \\
+&\leq
+\delta^* t.
+& |\{v_0, v_1, \dots, v_{t-1} \}| \leq t
 %&>
 %\sum_{z \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - d_x > \varepsilon \|d\|_1 \right ] \\
 %&\geq
 %\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - d_x > \varepsilon \|d\|_1 \wedge d_x < (\phi - \varepsilon) \|d\|_1 \right ] 
 %& \\
-&\geq
-\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x - (\phi - \varepsilon)\|\mathbf{d}\|_1 > \varepsilon \|d\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ] 
-& \\
-&=
-\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ] 
-& \text{i.e. sum of misses}  \\
-&\geq
-\Pr \left [ \bigvee_{x \in \mathcal{V}} \widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ].
-& \text{Union bound} \\
 \end{align*}
-We have shown that the probability that \emph{any} miss occurs is less than $n\delta^*$.
-By setting $\delta^* = \frac{\delta}{n}$ we guarantee that a miss occurs with probability at most $\delta$, obtaining our desired result.
+We have shown that the probability that a failure occurs in a simulation is less than $t\delta^*$.
+By setting $\delta^* = \frac{\delta}{t}$ we guarantee that a miss occurs with probability at most $\delta$, obtaining our desired result.
 This also fixes the space and update time complexities.
 \end{proof}
 
+A similar algorithm suffices for simulating weighted walks up to $\varepsilon$ error due to error inherent in the sketch.
 
 
-These algorithms are similar to others recently described by Jin \cite{jin2018simulating}. 
+We have shown a rudimentary serial algorithm for sublinearly sampling random walks from turnstile streams.
+However, unlike the application in Chapter~\ref{chap:cc}, here there is no need to combine sampling sketches. 
+Indeed, consider that the na\"ive algorithm for simulating $t$-step random walks we discussed above accumulates $t$ sketches for each vertex and iteratively samples vertices, using a total of $\widetilde{O}(nt)$ space.
+Thus, the \emph{sketch}-ness of the data structures is unimportant, and so we can utilize more general streaming data structures that might not admit a merge operator.
+However, as demonstrated by Li et al., streaming algorithms on turnstile streams possess a linear sketch equivalent \cite{li2014turnstile}. 
 
-Reservoir sampling is a sublinear memory sampling scheme defined on insert-only streams.
+If $\mathcal{G}$ is given in an insert-only stream (i.e. $\sigma$ lists $\mathcal{E}$), then the above result does not apply.
+Indeed, we can apply the well-studied \emph{reservoir sampling} in the place of $\ell_p$ sampling sketches \cite{vitter1985random}.
+Reservoir sampling maintains a reservoir of $t$ items as follows. 
+Upon reading the $s$th item, if fewer than $t$ items are held then it is added to the reservoir.
+If $t$ items are currently held, then with probability $\frac{t}{s}$ add it to the reservoir and discard one of the held items uniformly at random.
+We borrow the following lemma:
+%
+\begin{lemma} \label{lem:reservoir}
+Given an insert-only stream $\sigma$, reservoir sampling uniformly samples $t$ items without replacement in a single pass using $O(t)$ space. 
+\end{lemma}
+%
+
+Furthermore, Efraimidis and Spirakis extended reservoir sampling to admit sampling from weighted streams \cite{efraimidis2006weighted}.
+For each index $i$ of $\mathbf{f}$ we randomly sample $u_i \in (0,1)$ and compute a key $k_i = u_i ^ {\frac{1}{\mathbf{f}_i}}$.
+In a pass over the stream, we maintain the top $k$ elements, and return it as a sample.
+We summarize this result in the following lemma:
+%
+\begin{lemma} \label{lem:reservoir:weighted}
+Given a weighted insert-only stream $\sigma$ with index weights $\mathbf{f}_i$ and total weight $\|\mathbf{f}\|_1$, reservoir sampling samples $t$ items without replacement, sampling index $i$ with probability proportional to $\frac{\mathbf{f}_i}{\|\mathbf{f}\|_1}$ in a single pass using $O(t)$ space. 
+\end{lemma}
+%
+
+However, these weighted reservoir samplers are not robust to changes in weight, even cash register-style monotoic changes, and a suitable only for weighted insert-only streams.
+A similar approach that is robust to changes was developed by Indyk and Woodruff to estimate $F_k$ moments \cite{indyk2005optimal} and was subsequently formalized and streamlined as \emph{precision sampling} \cite{andoni2011streaming} and applied to many other problems in the streaming literature, such as estimating entropy \cite{bhuvanagiri2006estimating}, cascading norms \cite{jayram2009data}, Earth-mover distance \cite{andoni2009efficient}, and even $\ell_p$ sampling in \cite{monemizadeh20101, jowhari2011tight}. 
+At a high level, so-called precision sampling involves executing precision sampling with an internal \algoname{CountSketch} data structure that estimates the frequency vector whose indices are modulated by the random values sampled in precision sampling. 
+ 
+
+
+It if further worth noting that reservoir sampling can also be use to sample $t$ items \emph{with replacement} by maintaining $t$ parallel reservoir samplers each of size 1. 
+However, this increases the amount of work required to process each element in the stream by a factor of $t$.
+We can instead simulate sampling with replacement, which we summarize in Lemmas~\ref{lem:reservoir} and \ref{lem:reservoir:weighted}.
+This procedure maintains the update time up to constant factors at the cost of a logarithmic increase in the space overhead.
+We refer to this procedure as replacement reservoir sampling.
+%
+\begin{lemma} \label{lem:reservoir:replacement}
+Given an insert-only stream $\sigma$ consisting of $n$ insertions, there is a procedure allowing reservoir sampling to uniformly sample $t \leq \frac{n}{2}$ items with replacement in a single pass using $O(t\log(n/t))$ bits of space. 
+\end{lemma}
+%
+\begin{proof}
+Run a reservoir sampler with capacity $t$ on the stream, obtaining $t$ samples stored in the list $S$ while also recording $c$, the total count of elements in the stream.
+Let $U$ be an initially empty set of used samples. 
+When sampling from the sampler for the first time, select a random element from $S$ and remove it, adding it to $U$ before returning it.
+For subsequent samples, with probability $\frac{|U|}{c}$ instead sample a used sample uniformly from $U$ and return it.
+Otherwise, select an element from $S$ and add it to $U$ as before.
+In this way, each returned item is selected with probability $\frac{1}{c}$ with replacement, as desired, which follows from the correctness of Lemma~\ref{lem:reservoir}.
+
+The sampler might consist of any subset of elements drawn from $\mathcal{V} \setminus \{x\}$ of size between 0 and $t$. 
+Since the universe consists of $n$ items, there are $\sum_{i=0}^t {n-1 \choose i}$ total states that the sampler might assume. 
+If $t < n/2$, then we are able to say 
+$\sum_{i=0}^t {n-1 \choose i} \leq \sum_{i=0}^t \frac{(n-1)^i}{i!} = \sum_{i=0}^t \frac{k^i}{i!} \left ( \frac{n-1}{k} \right )^i \leq \left ( \frac{e(n-1)}{t} \right )^t$, where $e$ is Euler's constant.
+Thus, the state can be encoded using $\left \lceil t \log \left ( \frac{e(n-1)}{t} \right ) \right \rceil = O(t\log(n/t))$ bits of space.
+\end{proof}
+%
+\begin{lemma} \label{lem:reservoir:weighted:replacement}
+Given a weighted insert-only stream $\sigma$ with index weights $\mathbf{f}_i$ and total weight $\|\mathbf{f}\|_1$, reservoir sampling samples $t$ items without replacement, sampling index $i$ with probability proportional to $\frac{\mathbf{f}_i}{\|\mathbf{f}\|_1}$ in a single pass using $O(t\log (n/t))$ words of memory. 
+\end{lemma}
+%
+\begin{proof}
+The proof is similar to that of Lemma~\ref{lem:reservoir:replacement}.
+Collect $S$ as before using weighted reservoir sampling, where the elements of $S$ are tuples $(i,\mathbf{f}_i)$ consisting of element descriptors $i$ and their weights $\mathbf{f}_i$.
+Simultaneously record the sum of weights in the stream, $\|\mathbf{f}\|_1$.
+Let $U$ be an initially empty list of used samples. 
+When sampling from the sampler for the first time, sample an element from $S$ with probability proportional to its weight and remove it, adding it to $U$ before returning it.
+Say that $U = ((i_0, \mathbf{f}_{i_0}), (i_1, \mathbf{f}_{i_1}), \dots (i_j, \mathbf{f}_{i_j}))$ after performing some number of samples.
+Upon querying for a new sample, sample a random number $y \sim (0, \|f\|_1)$.
+If $y \leq \mathbf{f}_{i_0}$, return $i_0$.
+If $y \in \left ( \sum_{k=0}^{\ell-1}\mathbf{f}_{i_{k}}, \sum_{k=0}^{\ell}\mathbf{f}_{i_{k}} \right ]$ for some $0 < \ell \leq j$, then return $i_\ell$.
+Else return the next element from $S$, removing it and placing it in $U$ as $(i_{j+1}, \mathbf{f}_{j+1})$.
+As before, each item is returned with probability $\frac{\mathbf{f}_i}{\|\mathbf{f}\|_1}$ with replacement, as desired, which follows from the correctness of Lemma~\ref{lem:reservoir:weighted}.
+Furthermore, the sampler has the same number of states with respect to sampled items as the sampler in Lemma~\ref{lem:reservoir:replacement}.
+However, each of these states possesses a list of $O(t)$ weights as well.
+Assuming that these weights can be stored in a machine word, we have proven the $O(t\log(n/t))$ bound.
+\end{proof}
+%
+
+In particular, it is simple to reproduce the behavior of Theorem~\ref{thm:rw:sampling:turnstile} for insert-only streams, which we do with Theorem~\ref{thm:rw:sampling:insert-only}.
+%
+\begin{theorem} \label{thm:rw:sampling:insert-only}
+Let unweighted $\mathcal{G}$ with adjacency matrix $A$ be given in an insert-only stream.
+A randomized algorithm can simulate a random walk of length $t < n/2$ starting at vertex $v_0$, which need not be known ahead of time, using $O(nt \log (n/t))$ bits of memory.
+\end{theorem}
+
+\begin{proof}
+For every $x \in \mathcal{V}$, use Lemma~\ref{lem:reservoir:replacement} to uniformly sample $t$ of $x$'s neighbors.
+If $\mathbf{d}_x < t$ edges are incident upon $x$, then we can instead store $A_{:,x}$ explicitly as before.
+In a single pass over $\mathcal{G}$, we sample up to $t$ neighbors uniformly with replacement from each vertex.
+Let $N_x$ be this set of sampled neighbors for vertex $x$.
+We also compute the degree $\mathbf{d}_x$ of each vertex $x$.
+Like in Theorem~\ref{thm:rw:sampling:turnstile} we simulate a random walk from given starting vertex $v_0$ using the sampled vertices. 
+Unlike that theorem, however, the only additional work required is to read from $N_x$, as there is no sketch data structure. 
+%For each vertex, we maintain a separate counter $\mathbf{d}^*_x$ that records how many samples have been used so far.
+%We also maintain a separate set $M_x$ for each $x$.
+%When $y \sim N_x$ is sampled, it is removed from $N_x$ and added to $M_x$, and $\mathbf{d}^*_x$ is incremented.
+%We refer to this process as \emph{extracting} a neighbor from $N_x$.
+%For each step in the simulation, when sampling from $x$ we extract a new neighbor from $N_x$ with probability $\frac{\mathbf{d}^*_x}{\mathbf{d}_x}$ and otherwise return a uniform sample from $M_x$.
+%This procedure ensures that subsequent samples from the same vertex occur with replacement. 
+We are guaranteed not to run out of samples for any vertex, and the correctness of the distribution over random walks follows from Lemma~\ref{lem:reservoir:replacement}.
+As there are $n$ such replacement reservoir samplers operating in parallel, we have proven the $O(nt\log(n/t)))$ bit memory bound.
+
+%The suite of samplers for a particular vertex $x$ might consist of any bag of elements drawn from $\mathcal{V} \setminus \{x\}$ of size between 0 and $t$. 
+%Hence, there are $\sum_{i=0}^t {n-1 \choose i}$ total states that this bag might take. 
+%If $t < n/2$, then we are able to say 
+%$\sum_{i=0}^t {n-1 \choose i} \leq \sum_{i=0}^t \frac{(n-1)^i}{i!} = \sum_{i=0}^t \frac{k^i}{i!} \left ( \frac{n-1}{k} \right )^i \leq \left ( \frac{e(n-1)}{t} \right )^t$, where $e$ is Euler's constant.
+%Thus, the suite's state can be encoded using $O(t\log(n/t))$ bits of memory.
+%Putting this together with the fact that there are $n$ of these sampling suites, we have proven the $O(nt\log (n/t))$ bound.
+\end{proof}
+
+\begin{theorem} \label{thm:rw:sampling:weighted:insert-only}
+Let unweighted $\mathcal{G}$ with adjacency matrix $A$ be given in an insert-only stream.
+A randomized algorithm can simulate a random walk of length $t < n/2$ starting at vertex $v_0$, which need not be known ahead of time, using $O(nt \log (n/t))$ words of memory.
+\end{theorem}
+
+\begin{proof}
+The proof is similar to Theorem~\ref{thm:rw:sampling:insert-only}, but uses Lemma~\ref{lem:reservoir:weighted:replacement} instead of Lemma~\ref{lem:reservoir:replacement}.
+\end{proof}
+
+
+Jin explores the simulation of random walks from both insert-only and dynamic graph streams for directed and undirected graphs \cite{jin2018simulating}.
+The directed graph algorithms are similar to those corresponding to Theorems~\ref{thm:rw:sampling:turnstile} and \ref{thm:rw:sampling:insert-only}.
+The undirected algorithms boast only a $O(\sqrt{t})$ dependence on $t$ by sampling $O(\sqrt{t})$ neighbors from each vertex's adjacency list, as well as computing all of the vertex degrees.
+The insert-only algorithm stores $A_{:,v}$ for each $v \in \mathcal{V}$ sparsely in memory until the vector reaches a size threshold, upon which it begins maintaining reservoir samplers for $v$.
+The turnstile algorithm follow a similar procedure, instead using $\ell_1$ samplers when vectors become too large.
+%Jin boasts a $\sqrt{t}$ space dependence for unweighted graphs by storing $O(n \sqrt{t})$ sampled edges, with $O(\sqrt{t})$ sampled from each vertex as well as a measure of each vertex's degree.
+Vertices that can be stored wholly in memory are recorded in a central map.
+Vertices with degree greater than $\sqrt{t}$ might maintain only a subset of their edges. 
+Once accumulated, a random walk is simulated on this sparsified subgraph.
+When sampling from a high degree vertex, the central map is used with probability relative to the proportion of neighbors therein over the degree of the source.
+This is similar to the uniform sampling approach described in Theorem~\ref{thm:rw:sampling:insert-only}.
+Samples are consumed only when the central map is unused, and failures occur only when a vertex runs out of untouched samples.
+%If the simulated random consumes all of the sampled out-edges for a vertex, the simulation fails.
+%The unweightedness of the graph in this case is what allows the reduction to a $\sqrt{t}$ term in these theorems.
+%The probability of failure is ameliorated by the fact that each edge might be sampled by either of its endpoints.
+%The corresponding theorems for directed graphs are linear in $t$ for this reason \cite{jin2018simulating}. 
+%However, much of this work appears to still be preliminary.
+
+%We will assume, for the purposes of the rest of this document, that 
+
+
+
+%We reproduce the following theorems:
+%%
+%\begin{theorem}[Theorem 2 of \cite{jin2018simulating}] \label{thm:jin:lower}
+%For $t = O(n^2)$, simulating a $t$-step random walk on a simple undirected graph in the insertion-only model within error $\varepsilon = \frac{1}{3}$ requires $\Omega(n\sqrt{t})$ space.
+%\end{theorem}
+%%
+%\begin{theorem}[Theorem 4 of \cite{jin2018simulating}] \label{thm:jin:insert-only}
+%There is a randomized algorithm that simulates a $t$-step random walk on an undirected graph given by an insertion-only stream within error $\varepsilon$ using $O \left ( n\sqrt{t} \frac{q}{\log q}\right )$ memory, where $q = 2 + \frac{\log(1 / \varepsilon)}{\sqrt{t}}$.
+%In particular, the algorithm using $O(n \sqrt{t})$ space when $\varepsilon = 2^{=\Theta(\sqrt{t})}$.
+%\end{theorem}
+%%
+%\begin{theorem}[Theorem 6 of \cite{jin2018simulating}] \label{thm:jin:turnstile}
+%There is a randomized algorithm that simulates a $t$-step random walk on an undirected graph given by a turnstile stream within error $\varepsilon$ using $O \left ( n \left ( \sqrt{t} + \log (1 / \varepsilon) \right ) \log^2 \max \{ n, q/\varepsilon \} \right )$ memory.
+%\end{theorem}
+%%
+%
+%The algorithms corresponding to Theorems~\ref{thm:jin:insert-only} and \ref{thm:jin:turnstile} achieve their nearly-tight results by storing $O(n \sqrt{t})$ sampled edges, with $O(\sqrt{t})$ sampled from each vertex.
+%Once accumulated, a random walk is simulated on this sparsified subgraph.
+%Vertices with degree greater than $\sqrt{t}$ might maintain only a subset of their edges. 
+%If the simulated random consumes all of the sampled out-edges for a vertex, the simulation fails.
+%The unweightedness of the graph in this case is what allows the reduction to a $\sqrt{t}$ term in these theorems.
+%The probability of failure is ameliorated by the fact that each edge might be sampled by either of its endpoints.
+%The corresponding theorems for directed graphs are linear in $t$ for this reason \cite{jin2018simulating}. 
+%
+%It is worth noting that thesealgorithm support multigraphs (i,e, graphs where $\mathcal{E}$ is a bag rather than a set).
+%The turnstile algorithm furthermore  supports weighted graphs (and multigraphs).
+
+
+
+
+
+%\begin{theorem} \label{thm:dchh:cashregister}
+%Let $\mathcal{G}$ be an unweighted graph given in a turnstile stream.
+%An algorithm can return every vertex with degree $\geq \phi \|\mathbf{d}\|_1$, and avoid returning any vertices with degree $< (\phi - \varepsilon)\|\mathbf{d}\|_1$ with probability $1-\delta$.
+%The algorithm requires space $O \left ( \varepsilon^{-1}\log \frac{n}{\delta} \right )$ and update time $O \left ( \log \frac{n}{\delta} \right )$.
+%\end{theorem}
+%
+%\begin{proof}
+%Note that $\|\mathbf{d}(t)\|_1$ increases monotonically with $t$ in a cash register stream. 
+%If $t < t^*$ and a vertex's estimate is smaller than $\phi \|\mathbf{d}(t)\|_1$, it cannot be larger than $\phi \|\mathbf{d}(t^*)\|_1$ without its estimate due to $\mathcal{S}$ increasing by time $t^*$.
+%We check the estimate for each vertex when an incident edge is updated and the estimates do not underestimate, so no heavy hitters are omitted.
+%
+%%Assume that $z \in \mathcal{V}$ is not a heavy hitter.
+%Call the event where $\widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}_{x}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1$ for some $x \in \mathcal{V}$ a \emph{miss}.
+%If $x \in \mathcal{V}$ participates in a miss, it is falsely output as a heavy hitter by the algorithm.
+%By Theorem \ref{thm:cms:err}, an accumulated \algoname{CountMinSketch} data structure $\mathcal{S}$ with parameters $\varepsilon$ and $\delta^*$ guarantees that 
+%%
+%\begin{align*}
+%n\delta^* 
+%&>
+%\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x - d_x > \varepsilon \|\mathbf{d}_{-x}\|_1 \right ] 
+%& \\
+%%&>
+%%\sum_{z \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - d_x > \varepsilon \|d\|_1 \right ] \\
+%%&\geq
+%%\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{d}_x - d_x > \varepsilon \|d\|_1 \wedge d_x < (\phi - \varepsilon) \|d\|_1 \right ] 
+%%& \\
+%&\geq
+%\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x - (\phi - \varepsilon)\|\mathbf{d}\|_1 > \varepsilon \|d\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ] 
+%& \\
+%&=
+%\sum_{x \in \mathcal{V}} \Pr \left [ \widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ] 
+%& \text{i.e. sum of misses}  \\
+%&\geq
+%\Pr \left [ \bigvee_{x \in \mathcal{V}} \widetilde{\mathbf{d}}_x > \phi \|\mathbf{d}\|_1 \wedge \mathbf{d}_x < (\phi - \varepsilon) \|\mathbf{d}\|_1 \right ].
+%& \text{Union bound} \\
+%\end{align*}
+%We have shown that the probability that \emph{any} miss occurs is less than $n\delta^*$.
+%By setting $\delta^* = \frac{\delta}{n}$ we guarantee that a miss occurs with probability at most $\delta$, obtaining our desired result.
+%This also fixes the space and update time complexities.
+%\end{proof}
+
+
+
 
 
 %----------------------------------------------------------------------------------------
@@ -3756,7 +4028,7 @@ In notation, this is
 
 
 Kourtellis et al. provide a randomized algorithm for approximating the $\kappa$-path centrality of the vertices of a graph, and demonstrate that on real-world networks vertices with high approximate $\kappa$-path centrality empirically correlate well with high betweenness-centrality vertices. 
-Moreover, this algorithm is much more efficient than other attempts to approximate betweenness centrality, as it sidesteps the need to approximate the all pairs all shortest paths problem.
+Moreover, this algorithm is much more efficient than other attempts to approximate betweenness centrality, as it sidesteps the need to approximate the \algoname{AllPairsAllShortestPaths} problem.
 Finally, $\kappa$-Path centrality is desirable in that it depends only on $\kappa$-local features of the graph when considering any particular vertex.
 
 
@@ -3767,12 +4039,630 @@ Finally, $\kappa$-Path centrality is desirable in that it depends only on $\kapp
 
 
 %----------------------------------------------------------------------------------------
-\section{Distributed Sublinear Sampling of Random Walks}
+\section{Serial Sublinear Simulation of Many Random Walks}
  \label{walks:sec:walks}
 %----------------------------------------------------------------------------------------
 
-We will first discuss a serial algorithm, and then extend a distributed version.
+We described serial algorithms for the sampling of single random walks in Theorems~\ref{thm:rw:sampling:turnstile} and \ref{thm:rw:sampling:insert-only}.
+We will first discuss a serial algorithm for the simultaneous sampling of $k$ random walks of length $t$, and then discuss a distributed version. 
+%
+%We will first discuss a serial algorithm, and then extend a distributed version.
+%In any case, it is imperative to design an algorithm to sample $k$ random walks of length $t$ in a single pass over $\sigma$.
+Of course, the na\"ive approach is to simply increase the memory overhead of the algorithms corresponding to Theorem~\ref{thm:rw:sampling:insert-only} and \ref{thm:rw:sampling:turnstile} by a factor of $k$ and simulate the random walks in parallel sparsified subgraphs.
+However, we will show that it is possible to reduce the dependence on $t$ and $k$ to $O(\sqrt{tk})$ in undirected graphs.
 
+First, we show it is not possible to do better than $\sqrt{k}$.
+This result depends on a reduction from the well-known \algoname{Index} problem of communication theory.
+In the \algoname{Index} problem, two participants Alice and Bob communicate to identify the index of vector.
+Alice is given a vector $X \in \{0,1\}^n$, while Bob is given an index $i \in [n]$. 
+Alice sends a message containing $s$ bits to Bob, who must then output $X_i$. 
+We will require the following lemma:
+%$
+\begin{lemma} \label{lem:index}
+Solving the \algoname{Index} problem with probability $> \frac{1}{2}$ requires that Alice send $s = \Omega(n)$ bits.
+\end{lemma}
+
+
+
+We now prove the corresponding lower bound for the streaming simulation of parallel random walk sumulation, whose proof is inspired by that of Theorem~13 of \cite{jin2018simulating}.
+%
+\begin{theorem} \label{thm:rw:lower}
+For $t = O(n^2)$, simulating $k$ $t$-step random walks on a simple undirected graph in the insertion-only model within error $\varepsilon = \frac{1}{3}$ requires $\Omega(n\sqrt{kt})$ space.
+\end{theorem}
+%
+\begin{proof}
+We reduce from the \algoname{Index} problem.
+We assume that there is a streaming algorithm $\mathcal{A}$ that can perfectly simulate $k$ random walks on an insert-only graph stream
+% up to error $\varepsilon \leq \frac{1}{3}$ 
+consisting of $O(n)$ vertices from starting vertices $v_0^{(1)}, v_0^{(2)}, \dots, v_0^{(k)}$.
+Alice will insert edges into $\mathcal{A}$ and then pass its state to Bob, who will insert more edge, perform the sampling, and approximately solve the \algoname{Index} problem.
+
+Alice receives a vector $X = \{0.1\}^{n\sqrt{kt}}$ and encodes it in a graph as follows.
+Alice and Bob agree upon a graph representation $\mathcal{G} = \mathcal{V}_0 \cup \mathcal{V}_1 \cup \cdots \cup \mathcal{V}_{\frac{n}{\sqrt{kt}}}$, where $|\mathcal{V}_j| = 2 \sqrt{kt}$ and the $V_j$s are mutually disjoint.
+For each $j >0$, $V_j = A_j \cup B_j$, where $|A_j| = |B_j| = \sqrt{kt}$ are disjoint.
+Note that there are $O(n + \sqrt{kt}) = O(n)$ vertices in $\mathcal{G}$.
+There are $k$ agreed-up starting vertices $v_0^{(1)}, v_0^{(2)}, \dots, v_0^{(k)} \in V_0$.
+Due to the pigeonhole principle some of these vertices collide, but we will show that this is not a problem in the analysis.
+
+Alice divides $X$ up into ranges of size $kt$.
+For the $j$th such range, she encodes the $kt$ bits into the possible edges between $A_j$ and $B_j$.
+Note that there are $|A_j||B_j| = kt$ such edges.
+If a bit is 1, she inserts the corresponding edge into $\mathcal{A}$. 
+In total she so encodes $kt \cdot n/\sqrt{kt} = n\sqrt{kt}$ bits in this way, and then passes the state of $\mathcal{A}$ to Bob. 
+
+Bob receives the index $i \in [n\sqrt{kt}]$ and the state of $\mathcal{A}$ so far.
+$i$ corresponds to the $j$th partition, $\mathcal{V}_j$, for some $j$, and to some particular edge, say $(a,b) \in A_j \times B_j$.
+Bob inserts every edge in $\mathcal{V}_0 \times A_j$ into $\mathcal{A}$.
+Bob then queries $\mathcal{A}$ to perform $k$ random walks of length $t^* = O(t)$ to be determined.
+
+Any random walk starting in $\mathcal{V}_0$ will occur inside of the bipartite subgraph $(A_j, \mathcal{V}_0 \cup B_j)$.
+In particular, every other hop will take a random walk through $A_j$. 
+We will assume that the edge $(a, b)$ exists, i.e. Bob wants to output 1.
+It is impossible to productively bound the probability of then hopping from some vertex in $A_j$ to $b$ before hopping to $a$.
+However, we instead bound the probability of hopping to some vertex in $V_0$, then $a$, then $b$.
+We again assume the $p$th random walk output by $\mathcal{A}$ corresponds to the random variables $\left ( v_0^{(p)}, v_1^{(p)}, \dots v_{t^*}^{(p)} \right)$.
+Consider,
+%
+\begin{align}
+\nonumber
+\Pr \left [ \left ( v_{\ell+2}^{(p)}, v_{\ell+3}^{(p)} \right ) = (a ,b) \mid v_\ell^{(p)} \in A_j \right ]
+&\leq
+\Pr \left [ v_{\ell+1}^{(p)} \in V_0 \wedge v_{\ell+2}^{(p)} = a \wedge v_{\ell+3}^{(p)} = b \mid v_{\ell}^{(p)} \in A_j \right ]
+\\
+\nonumber
+&=
+\Pr[v_{\ell+1}^{(p)} \in V_0 \mid v_\ell^{(p)} \in A_j] \cdot
+\Pr[v_{\ell+2}^{(p)} = a \mid v_{\ell+1}^{(p)} \in V_0] \cdot
+\Pr[v_{\ell+3}^{(p)} = b \mid v_{\ell+2}^{(p)} = a] 
+\\
+\nonumber
+&\leq
+\frac{|V_0|}{|V_0| + |B_j|} \cdot \frac{1}{|A_j|} \cdot \frac{1}{|V_0| + |B_j|}
+\\
+\label{eq:rw:lb}
+&=
+\frac{2}{9kt}.
+\end{align}
+%
+Thus, in ever four hops on the $p$th walk the edge $(a,b)$ will be passed with probability at least $\frac{2}{9kt}$.
+Call each of these events where $(a,b)$ is \emph{not} passed a \emph{miss}.
+Walk $p$ has $\geq \lfloor t^*/4 \rfloor$ opportunities to miss over the course of its simulation.
+As these walks are independently sampled, this is true of every walk. 
+Say that a walk \emph{fails} if it completes without passing $(a,b)$.
+Then we have the following:
+%
+\begin{align*}
+\Pr \left [ \textnormal{walker $p$ fails} \mid v_0^{(p)} \in V_0 \right ]
+&\leq
+\Pr \left [ \textnormal{walker $p$ passes at every opportunity} \mid v_{0}^{(p)} \in V_0 \right ]
+&
+\\
+&\leq
+\prod\limits_{s = 1}^{t^*} 
+\mathbf{1}_{[s\mod 4 = 1]}
+\Pr \left [ \textnormal{walker $p$ passes} \mid v_{s}^{(p)} \in A_j \right ]
+&
+\\
+&\leq
+\prod\limits_{s = 1}^{t^*} 
+\mathbf{1}_{[s\mod 4 = 1]}
+\left ( 1 - \Pr \left [ \left ( v_{\ell+2}^{(p)}, v_{\ell+3}^{(p)} \right ) = (a ,b) \mid v_\ell^{(p)} \in A_j \right ] \right )
+&
+\\
+&\leq
+\left ( 1 - \frac{2}{9kt} \right ) ^ {\left \lfloor \frac{t^*}{4} \right \rfloor}.
+& \textnormal{Eq.~\eqref{eq:rw:lb}}
+\end{align*}
+%
+Note that Bob will only output 0 if all independent walkers fail. 
+We can now bound this probability with 
+%
+\begin{align*}
+\Pr \left [ \textnormal{all walkers fail} \mid v_0^{(1)}, v_0^{(2)}, \dots v_0^{(k)} \in V_0 \right ]
+&=
+\prod\limits_{p=1}^{k} \Pr \left [ \textnormal{walker $p$ fails} \mid v_0^{(p)} \in V_0 \right ]
+&
+\\
+&\leq
+\left ( 1 - \frac{2}{9kt} \right ) ^ {k\left \lfloor \frac{t^*}{4} \right \rfloor}.
+&
+\end{align*}
+%
+
+If we choose $t^* = 42 t$, we can guarantee that the probability that all walkers fail is $< 0.1$ for all $t$ and $k$. 
+Consequently, Bob is able to use $\mathcal{A}$ to output 1 if $X_i = 1$ with probability $> 0.9$. 
+$\mathcal{A}$ can admit error up to $\varepsilon = \frac{1}{3}$ and maintain $0.9 - \varepsilon > 0.5$.
+Meanwhile, if $X_i = 0$ Bob will always output $0$.
+Thus, Alice and Bob can solve the \algoname{Index} problem.
+So, by Lemma~\ref{lem:index}, $\mathcal{A}$ requires $\Omega(n\sqrt{kt})$ memory, and we have the result.
+\end{proof}
+
+We have shown asymptotic bounds on the space performance of multiple random walk simulation algorithms.
+We will now demonstrate a serial algorithm that nearly meets this bound.
+The algorithm is inspired by \cite{jin2018simulating}, and depends upon the intuition discussed in Section~\ref{walks:sec:streaming:rw}, wherein $O(\sqrt{kt})$ sample neighbors are kept for each vertex and careful attention is paid to accounting how many times some random walk simulation visits vertices not wholly stored in memory.
+We first present an insert-only algorithm utilizing replacement reservoir sampling.
+We will then augment this algorithm to handle multigraphs.
+Finally, we will present a further turnstile version of the algorithm instead using $\ell_1$ sampling sketches.
+
+%\noindent
+%\textbf{Algorithm Description}
+
+We will set a positive threshold integer $c$, to be determined later, and assume that an input graph $\mathcal{G}$ has degree distribution $\mathbf{d}$. 
+We will notionally separate $\mathcal{V} = \mathcal{B} \cup \mathcal{S}$, where $\mathcal{B} = \{x \in \mathcal{V} \mid \mathbf{d}_x > c \}$ is the set of \emph{big} vertices and $\mathcal{S} = \{x \in \mathcal{V} \mid \mathbf{d}_x \leq c\}$ is the set of \emph{small} vertices.
+A directed edge $(x, y)$ is \emph{important} if $y \in \mathcal{S}$, and \emph{unimportant} otherwise.
+Let $\mathcal{E}^\prime$ be the set of directed edges corresponding to edges in $\mathcal{E}$. 
+Since $\mathcal{G}$ is undirected, for every $xy \in \mathcal{E}$, $(x, y), (y, x) \in \mathcal{E}^\prime$.
+Then we can partition $\mathcal{E}^\prime = \mathcal{E}_\mathcal{S} \cup \mathcal{E}_\mathcal{B}$, where $\mathcal{E}_\mathcal{S}$ is the set of important edges and $\mathcal{E}_\mathcal{B}$ is the set of unimportant edges. 
+Note in particular that by definition $|\mathcal{E}_\mathcal{S}| = \sum_{x \in \mathcal{S}} \mathbf{d}_x \leq |\mathcal{S}|c = O(nc)$.
+$\mathcal{E}_\mathcal{B}$, on the otherhand, may be quite large.
+
+The core idea of the algorithm is to store $\mathcal{E}_\mathcal{S}$ directly, and sample $O(c)$ unimportant edges incident upon each $x \in \mathcal{V}$ while recording $\mathbf{d}$.
+%Let $\mathcal{N}_\mathcal{S}^{(I)}$ and $\mathcal{N}_\mathcal{S}^{(O)}$ be dictionary data structures such that for $x \in \mathcal{V}$, $\mathcal{N}_\mathcal{S}^{(I)}[x] = \{(u, v) \in \mathcal{E}_\mathcal{S} \mid v = x \}$ and $\mathcal{N}_\mathcal{S}^{(O)}[x] = \{(u, v) \in \mathcal{E}_\mathcal{S} \mid u = x \}$, allowing fast looking in both directions of arcs in $\mathcal{E}_\mathcal{S}$.
+Let $\mathcal{N}_\mathcal{S}$ be a dictionary data structure such that for $x \in \mathcal{V}$, $\mathcal{N}_\mathcal{S}[x] = \{(u, v) \in \mathcal{E}_\mathcal{S} \mid u = x \}$.
+Meanwhile, the sampled unimportant edges are stored in a dictionary data structure $\mathcal{N}_\mathcal{B}$ such that for $x \in \mathcal{V}$, $\mathcal{N}_\mathcal{B}[x]$ is a replacement reservoir sampler over the stream, and after accumulation  $\mathcal{N}_\mathcal{B}[x]= \{(u, v) \in \mathcal{E}_\mathcal{B} \mid u = x \wedge \textnormal{$(u, v)$ is sampled} \}$.
+While simulating a random hop from $x \in \mathcal{V}$ we toss a coin and with probability $\frac{|\mathcal{N}_\mathcal{S}[x]|}{\mathbf{d}_x}$ sample from $\mathcal{N}_\mathcal{S}[x]$.
+We otherwise consume a sample from $\mathcal{N}_\mathcal{B}[x]$, which are sampled with replacement via a scheme like Lemma~\ref{lem:reservoir:replacement} and so each require at most $O(c)$ words of memory.
+
+We need to maintain $\mathcal{N}_\mathcal{S}$ and $\mathcal{N}_\mathcal{B}$ when $x \in \mathcal{V}$ moves from $\mathcal{S}$ to $\mathcal{B}$ as the algorithm reads the edge list. 
+This is as simple as removing $(y, x)$ from $\mathcal{N}_\mathcal{S}[y]$ for each $y \in \mathcal{V}$, which unfortunately requires a linear scan over $\mathcal{V}$.
+We can ameliorate this by maintaining a separate dictionary data structure $\mathcal{L}$ so that for $x \in \mathcal{S}$, $\mathcal{L}[x] = \{ y \mid (y, x) \in \mathcal{N}_\mathcal{S}[y] \}$.
+Thankfully, $|\mathcal{L}[x]| = O(c)$ for each $x \in \mathcal{S}$ by the definition of $\mathcal{S}$, which allows us to perform this procedure with $O(c)$ lookups to $\mathcal{N}_\mathcal{S}^{(O)}$.
+
+Algorithm~\ref{alg:rw:serial:insert-only:accumulation} describes this accumulation procedure in pseudocode. 
+Algorithm~\ref{alg:rw:serial:insert-only:simulation} describes the simulation procedure.
+As we have described above, the algorithm flips a coin at each random hop to decide whether to jump to a vertex in $\mathcal{S}$ or $\mathcal{B}$.
+If a vertex $x$ is receives $> c$ queries to unimportant edges $\mathcal{N}_\mathcal{B}[x]$ during the simulation of a random walk (counting all the queries that occured in earlier walks), that walk simulation terminates with FAIL.
+
+
+
+\begin{algorithm}[htbp] 
+\caption{Insert-Only Streaming $k$ Random Walk Accumulation}\label{alg:rw:serial:insert-only:accumulation}
+\begin{flushleft}
+        \textbf{Input:} 		$\sigma$ - insert-only edge stream\\
+%        	\hspace{2.65em}	$k$ - integral heavy hitter count	 \\
+%        	\hspace{2.65em}	$\mathcal{P}$ - universe of processors	 \\
+%        	\hspace{2.65em}	$\mathcal{D}$ - accumulated \algoname{DegreeSketch} 	 \\
+%        	\hspace{2.65em}	$\mathcal{S}$ - distributed dictionary mapping $\mathcal{P}$ to send queues	 \\
+%        	\hspace{2.65em}	$\mathcal{R}$ - distributed dictionary mapping $\mathcal{P}$ to receive queues	 \\
+%        	\hspace{2.65em}	$f$ - function mapping $\mathcal{V} \rightarrow \mathcal{P}$	 \\
+        \textbf{Output:} $\mathcal{N}_\mathcal{S}$ - dictionary for edges in $\mathcal{E}_\mathcal{S}$ \\
+        	\hspace{4.05em}	$\mathcal{N}_\mathcal{B}$ - dictionary for sampled edges in $\mathcal{E}_\mathcal{B}$
+\end{flushleft}
+\begin{flushleft}
+\begin{algorithmic}[1]
+	\Statex \textbf{Functions}:
+		\Function{InitVertex}{$x$}
+			\If {$\exists ! \mathbf{d}_x$}
+				\State $\mathbf{d}_x \gets 0$
+				\State $\mathcal{L}[x] \gets \emptyset$			
+				\State $\mathcal{N}_\mathcal{S}[x] \gets \emptyset$			
+				\State $\mathcal{N}_\mathcal{B}[x] \gets$ empty sampler			
+			\EndIf
+		\EndFunction
+		\Function{InsertArc}{$x,y$}
+			\State $\algoname{InitVertex}(x)$, $\algoname{InitVertex}(y)$
+			\State $\mathbf{d}_y \gets \mathbf{d}_y + 1$
+			\If {$\mathbf{d}_y = c + 1$}
+				\For{$u \in \mathcal{L}[y]$}
+					\State $\mathcal{N}_\mathcal{S} \gets \mathcal{N}_\mathcal{S} \setminus (u, y)$
+					\State Feed $(u,y)$ into $\mathcal{N}_\mathcal{B}[u]$
+				\EndFor
+			\EndIf
+			\If {$\mathbf{d}_y \leq c$}
+				\State $\mathcal{N}_\mathcal{S}[x] \gets \mathcal{N}_\mathcal{S}[x] \cup \{(x, y)\}$
+				\State $\mathcal{L}[y] \gets \mathcal{L}[y] \cup \{x\}$
+			\Else
+				\State Feed $(x,y)$ into $\mathcal{N}_\mathcal{B}[x]$
+			\EndIf
+		\EndFunction
+	\Statex \textbf{Accumulation}:
+		\For{$xy \in \sigma$}
+			\State $\algoname{InsertArc}(x, y)$
+			\State $\algoname{InsertArc}(y, x)$
+		\EndFor
+		\State \Return $\mathcal{N}_\mathcal{S}$, $\mathcal{N}_\mathcal{B}$
+\end{algorithmic}
+\end{flushleft}
+\end{algorithm}
+
+\begin{algorithm}[htbp] 
+\caption{Insert-Only Streaming $k$ Random Walk Simulation}\label{alg:rw:serial:insert-only:simulation}
+\begin{flushleft}
+        \textbf{Input:} 		$\mathcal{N}_\mathcal{S}$ - dictionary mapping vertices to outgoing edges in $\mathcal{E}_\mathcal{S}$ \\
+        	\hspace{3.15em}	$\mathcal{N}_\mathcal{B}$ - dictionary mapping vertices to outgoing sampled edges in $\mathcal{E}_\mathcal{B}$ \\
+        	\hspace{3.15em}	$\mathbf{d}$ - degree dictionary \\
+        	\hspace{3.15em}	$v_0^{(1)}, v_0^{(2)}, \dots, v_0^{(k)}$ - $k$ starting vertices $\in \mathcal{V}$ \\
+%        	\hspace{2.65em}	$k$ - integral heavy hitter count	 \\
+%        	\hspace{2.65em}	$\mathcal{P}$ - universe of processors	 \\
+%        	\hspace{2.65em}	$\mathcal{D}$ - accumulated \algoname{DegreeSketch} 	 \\
+%        	\hspace{2.65em}	$\mathcal{S}$ - distributed dictionary mapping $\mathcal{P}$ to send queues	 \\
+%        	\hspace{2.65em}	$\mathcal{R}$ - distributed dictionary mapping $\mathcal{P}$ to receive queues	 \\
+%        	\hspace{2.65em}	$f$ - function mapping $\mathcal{V} \rightarrow \mathcal{P}$	 \\
+        \textbf{Output:} $k$ Random Walks (length $t$ or ends in FAIL)
+%        $\mathcal{N}_\mathcal{S}$ - dictionary for edges in $\mathcal{E}_\mathcal{S}$ \\
+%        	\hspace{4.05em}	$\mathcal{N}_\mathcal{B}$ - dictionary for sampled edges in $\mathcal{E}_\mathcal{B}$
+\end{flushleft}
+\begin{flushleft}
+\begin{algorithmic}[1]
+	\Statex \textbf{Functions}:
+		\Function{SimulateRandomWalk}{$v_0$}
+			\For {$i = 0, 1, \dots, t-1$}
+				\State $a \sim_U [\mathbf{d}_{v_i}] $
+				\If {$a \leq |\mathcal{N}_\mathcal{S}[v_i]|$}
+					\State $v_{i+1} \sim_U \mathcal{N}_\mathcal{S}[v_i]$
+				\Else
+					\If {$|\mathcal{N}_\mathcal{B}[v_i]| > 0$}
+						\State $v_{i+1} \gets$ next item from $\mathcal{N}_\mathcal{B}[v_i]$
+						\State $\mathcal{N}_\mathcal{B}[v_i] \gets \mathcal{N}_\mathcal{B}[v_i] \setminus \{v_{i+1}\}$
+					\Else
+						\State \Return $(v_0, v_1, \dots, v_i)$, FAIL
+					\EndIf
+				\EndIf
+			\EndFor
+			\State \Return $(v_0, v_1, \dots, v_t)$
+		\EndFunction
+	\Statex \textbf{Accumulation}:
+		\For{$j \in [k]$}
+			\State $\left ( v_0^{(j)}, v_1^{(j)}, \dots, v_t^{(j)} \right ) \gets \algoname{SimulateRandomWalk} \left ( v_0^{(j)} \right )$
+		\EndFor
+		\State \Return $\left ( v_0^{(j)}, v_1^{(j)}, \dots, v_t^{(j)} \right )$ for all $j \in [k]$
+\end{algorithmic}
+\end{flushleft}
+\end{algorithm}
+
+A set of $k$ walks $\left ( v_0^{(j)}, v_1^{(j)}, \dots, v_t^{(j)} \right )$, $j \in [k]$, \emph{fails} at vertex $x$ in the $w$th walk if 
+\begin{equation*}
+\left | \left \{ (i,j) \in [t] \times [w] \mid v_i^{(j)} = x 
+		\wedge (v_i^{(j)}, v_{i+1}^{(j)}) \in \mathcal{E}_\mathcal{B} \right \} \right | = c + 1.
+\end{equation*}
+It is at this point that $\mathcal{N}_\mathcal{B}[x]$ is queried for the $(c+1)$th time, but all of the samples have already been consumed.
+If no vertex fails, then by the correctness of reservoir sampling the set is returned perfectly, i.e. with probability equal to that of the true distribution.
+It suffices to show that the algorithm fails with probability at most $\frac{\varepsilon}{2}$, which is achieved by setting the capacity $c$.
+
+\begin{lemma} \label{lem:rw:startbound}
+Suppose for every $x \in \mathcal{V}$, $\Pr \left [\textnormal{$x$ fails} \mid v_0^{(1)} = x, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ] \leq \delta$.
+Then for any starting vertex $x \in \mathcal{V}$, $\Pr \left [\textnormal{any vertex fails} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ] \leq tk\delta$.
+\end{lemma}
+%
+\begin{proof}
+Fix $s \in \mathcal{V}$.
+As before, say vertex $x$ is \emph{chosen} if $v_i^{(j)} = x$ for some $(i, j) \in [t] \times [k-1]$.
+For any $x \in \mathcal{V}$, 
+%
+\begin{align}
+\nonumber
+\Pr& \left [ \textnormal{$x$ fails} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ]
+\\
+\nonumber
+&=
+\Pr \left [ \textnormal{$x$ fails and $x$ is chosen} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ]
+\\
+\nonumber
+&=
+\Pr \left [ \textnormal{$x$ fails} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \textnormal{ and $x$ is chosen} \right ] \cdot
+\Pr \left [ \textnormal{$x$ is chosen} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ]
+\\
+\nonumber
+&\leq
+\Pr \left [ \textnormal{$x$ fails} \mid v_0^{(1)} = x, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ] \cdot
+\Pr \left [ \textnormal{$x$ is chosen} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ]
+\\
+\label{eq:rw:sample:fail:prob}
+&\leq
+\delta \cdot
+\Pr \left [ \textnormal{$x$ is chosen} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ].
+\end{align}
+%
+%\begin{equation} \label{eq:poisson:joint}
+%	\begin{aligned}
+%		\mathclap{\Pr \left [ \textnormal{$x$ fails} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ]} \\
+%		&= 
+%		\Pr \left [ \textnormal{$x$ fails and $x$ is chosen} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ]
+%		\\
+%		&=
+%		\Pr \left [ \textnormal{$x$ fails} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \textnormal{ and $x$ is chosen} \right ] \cdot
+%		\Pr \left [ \textnormal{$x$ is chosen} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ]
+% 		\\
+%		&\leq
+%		\Pr \left [ \textnormal{$x$ fails} \mid v_0^{(1)} = x, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ] \cdot
+%		\Pr \left [ \textnormal{$x$ is chosen} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ]
+%		\\
+%		&\leq
+%		\delta \cdot
+%		\Pr \left [ \textnormal{$x$ is chosen} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ].
+%	\end{aligned}
+%\end{equation}
+
+We are now able to show that
+%
+\begin{align*}
+\Pr& \left [ \textnormal{a failure occurs} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ]
+&\\
+&\leq 
+\Pr \left [ \bigvee_{x \in \mathcal{V}} \textnormal{$x$ fails} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right )\right ]
+&\\
+&\leq
+\sum_{x \in \mathcal{V}} \Pr \left [ \textnormal{$x$ fails} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ] 
+& \textnormal{Union bound}\\
+&\leq
+\delta \sum_{x \in \mathcal{V}} \Pr \left [ \textnormal{$x$ is chosen} \mid v_0^{(1)} = s, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ] 
+& \textnormal{Eq.~\ref{eq:sample:fail:prob}}\\
+&\leq
+\delta kt
+& \textnormal{$\leq kt$ vertices chosen}
+\end{align*}
+\end{proof}
+
+We now must show that a bound of the type supposed in Lemma~\ref{lem:rw:startbound} exists.
+We do so by setting $c$ appropriately. 
+
+\begin{lemma} \label{lem:rw:setc}
+There is a parameter $c = O\left (\sqrt{kt} \cdot \frac{q}{\log q} \right )$, where $q = 2 + \frac{\log(1/\delta)}{\sqrt{kt}}$ such that 
+%
+\begin{equation*}
+\Pr \left [\textnormal{$x$ fails} \mid v_0^{(1)} = x, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ], \leq \delta
+\end{equation*}
+%
+where $x$ does not occur in $\left ( v_0^{(1)}, v_0^{(2)}, \dots, v_0^{(k)} \right )$ more than $\sqrt{k}$ times, 
+for all $x \in \mathcal{V}$.
+\end{lemma}
+%
+\begin{proof}
+Assume that $\mathbf{d}_\mathcal{B}[x] = |\{y \mid (x, y) \in \mathcal{E}_\mathcal{B}\}|$.
+Furthermore, certainly for any $x \in \mathcal{V}$,
+%
+\begin{equation*}
+\Pr \left [\textnormal{$x$ fails} \mid v_0^{(1)} = x, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ]
+\leq 
+\Pr \left [\textnormal{$x$ fails} \mid v_0^{(1)} = x, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \wedge (v_0, v_1) \in \mathcal{E}_\mathcal{B} \right ].
+\end{equation*}
+%
+We can rewrite this probability in terms of the sum of probabilities of all series of random walks in which $x$ fails.  
+Recall that $x$ fails if and only if 
+$\left | \left \{ (i,j) \in [t] \times [k] \mid v_i^{(j)} = x 
+	\wedge \left ( v_i^{(j)}, v_{i+1}^{(j)} \right ) \in \mathcal{E}_\mathcal{B} \right \} \right | > c$.
+We imagine we simulate the random walks in lockstep in reverse order, i.e. we sample $v_1^{(k)}, v_2^{(k-1)}, \dots, v_1^{(1)}$, followed by $v_2^{(k)}, v_2^{(k-1)}, \dots, v_2^{(1)}$, and so on.
+Assume that $x$ fails on the $\ell$th step of the $w$th walk.
+When we perform this simulation, we keep only the shortest prefix of each walk sampled at the time that $x$ fails, i.e. we keep $\left (v_0^{(p)}, v_1^{(p)},  \dots, v_\ell^{(p)} \right )$ of the $p$th walk where $p \in [w, k]$, and $\left (v_0^{(p)}, v_1^{(p)},  \dots, v_{\ell-1}^{(p)} \right )$ where $p \in [w-1]$. 
+Specifically, the edge $\left ( v_{\ell-1}^{(w)}, v_{\ell}^{(w)} \right )$ is the $(c+1)$st unimportant edge sampled outgoing from $x$, so $v_{\ell-1}^{(w)} = x$.
+Consider the sum of probabilities of such random walks, which is given by
+%
+\begin{align}
+\nonumber
+\Pr& \left [\textnormal{$x$ fails} \mid v_0^{(1)} = x, \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \wedge (v_0, v_1) \in \mathcal{E}_\mathcal{B} \right ]
+\\
+\nonumber
+&= 
+\sum_{i = 1}^{t} 
+\sum_{j =k}^{1} 
+\sum_{\substack{
+	\left (v_0^{(k)}, v_2^{(k)} \dots, v_i^{(k)} \right ) \\
+	\vdots \\
+	\left (v_0^{(j)}, v_2^{(j)} \dots, v_i^{(j)} \right ) \\
+	\vdots \\
+	\left (v_0^{(1)}, v_2^{(1)} \dots, v_{i-1}^{(1)} \right ) \\
+}}
+\mathbf{1}_{ \left [\substack{
+	v_0^{(1)} = v_{i-1}^{(j)} = x 
+			\wedge \left ( v_0^{(1)}, v_1^{(1)} \right ), \left ( v_{i-1}^{(j)}, v_i^{(j)} \right ) \in \mathcal{E}_\mathcal{B} 
+			\wedge \\
+	\left ( \substack{
+		\left | \left \{ 
+				(i^*,j^*) \in [0, i-2] \times [k] 
+						\mid v_{i^*}^{(j*)} = x 
+						\wedge \left ( v_{i^*}^{(j^*)}, v_{i^*+1}^{(j^*)} \right ) \in \mathcal{E}_\mathcal{B}
+		\right \} \right | \\
+		+ \left | \left \{ 
+				j^* \in [j, k] 
+						\mid v_{i}^{(j*)} = x 
+						\wedge \left ( v_{i - 1}^{(j^*)}, v_{i}^{(j^*)} \right ) \in \mathcal{E}_\mathcal{B}
+		\right \} \right | = c + 1
+	} \right )
+}\right ]}
+\frac{1}{\mathbf{d}_\mathcal{B}[x]}
+\left ( 
+	\prod_{i^* = 0}^{i-1}  
+	\prod_{j^*= 1}^{k} 
+		\frac{1}{\mathbf{d}_{v_{i^*}^{(j^*)}}} 
+\right ) 
+\prod_{j^* = 0}^{j -1}  \frac{1}{\mathbf{d}_{v_{i}^{(j^*)}}}
+\\
+\label{eq:rw:q:prob}
+&= 
+\sum_{i = 1}^{t} 
+\sum_{j =k}^{1} 
+\sum_{\substack{
+	\left (v_0^{(k)}, v_2^{(k)} \dots, v_i^{(k)} \right ) \\
+	\vdots \\
+	\left (v_0^{(j)}, v_2^{(j)} \dots, v_{i-1}^{(j)} \right ) \\
+	\vdots \\
+	\left (v_0^{(1)}, v_2^{(1)} \dots, v_{i-1}^{(1)} \right ) \\
+}}
+\mathbf{1}_{ \left [\substack{
+	v_0^{(1)} = v_{i-1}^{(j)} = x 
+			\wedge \left ( v_0^{(1)}, v_1^{(1)} \right ) \in \mathcal{E}_\mathcal{B} 
+			\wedge \\
+	\left ( \substack{
+		\left | \left \{ 
+				(i^*,j^*) \in [0, i-2] \times [k] 
+						\mid v_{i^*}^{(j*)} = x 
+						\wedge \left ( v_{i^*}^{(j^*)}, v_{i^*+1}^{(j^*)} \right ) \in \mathcal{E}_\mathcal{B}
+		\right \} \right | \\
+		+ \left | \left \{ 
+				j^* \in [j, k] 
+						\mid v_{i}^{(j*)} = x 
+						\wedge \left ( v_{i - 1}^{(j^*)}, v_{i}^{(j^*)} \right ) \in \mathcal{E}_\mathcal{B}
+		\right \} \right | = c
+	} \right )
+}\right ]}
+%\frac{1}{\mathbf{d}_\mathcal{B}[x]}
+\left ( 
+	\prod_{i^* = 0}^{i-1}  
+	\prod_{j^*= 1}^{k} 
+		\frac{1}{\mathbf{d}_{v_{i^*}^{(j^*)}}} 
+\right ) 
+\prod_{j^* = 0}^{j -1}  \frac{1}{\mathbf{d}_{v_{i}^{(j^*)}}}
+\end{align}
+%
+Recall that $v_{\ell-1}^{(w)} = x$ is the point at which we assume the simulation fails.
+In Eq.~\eqref{eq:rw:q:prob} we threw away the $\ell$th step of the $w$th walk. 
+At this point we have simulated the $k$th through $(w+1)$th walks up to $\ell$ steps, and all other walks up to $\ell-1$ steps.
+Assume that $v^{(p)^\prime}_s$ = $v^{(p)}_{\ell - s}$ for $p \in [w+1, k]$ and $s \leq \ell$.
+Then the walk $\left ( v_0^{(p)^\prime}, v_1^{(p)^\prime} \dots, v_\ell^{(p)^\prime} \right )$ is the reverse of the walk $\left ( v_0^{(p)}, v_1^{(p)} \dots, v_\ell^{(p)} \right )$ for such $p$.
+Similarly assume that $v^{(p)^\prime}_s$ = $v^{(p)}_{\ell -1 - s}$ for $p \in [2, w-1]$ and $s \leq \ell-1$.
+Then the walk $	\left ( v_0^{(p)^\prime}, v_1^{(p)^\prime} \dots, v_{\ell-1}^{(p)^\prime} \right )$ is also the reverse of the walk $\left ( v_0^{(p)}, v_{1}^{(p)} \dots, v_{\ell-1}^{(p)} \right )$.
+%Furthermore, now $v_t^{(1)^\prime} = v_0^{(w)^\prime} = x$.
+Finally, assume that $v^{(1)^\prime}_s = v^{(w)}_{\ell -1 - s}$ and $v^{(w)^\prime}_s = v^{(1)}_{\ell -1 - s}$ for $s \leq \ell-1$.
+Then $\left ( v_0^{(1)^\prime}, v_1^{(1)^\prime} \dots, v_{\ell-1}^{(1)^\prime} \right )$ is the reverse of $\left ( v_0^{(w)}, v_{1}^{(w)} \dots, v_{\ell-1}^{(w)} \right )$ and $\left ( v_0^{(w)^\prime}, v_1^{(w)^\prime} \dots, v_{\ell-1}^{(w)^\prime} \right )$ is the reverse of $\left ( v_0^{(1)}, v_{1}^{(1)} \dots, v_{\ell-1}^{(1)} \right )$.
+This yields a family of random walks of a the same form as the original walks, as $v_0^{(1)^\prime} = v_{\ell - 1}^{(w)^\prime} = x$.
+This allows us to set the summation Eq.~\eqref{eq:rw:q:prob} equal to 
+%
+\begin{align}
+%\nonumber
+%& 
+%\sum_{i = 1}^{t} 
+%\sum_{j =1}^{k} 
+%\sum_{\substack{
+%	\left (v_0^{(1)^\prime}, v_2^{(1)^\prime} \dots, v_t^{(1)^\prime} \right ) \\
+%	\vdots \\
+%	\left (v_0^{(j)^\prime}, v_2^{(j)^\prime} \dots, v_i^{(j)^\prime} \right ) \\
+%}}
+%\mathbf{1}_{ \left [\substack{
+%	v_t^{(1)^\prime} = v_{0}^{(j)^\prime} = x \wedge \left ( v_t^{(1)^\prime}, v_{t-1}^{(1)^\prime} \right ) \in \mathcal{E}_\mathcal{B} \wedge \\
+%	\left | \left \{ (i^*,j^*) \in [i] \times [j] \mid v_{i^*}^{(j)^\prime} = x 
+%			\wedge \left ( v_{i^*-1}^{(j^*)^\prime}, v_{i^*}^{(j^*)^\prime} \right ) \in \mathcal{E}_\mathcal{B} \right \} \right | = c
+%}\right ]}
+%%\frac{1}{\mathbf{d}_\mathcal{B}[x]}
+%\left ( \prod_{j^* = 1}^{j-1} \prod_{i^* = 0}^{t-1}  \frac{1}{\mathbf{d}_{v_{i^*}^{j^*}}} \right ) \prod_{i^* = 0}^{i-1}  \frac{1}{\mathbf{d}_{v_{i^*}^{(j)^\prime}}}
+%\\
+\nonumber
+& 
+\sum_{i = 1}^{t} 
+\sum_{j =k}^{1} 
+\sum_{\substack{
+	\left (v_0^{(k)^\prime}, v_2^{(k)^\prime} \dots, v_i^{(k)^\prime} \right ) \\
+	\vdots \\
+	\left (v_0^{(j)^\prime}, v_2^{(j)^\prime} \dots, v_{i-1}^{(j)^\prime} \right ) \\
+	\vdots \\
+	\left (v_0^{(1)^\prime}, v_2^{(1)^\prime} \dots, v_{i-1}^{(1)^\prime} \right ) \\
+}}
+\mathbf{1}_{ \left [\substack{
+	v_0^{(1)^\prime} = v_{i-1}^{(j)^\prime} = x 
+			\wedge \left ( v_{i-1}^{(j)^\prime}, v_{i}^{(j)^\prime} \right ) \in \mathcal{E}_\mathcal{B} 
+			\wedge \\
+	\left ( \substack{
+		\left | \left \{ 
+				(i^*,j^*) \in [1, i-1] \times [k] 
+						\mid v_{i^*}^{(j*)^\prime} = x 
+						\wedge \left ( v_{i^*}^{(j^*)^\prime}, v_{i^* - 1}^{(j^*)^\prime} \right ) \in \mathcal{E}_\mathcal{B}
+		\right \} \right | \\
+		+ \left | \left \{ 
+				j^* \in [j, k] 
+						\mid v_{i}^{(j*)} = x 
+						\wedge \left ( v_{i}^{(j^*)^\prime}, v_{i-1}^{(j^*)^\prime} \right ) \in \mathcal{E}_\mathcal{B}
+		\right \} \right | = c
+	} \right )
+}\right ]}
+%\frac{1}{\mathbf{d}_\mathcal{B}[x]}
+\left ( 
+	\prod_{i^* = 0}^{i-1}  
+	\prod_{j^*= 1}^{k} 
+		\frac{1}{\mathbf{d}_{v_{i^*}^{(j^*)}}} 
+\right ) 
+\prod_{j^* = 0}^{j -1}  \frac{1}{\mathbf{d}_{v_{i}^{(j^*)}}}
+\\
+\nonumber
+&=
+\Pr_{\substack{
+	\left (v_0^{(1)^\prime}, v_2^{(1)^\prime} \dots, v_{t-1}^{(1)^\prime} \right ) \\
+	\vdots \\
+	\left (v_0^{(k)^\prime}, v_2^{(k)^\prime} \dots, v_{t-1}^{(k)^\prime} \right ) \\
+}}
+\left [ 
+	\left | \left \{ (i^*,j^*) \in [t-1] \times [k] \mid v_{i^*}^{(j^*)^\prime} = x 
+			\wedge \left ( v_{i^*-1}^{(j^*)^\prime}, v_{i^*}^{(j^*)^\prime} \right ) \in \mathcal{E}_\mathcal{B} \right \} \right | \geq c
+\right ].
+\end{align}
+%
+The last equality follows because we have transformed the summation into the sum of probabilities all sets of $k$ independent random walks that involve querying $\mathcal{N}_\mathcal{B}[x]$ at least $c$ times.
+
+Recall that $\left ( v_i^{(j)^\prime}, v_{i-1}^{(j)^\prime} \right ) \in \mathcal{E}_\mathcal{B}$ if and only if $v_{i-1}^{(j)^\prime} \in \mathcal{E}_\mathcal{B}$.
+Thus, for any $i \in [1, t-1]$ and $j \in [k]$ with fixed prefix set 
+%$\mathcal{P} =$
+%$ \left (v_0^{(1)^\prime}, v_2^{(1)^\prime} \dots, v_{i-1}^{(1)^\prime} \right )$, 
+%$\dots$,
+$\left (v_0^{(j)^\prime}, v_2^{(j)^\prime} \dots, v_{i-1}^{(j)^\prime} \right )$,
+%$\left (v_0^{(j+1)^\prime}, v_2^{(j+1)^\prime} \dots, v_{i}^{(j+1)^\prime} \right )$,
+%$\dots$,
+%$\left (v_0^{(k)^\prime}, v_2^{(k)^\prime} \dots, v_i^{(k)^\prime} \right )$,
+we have that 
+%
+\begin{align*}
+\Pr \left [ 
+		v_i^{(j)^\prime} = x \wedge 
+		\left ( v_i^{(j)^\prime}, v_{i-1}^{(j)^\prime} \right ) \in \mathcal{E}_\mathcal{B} 
+				\mid \left (v_0^{(j)^\prime}, v_2^{(j)^\prime} \dots, v_{i-1}^{(j)^\prime} \right )
+\right ]
+&\leq
+\mathbf{1}_{\left [ v_{i-1}^{(j)^\prime} \in \mathcal{B} \right ]} \cdot \frac{1}{\mathbf{d}_{v_{i-1}^{(j)^\prime}}}
+\\
+&<
+\frac{1}{c}.
+\end{align*}
+%
+{\color{red} HANDLING MULTIPLE SOURCES GOES HERE}
+
+Moreover, the probability of this event is independent of all of the other walks, and there are $k(t-1)$ opportunities in a particular suite of random walks where it could occur, with at most $c$ occurrences, which could be in any of ${k(t-1) \choose c}$ combinations of opportunities. 
+Ergo, we can bound the probability that $x$ fails in this way via 
+\begin{align*}
+\Pr &\left [
+	\left | \left \{ 
+		(i,j) \in [1, t-1] \times [k] 
+			\mid v_{i}^{(j)^\prime} = x 
+			\wedge \left ( v_{i}^{(j)^\prime}, v_{i - 1}^{(j)^\prime} \right ) \in \mathcal{E}_\mathcal{B}
+	\right \} \right | \geq c
+\right ]	
+\\
+&\leq 
+{k(t -1) \choose c} \left ( \frac{1}{c} \right )^c
+\\
+&\leq 
+\left ( \frac{ek(t-1)}{c} \right )^c \left ( \frac{1}{c} \right )^c
+\\
+&< 
+\left ( \frac{ekt}{c^2} \right )^c.
+\end{align*}
+%
+
+We can now set $c = \left \lceil 4 \sqrt{kt} \frac{q}{\log q} \right \rceil$, where $q = 2 + \frac{\log (1/\delta)}{\sqrt{kt}}$ is greater than 2. 
+Moreover, note that $\frac{q}{\log^2 q} > \frac{1}{4}$.
+Then we have that 
+%
+\begin{equation*}
+c \log \left ( \frac{c^2}{ekt} \right ) 
+\geq 
+\frac{4 q \sqrt{kt}}{\log q} \log \left ( \frac{16q^2}{e \log^2q} \right )
+>
+\frac{4 q \sqrt{kt}}{\log q} \log \left ( \frac{4q}{e} \right )
+> 
+4 q\sqrt{kt}
+> \log (1/\delta).
+\end{equation*}
+%
+Hence, $\left ( \frac{ekt}{c^2} \right )^c < \delta$.
+Thus, we have shown that $\Pr \left [ \textnormal{$x$ fails} \mid v_0^{(1)}  = x , \left (v_0^{(2)}, v_2^{(3)} \dots, v_{i-1}^{(k)} \right ) \right ] < \delta$ by setting $c = O \left ( \frac{q \sqrt{kt}}{\log (1/\delta)} \right )$.
+
+\end{proof}
+
+We are now able to prove the correctness of the Algorithm.
+%
+\begin{theorem} \label{thm:rw:serial}
+There is a randomized algorithm that can simulate $k$ $t$-step random walks where no source exceeds $\Omega(\sqrt{k})$ occurrences in a single pass over an insert-only stream defining an undirected graph within error $\varepsilon$ using $O \left (n \sqrt{kt} \frac{q}{\log q} \right )$ words of memory, where $q = 2 + \frac{\log(1/\varepsilon)}{\sqrt{kt}}$.
+\end{theorem}
+%
+\begin{proof}
+The result follows from Lemma~\ref{lem:rw:startbound} and Lemma~\ref{lem:rw:setc}, where $\delta = \frac{\varepsilon}{2t}$.
+\end{proof}
 
 %----------------------------------------------------------------------------------------
 \section{Distributed Sublinear Sampling of Random Simple Paths}
