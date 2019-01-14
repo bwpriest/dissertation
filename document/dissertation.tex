@@ -4937,38 +4937,229 @@ It would be quite useful to remember $\mathcal{N}_\mathcal{E}$ at least, while r
 
 While rather awkward in serial, the distributed model makes this approach not only sensible but rather convenient. 
 Assume that every processor has access to some fast long-term memory bank $\mathcal{M}$- e.g. NVRAM, to which it can write and read.
-Each processor may have its own memory bank, in which case $\mathcal{M}$ refers to a distributed data structure in the convention we have used throughout this document.
-Assume that $P \in \mathcal{P}$ can allocate a portion of its memory bank, $\mathcal{M}[x]$, allocated to $x \in \mathcal{V}_P$.
-In Algorithm~\ref{alg:rw:distributed:insert-only:accumulation}, while it is processing an insert $(x, y)$ to $\mathcal{N}_\mathcal{E}[x]$ for some $x \in \mathcal{B}$ that it owns, $P$ also writes $(x,y)$ to $M[x]$.
-After accumulation is finished, $M[x] = \{ (u, v) \in \mathcal{E}_\mathcal{B} \mid u = x\}$ is a stream recorded in fast storage, but not held in working memory.
+Each processor might have its own memory bank, or there may be many that partition $\mathcal{P}$.
+In either case $\mathcal{M}$ refers to a distributed data structure in the convention we have used throughout this document.
+Assume that $P \in \mathcal{P}$ can allocate a portion of its memory bank, $\mathcal{M}_P[x]$, allocated to $x \in \mathcal{V}_P$.
+
+Algorithm~\ref{alg:rw:distributed:insert-only:accumulation:playback} is generalizes the \algoname{FeedSampler} function of Algorithm~\ref{alg:rw:distributed:insert-only:accumulation} to include playback.
+The other contexts of the accumulation procedure are unchanged.
+While processing an insert $(x, y)$ to $\mathcal{N}_\mathcal{E}[x]$ for some $x \in \mathcal{B}$ that it owns, $P$ also writes $(x,y)$ to $M[x]$.
+After accumulation is finished, $\mathcal{M}[x] = \{ (u, v) \in \mathcal{E}_\mathcal{B} \mid u = x\}$ is a stream recorded in fast storage, but not held in working memory.
+
+\begin{algorithm}[htbp] 
+\caption{Insert-Only Streaming Distributed $k$ Random Walk Accumulation with Playback}\label{alg:rw:distributed:insert-only:accumulation:playback}
+\begin{flushleft}
+        \textbf{Input:} 		%$\boldsymbol{\sigma}$ - insert-only edge stream\\
+%        	\hspace{2.65em}	$k$ - integral heavy hitter count	 \\
+%        	\hspace{3.2em}	$\mathcal{P}$ - universe of processors	 \\
+%        	\hspace{2.65em}	$\mathcal{D}$ - accumulated \algoname{DegreeSketch} 	 \\
+%        	\hspace{3.2em}	$\mathcal{S}$ - distributed dictionary mapping $\mathcal{P}$ to send queues	 \\
+%        	\hspace{3.2em}	$\mathcal{R}$ - distributed dictionary mapping $\mathcal{P}$ to receive queues	 \\
+        		$\mathcal{M}$ - distributed dictionary mapping $\mathcal{P}$ to memory banks	 \\
+%        	\hspace{3.2em}	$f$ - function mapping $\mathcal{V} \rightarrow \mathcal{P}$	 \\
+        \textbf{Output:} $\mathcal{N}_\mathcal{S}$ - distributed dictionary of edges in $\mathcal{E}_\mathcal{S}$ \\
+        	\hspace{4.05em}	$\mathcal{N}_\mathcal{B}$ - distributed dictionary of sampled edges in $\mathcal{E}_\mathcal{B}$ \\
+        	\hspace{4.05em}	$\mathbf{d}$ - distributed dictionary of degrees
+\end{flushleft}
+\begin{flushleft}
+\begin{algorithmic}[1]
+	\Statex \textbf{Functions}:
+%		\Function{InitVertex}{$x$}
+%			\If {$\exists ! \mathbf{d}[x]$}
+%				\State $\mathbf{d}[x] \gets 0$
+%				\State $\mathcal{L}[x] \gets \emptyset$			
+%				\State $\mathcal{N}_\mathcal{S}[x] \gets \emptyset$			
+%				\State $\mathcal{N}_\mathcal{B}[x] \gets$ empty sampler			
+%			\EndIf
+		\Function{FeedSampler}{$x, y$}
+			\If {$\mathbf{d}[x] > c$}
+				\State Feed $(x,y)$ into $\mathcal{N}_\mathcal{B}$
+				\State \textbf{Append $\boldsymbol{(x,y)}$ to $\boldsymbol{\mathcal{M}[x]}$}
+			\Else
+				\State $\mathcal{N}_\mathcal{S}[x] \gets \mathcal{N}_\mathcal{S}[x] \cup \{(x, y)\}$
+			\EndIf
+		\EndFunction
+%		\EndFunction
+%%		\Function{InsertArc}{$x,y$}
+%%			\State $\algoname{InitVertex}(x)$, $\algoname{InitVertex}(y)$
+%%			\State $\mathbf{d}[y] \gets \mathbf{d}[y] + 1$
+%%			\If {$\mathbf{d}[y] = c + 1$}
+%%				\For{$u \in \mathcal{L}[y]$}
+%%					\State $\mathcal{N}_\mathcal{S} \gets \mathcal{N}_\mathcal{S} \setminus (u, y)$
+%%					\State Feed $(u,y)$ into $\mathcal{N}_\mathcal{B}[u]$
+%%				\EndFor
+%%			\EndIf
+%%			\If {$\mathbf{d}[y] \leq c$}
+%%				\State $\mathcal{N}_\mathcal{S}[x] \gets \mathcal{N}_\mathcal{S}[x] \cup \{(x, y)\}$
+%%				\State $\mathcal{L}[y] \gets \mathcal{L}[y] \cup \{x\}$
+%%			\Else
+%%				\State Feed $(x,y)$ into $\mathcal{N}_\mathcal{B}[x]$
+%%			\EndIf
+%%		\EndFunction
+%	\Statex \textbf{Send Context} $P \in \mathcal{P}$:
+%		\While{$\mathcal{S}[P]$ is not empty}
+%%			\If {next message is an \algoname{Edge}}
+%	  			\State $(\xi, (x, y)) \gets \mathcal{S}[P].\pop$
+%				\If {$\xi = \algoname{Edge}$}
+%					\State $W \gets f(y)$
+%				\Else
+%					\State $W \gets f(x)$
+%				\EndIf
+%				\State $\mathcal{R}[W].\push{\xi, (x, y)}$
+%%			\ElsIf{next message is a \algoname{Sketch}}
+%%				\State $(W, \mathcal{D}[x], y) \gets \mathcal{S}[P].pop()$
+%%				\State $\mathcal{R}[W].\push{\algoname{Sketch}, xy}$
+%%			\EndIf
+%  		\EndWhile
+%	\Statex \textbf{Receive Context} $P \in \mathcal{P}$:
+%		\While{$\mathcal{R}[P]$ is not empty}
+%  			\State $(\xi, (x, y)) \gets \mathcal{R}[P].\pop$
+%			\If {$\xi = \algoname{Edge}$}
+%				\State $\algoname{InitVertex}(y)$
+%				\State $\mathbf{d}[y] \gets \mathbf{d}[y] + 1$
+%				\If {$\mathbf{d}[y] = c + 1$}
+%					\For{$u \in \mathcal{L}[y]$}
+%						\State $\mathcal{S}[P].\push{\algoname{Promote}, (u, y)}$
+%%						\State Feed $(u,y)$ into $\mathcal{N}_\mathcal{B}[u]$
+%					\EndFor
+%				\EndIf
+%				\If {$\mathbf{d}[y] \leq c$}
+%					\State $\mathcal{S}[P].\push{\algoname{Small}, (x, y)}$
+%					\State $\mathcal{L}[y] \gets \mathcal{L}[y] \cup \{x\}$
+%				\Else
+%					\State $\mathcal{S}[P].\push{\algoname{Big}, (x, y)}$
+%				\EndIf
+%			\ElsIf{$\xi = \algoname{Promote}$}
+%				\State $\mathcal{N}_\mathcal{S}[x] \gets \mathcal{N}_\mathcal{S}[x] \setminus (x, y)$
+%%				\State Feed $(x, y)$ into $\mathcal{N}_\mathcal{B}[x]$
+%				\State $\algoname{FeedSampler}(x, y)$
+%			\ElsIf{$\xi = \algoname{Small}$}
+%				\State $\mathcal{N}_\mathcal{S}[x] \gets \mathcal{N}_\mathcal{S}[x] \cup \{(x, y)\}$
+%			\ElsIf{$\xi = \algoname{Big}$}
+%				\State $\algoname{FeedSampler}(x, y)$
+%%				\State Feed $(x,y)$ into $\mathcal{N}_\mathcal{B}[x]$
+%%				\State $(W, \mathcal{D}[x], y) \gets \mathcal{S}[P].pop()$
+%%				\State $\mathcal{R}[W].\push{\algoname{Sketch}, xy}$
+%			\EndIf
+%  		\EndWhile
+%	\Statex \textbf{Accumulation} $P \in \mathcal{P}$:
+%		\For{$xy \in \boldsymbol{\sigma}_P$}
+%			\State $\mathcal{S}[P].push(\algoname{Edge}, (x, y))$
+%			\State $\mathcal{S}[P].push(\algoname{Edge}, (y, x))$
+%		\EndFor
+%		\State \Return $\mathcal{N}_\mathcal{S}$, $\mathcal{N}_\mathcal{B}$
+\end{algorithmic}
+\end{flushleft}
+\end{algorithm}
+
 Say that $\mathcal{N}_\mathcal{B}[x]$ runs out of samples during the simulation phase. 
 Rather than outputting FAIL, the algorithm can instead refresh it by taking another pass over $\mathcal{M}[x]$.
 This avoids both taking another pass over all of $\boldsymbol{\sigma}$ and outputting FAIL.
+Algorithm~\ref{alg:rw:distributed:insert-only:simulation:playback} generalizes the receive context of Algorithm~\ref{alg:rw:distributed:insert-only:simulation} with this behavior.
 
-Say, for example, that we run this algorithm where we sample $O(\sqrt{kt})$ neighbors per vertex, same as before.
-However, where simulation would have resulted in FAIL, we now take another pass over the relevant substream and record a new set of $O(\sqrt{kt})$ neighbors for the offending vertex.
+\begin{algorithm}[htbp] 
+\caption{Insert-Only Streaming Distributed $k$ Random Walk Simulation}\label{alg:rw:distributed:insert-only:simulation:playback}
+\begin{flushleft}
+        \textbf{Input:} 		$\mathcal{M}$ - dictionary mapping vertices to external incident edge streams in $\mathcal{E}_\mathcal{B}$ \\
+        	\hspace{3.15em}	$\mathcal{N}_\mathcal{S}$ - dictionary mapping vertices to outgoing edges in $\mathcal{E}_\mathcal{S}$ \\
+        	\hspace{3.15em}	$\mathcal{N}_\mathcal{B}$ - dictionary mapping vertices to outgoing sampled edges in $\mathcal{E}_\mathcal{B}$ \\
+        	\hspace{3.15em}	$\mathbf{d}$ - degree dictionary \\
+%        	\hspace{3.15em}	$\mathbf{p}$ - playback dictionary, initially $\{0\}^n$ \\
+%        	\hspace{3.15em}	$v_0^{(1)}, v_0^{(2)}, \dots, v_0^{(k)}$ - $k$ starting vertices $\in \mathcal{V}$ \\
+%        	\hspace{2.65em}	$k$ - integral heavy hitter count	 \\
+%        	\hspace{2.65em}	$\mathcal{P}$ - universe of processors	 \\
+%        	\hspace{2.65em}	$\mathcal{D}$ - accumulated \algoname{DegreeSketch} 	 \\
+%        	\hspace{2.65em}	$\mathcal{S}$ - distributed dictionary mapping $\mathcal{P}$ to send queues	 \\
+%        	\hspace{2.65em}	$\mathcal{R}$ - distributed dictionary mapping $\mathcal{P}$ to receive queues	 \\
+%        	\hspace{2.65em}	$f$ - function mapping $\mathcal{V} \rightarrow \mathcal{P}$	 \\
+        \textbf{Output:} $k$ Random Walks (length $t$ or ends in FAIL)
+%        $\mathcal{N}_\mathcal{S}$ - dictionary for edges in $\mathcal{E}_\mathcal{S}$ \\
+%        	\hspace{4.05em}	$\mathcal{N}_\mathcal{B}$ - dictionary for sampled edges in $\mathcal{E}_\mathcal{B}$
+\end{flushleft}
+\begin{flushleft}
+\begin{algorithmic}[1]
+%	\Statex \textbf{Functions}:
+%		\Function{SimulateRandomWalk}{$v_0$}
+%			\For {$i = 0, 1, \dots, t-1$}
+%				\State $a \sim_U [\mathbf{d}[{v_i}]] $
+%				\If {$a \leq |\mathcal{N}_\mathcal{S}[v_i]|$}
+%					\State $v_{i+1} \sim_U \mathcal{N}_\mathcal{S}[v_i]$
+%				\Else
+%					\If {$|\mathcal{N}_\mathcal{B}[v_i]| > 0$}
+%						\State $v_{i+1} \gets$ next item from $\mathcal{N}_\mathcal{B}[v_i]$
+%						\State $\mathcal{N}_\mathcal{B}[v_i] \gets \mathcal{N}_\mathcal{B}[v_i] \setminus \{v_{i+1}\}$
+%					\Else
+%						\State \Return $(v_0, v_1, \dots, v_i)$, FAIL
+%					\EndIf
+%				\EndIf
+%			\EndFor
+%			\State \Return $(v_0, v_1, \dots, v_t)$
+%		\EndFunction
+%	\Statex \textbf{Send Context} $P \in \mathcal{P}$:
+%		\While{$\mathcal{R}[P]$ is not empty}
+%  			\State $(v_0, v_1, \dots, v_j) \gets \mathcal{R}[P].\pop$
+%			\State $Q \gets f(v_j)$
+%			\State $R[Q].\push{v_0, v_1, \dots, v_{j}}$
+%  		\EndWhile
+	\Statex \textbf{Receive Context} $P \in \mathcal{P}$:
+		\While{$\mathcal{R}[P]$ is not empty}
+  			\State $(v_0, v_1, \dots, v_i) \gets \mathcal{R}[P].\pop$
+			\State $a \sim_U [\mathbf{d}[{v_i}]] $
+			\If {$a \leq |\mathcal{N}_\mathcal{S}[v_i]|$}
+				\State $v_{i+1} \sim_U \mathcal{N}_\mathcal{S}[v_i]$
+			\Else
+				\If {$|\mathcal{N}_\mathcal{B}[v_i]| = 0$}
+					\State Refresh $\mathcal{N}_\mathcal{B}[v_i]$ by taking a pass over $\mathcal{M}[x]$
+				\EndIf
+				\State $v_{i+1} \gets$ next item from $\mathcal{N}_\mathcal{B}[v_i]$
+				\State $\mathcal{N}_\mathcal{B}[v_i] \gets \mathcal{N}_\mathcal{B}[v_i] \setminus \{v_{i+1}\}$
+			\EndIf
+			\If {$i + 1 = t$}
+				\State \Return $(v_0, v_1, \dots, v_{i+1})$
+			\Else
+				\State $S[P].\push{v_0, v_1, \dots, v_{i+1}}$
+			\EndIf
+  		\EndWhile
+%	\Statex \textbf{Execution} $P \in \mathcal{P}$:
+%		\ParFor{$j \in [k]$}
+%			\If {$f\left (v_0^{(j)} \right) = P$}
+%				\State $\mathcal{R}[P].\push{v_0^{(j)}}$
+%			\EndIf
+%		\EndParFor
+\end{algorithmic}
+\end{flushleft}
+\end{algorithm}
+
+
+Say, for example, that we run this algorithm where we sample $O(k^\alpha \sqrt{t})$ neighbors per vertex, where $\alpha \in [0,1]$ is a real number.
+However, where simulation would have resulted in FAIL, we now take another pass over the relevant substream and record a new set of $O(k^\alpha \sqrt{t})$ neighbors for the offending vertex.
 We will call such an event a $\emph{playback}$.
 
 We can bound the number of playbacks that are likely to occur.
-Consider a particular vertex $x \in \mathcal{V}$, and assume that while simulating $k$ random walks of length $t$, the algorithm triggers $\omega(\sqrt{k})$ playbacks on $x$.
-Then the algorithm considers $\omega(k\sqrt{t})$ samples from neighbors of $x$ in $\mathcal{B}$. 
+Consider a particular vertex $x \in \mathcal{V}$, and assume that while simulating $k$ random walks of length $t$, the algorithm triggers $\omega \left ( k^{1 - \alpha} \right )$ playbacks on $x$.
+Then the algorithm considers $\omega \left ( k \sqrt{t}\right )$ samples from neighbors of $x$ in $\mathcal{B}$. 
 This means that there is at least one simulated random walk $w$ that consumes $\omega(\sqrt{t})$ of these samples.
 As there are no failures by design, these random walks are perfectly simulated.
-That means that, should that $w$ have been simulated by the single source algorithm, it would have output fail. 
-We have shown that $\omega(\sqrt{k})$ playbacks occurring on one vertex implies that some walk is simulated that would have failed using the single source algorithm. 
-Thus, the probability that $\omega(\sqrt{k})$ playbacks occur on a single vertex is bounded by the probability that one of $k$ independent single source instantiations of the algorithm with the same starting vertices fails. 
+That means that, should that $w$ have been simulated by the single source algorithm, it would have failed. 
+We have shown that $\omega(k^{1 - \alpha})$ playbacks occurring on one vertex implies that some walk is simulated that would have failed using the single source algorithm. 
+Thus, the probability that $\omega(k^\alpha)$ playbacks occur on a single vertex is bounded by the probability that one of $k$ independent single source instantiations of the algorithm with the same starting vertices fails. 
 We have proven the following Lemma.
 
 \begin{theorem} \label{thm:playback:bound}
-If $\delta$ is the probability that a single source streaming random walk simulation of length $t$ fails, then the distributed algorithm with playback  using the same parameters will generate $O(\sqrt{k})$ playbacks on any particular vertex with probability at most $(1 - \delta)^k$.
+Let $\delta$ be the probability that a single source streaming random walk simulation of length $t$ fails given a parameterization.
+Further assume that the distributed $k$-source streaming algorithm with playback using the same parameterization accumulates $O(k^\alpha \sqrt{t})$ neighbors per vertex.
+Then the distributed algorithm will generate $O(k^{1-\alpha})$ playbacks on each vertex with probability at least $(1 - \delta)^k$.
 \end{theorem}
 
 This means that we are unlikely to take too many passes over the memory banks, which has the added benefit of allowing us to partially skirt the limitations of Lemma~\ref{lem:rw:setc} in the distributed case.
+In particular, if $\alpha=\frac{1}{2}$ we will accumulate $O(\sqrt{kt})$ neighbors per vertex per pass.
 It is likely that we will take $O(\sqrt{k})$ passes over the unimportant edges $\mathcal{E}_\mathcal{B}$, while using $O \left (n\sqrt{kt}\frac{q}{\log q} \right )$ words of memory.
 Meanwhile, using $k$ single source simulators in parallel requires a single pass over all of $\boldsymbol{\sigma}$ using $O\left (nk\sqrt{t}\frac{q^\prime}{\log q^\prime} \right )$ words of memory, where $q^\prime = 2 + \frac{\log 1/\varepsilon}{\sqrt{k}}$.
 Further, using a single source simulator in a series requires $\Theta(k)$ passes over all of $\boldsymbol{\sigma}$ using $O\left (n\sqrt{t}\frac{q^\prime}{\log q^\prime} \right )$ words of memory.
 So, we are able to provide a middle ground in terms of memory and pass efficiency.
-For practical graphs, it is likely that most vertices will trigger far fewer than $\sqrt{k}$ playbacks, which indicates much less time spent in I/O and communication than taking an equivalent number of passes over $\boldsymbol{\sigma}$.
+
+Say that in a particular simulation, the most active vertex triggers $O(k^\alpha)$ playbacks.
+For practical graphs, it is likely that most of the other vertices will trigger $o(k^\alpha)$ playbacks, which indicates much less time spent in I/O and communication than taking $\Theta(k^\alpha)$ passes over $\boldsymbol{\sigma}$.
 
 
 
@@ -4980,12 +5171,63 @@ For practical graphs, it is likely that most vertices will trigger far fewer tha
 Many applications call for the simulation of random sequences of vertices that are generalizations of random walks. 
 For example, one might want to prefer to follow edges to vertices two hops in the past so as to bias toward closing triangles. 
 Alternatively, one might want to avoid vertices visited up to a certain number of hops in the past so as to bias toward exploration. 
+One might want to include a probability of hopping back to a previously visited vertex, e.g. restarting from the source. 
+Furthermore, any of these augmentations might want to be biases with respect to the length of the walk thus far, e.g. the probability of return-to-source grows as the length of the walk increases.
+
+For the purposes of our analysis in Section~\ref{sec:sskpc}, we will focus on only one of these cases, namely history-avoiding random walks.
+In the unitary case of sampling from a stream while avoiding a subset of possible items, the solution is as simple as ignoring stream indices that match the list of forbidden items.
+This approach works for insert-only, weighted, and turnstile streams. 
+
+However, the sampling of full random walks is more involved.
+The histories to be avoided are not known ahead of time.
+The simplest serial algorithm is to sample from $v_0$'s adjacency set in one pass, and in subsequent passes to sample from $v_i$'s adjacency set while avoiding edges returning to $\left \{ v_0, v_1, \dots, v_{i-1} \right \}$. 
+However, this requires $t$ passes over the entire graph.
+This approach can be made somewhat less wasteful via the simulation of $k$ random walks in parallel, as the space complexity and update times increase by a factor of $k$ and the pass complexity remains the same. 
+
+One might be tempted, for unweighted simple graphs, to simply sample many vertices ahead of time and upon simulation ignore the samples that match a history to be ignored.
+However, we may not know which, if any of $\left \{ v_0, v_1, \dots, v_{i-1} \right \}$ are actually adjacent to $v_0$. 
+If $\left \{ v_0, v_1, \dots, v_{i-1} \right \} \not \subseteq \mathcal{N}_\mathcal{S}$, then we are unable to flip a coin with probability 
+$\frac{|\mathcal{N}_\mathcal{S} \setminus \left \{ v_0, v_1, \dots, v_{i-1} \right \}|}
+{|\{ x \in \mathcal{B} \mid (v_i, x) \in \mathcal{E}_\mathcal{B} \} \setminus \left \{ v_0, v_1, \dots, v_{i-1} \right \}|}$
+, because we do not know the size of the denominator without taking another pass over $M[v_i] = \{ x \in \mathcal{B} \mid (v_i, x) \in \mathcal{E}_\mathcal{B} \}$.
+Hence, even for unweighted simple graphs, we must pass over $M[x]$ each time we sample from non-source $x$.
+
+History-avoiding random walks also introduce a second notion of failure, where a simulation writes itself into a proverbial corner and finds no valid options for the next hop. 
+We will call such an event a \emph{dead end}. 
+Note, however, that near the end of a single source random walk simulation $O(t)$ potential vertices must be avoided in order to avoid a failure. 
+%Assuming that every vertex has $\omega(t)$ neighbors, then this requires that each vertex maintain $O \left ( t^{\frac{3}{2}} \right )$ samples to avoid dead ends while providing similar failure guarantees.
+It is not at all a safe assumption that every vertex have $\omega(t)$ degree in most practical graphs for nontrivial $t$.
+Indeed, it is impossible to guarantee that dead ends do not occur with bounded probability in the simulation of history-avoiding random walks.  
+
+However, a high-performance computing approach with playback of the sort described in Section~\ref{walks:sec:walks:distributed:playback} provides a possible way forward.
+Simulating $k$ parallel history-avoiding random walks can then proceed, where for each history $(v_0, v_1, \dots, v_i)$ the processor in question takes another pass over $M[v_i]$, avoiding any neighbors in $\{v_0, v_1, \dots, v_{i - 1}\}$. 
+Only in the situation where $\{v_0, v_1, \dots, v_{i-1}\} \subseteq \mathcal{N}_\mathcal{B}[v_i]$ and the coin flip determines sampling from $\mathcal{N}_\mathcal{B}$ can a simulation avoid executing this playback.
+In the worst case, certainly no more than $O(kt)$ playbacks will occur for a particular vertex.
+There may be strategies for cleverly batching playbacks for multiple samples from the same vertex, as $O(k)$ different random walks are being simulated in parallel and might all visit some $x \in \mathcal{V}$.
+However, there is no way to guarantee that these visits happen close together in time, short of implementing a Pregel-like synchronous communication protocol.
+Unfortunately, it is then much more difficult to assign a better bound on the number of playbacks that will occur for the simulation of history-avoiding random walks in general.
+Furthermore, each simulation now can terminate in a dead end, the probability of which is highly dependent upon graph structure and independent of the sublinear approximation scheme.
+
+%As the histories to be avoided cannot be known ahead of time, the accumulation stage is unchanged.
+%In simulation, however, we must avoid a subset of possible neighbors.
+%Let $C$ and $D$ be finite sets. 
+%Then $\Pr [i \not\in D \mid i \sim_u C ] = \frac{1}{|C \setminus D|} = \Pr [ i \sim_u C \setminus D]$.
+%Assume that a simulation has produced the walk $\left (v_0, v_1, \dots, v_i \right)$ thus far.
+%So we would sample from $\mathcal{N}_\mathcal{B}[v_i]$, we must ignore all of $\left (v_0, v_1, \dots, v_{i-1} \right)$.
+%Say that $(v_i, x) \sim_u \mathcal{E}_\mathcal{B}$ was sampled, and is in $\mathcal{N}_\mathcal{B}[x]$.
+%If $x \not \in (v_0, v_1, \dots, v_{i-1})$ then
+%, which invalidates any a priori samples if one of the actual neighbors is an option because it invalidates the probabilities in the proof of Lemma~\ref{lem:reservoir:replacement}.
+%Thus, we must take a fresh pass over the stream, ignoring elements 
+
 
 %----------------------------------------------------------------------------------------
 \section{Application: Semi-Streaming Estimation of Betweenness Centrality Heavy Hitters via $\kappa$-Path Centrality} 
 \label{sec:sskpc}
 %----------------------------------------------------------------------------------------
 
+We will show an application of the distributed streaming algorithms described in Section~\ref{walks:sec:walks} to betweenness centrality heavy hitter recovery.
+Unlike some result in earlier chapters, we are unable to provide theoretical approximation bounds for this approach. 
+We will begin by supplying some necessary background on betweenness centrality, the related $\kappa$-path centrality, and discuss the application of distributed history-avoiding random walk simulation to $\kappa$-path centrality.
 
 %----------------------------------------------------------------------------------------
 \subsection{Betweenness Centrality} 
@@ -5002,7 +5244,7 @@ Then the betweenness centrality of $x$ is calculated as
 \mathcal{C}^{\algoname{Btw}}(x) = \sum\limits_{\substack{x \not\in \{y,z\} \\ \lambda_{y,z} \neq 0}} \frac{\lambda_{y,z}(x)}{\lambda_{y,z}}.
 \end{equation}
 %
-An implementation of betweenness centrality must solve the \algoname{AllPairsAllShortestPaths} problem, which is strictly more difficult than the \algoname{AllPairsShortestPaths} solution required by closeness centrality.
+An algorithm solving betweenness centrality must solve the \algoname{AllPairsAllShortestPaths} problem, which is strictly more difficult than the \algoname{AllPairsShortestPaths} solution required by closeness centrality.
 Moreover, there is no known algorithm for computing the betweenness centrality of a single vertex using less space or time than the best algorithm for computing the betweenness centrality for all of the vertices. 
 The celebrated Brandes algorithm, the best known algorithm for solving betweeness centrality, requires $\Theta(nm)$ time ($\Theta(nm + n^2\log n)$ for weighted graphs) and space no better than that required to store the graph  \cite{brandes2001faster}. 
 
@@ -5024,8 +5266,8 @@ Indeed, directly approximating betweenness centrality seems likely to be infeasi
 It is unclear how to sublinearize approximating the betweenness centrality of a vertex.
 %Indeed, it is known that the worst-case complexity of computing $\textnormal{BC}(x)$ for $x \in V$ is $O(nm)$, no better than computing $BC(G)$. 
 %It is known that computing the betweenness centrality of one vertex has the same worst-case complexity of computing it for the entire graph. 
-Indeed, each solution to the \algoname{SSSP} problem requires $\Omega(m)$ memory.
-As this is the basis of the on- and off-line  betweenness centrality approximation algorithms discussed in Section \ref{sec:bc}, variations on their approach is unlikely to yield a semi-streaming solution.
+Indeed, each solution to the \algoname{SingleSourceAllShortestPaths} problem requires $\Omega(m)$ memory.
+As this is the basis of the on- and off-line  betweenness centrality approximation algorithms discussed above, variations on their approach is unlikely to yield a semi-streaming solution.
 Moreover, the spanner-based approach deployed in Section \ref{sec:sscc} to approximate closeness centrality does not apply.
 This is because betweenness centrality is defined in terms of the number of all shortest paths between two vertices, information which is lost when building the sparse spanner.
 
@@ -5038,21 +5280,158 @@ This is because betweenness centrality is defined in terms of the number of all 
 
 Kourtellis et al. attempt to approximate the top-$k$ betweenness central vertices by way of relaxing its computation with the related $\kappa$-path centrality \cite{alahakoon2011k, kourtellis2013identifying}.
 The authors define the $\kappa$-path centrality of a vertex $x$ as the sum, over all $y \in \mathcal{V} \setminus \{x\}$, of the probability that a random simple path beginning at $y$ of length at most $k$ passes through $x$. 
-In notation, this is 
+Let $\rho_{s, \ell} = (v_0 = s, v_1, \dots, v_\ell)$ be a random variable consisting of a history-avoiding random walk of length $\ell$ starting at $s \in \mathcal{V}$. 
+Then $\Pr [ \rho_{s, \ell}]$ is given by the recurrence relation
+%
+\begin{equation} \label{eq:path:unweighted}
+	\Pr[\rho_{s, i}] = 
+	\begin{cases}
+		\mathbf{1}_{[v_i \not \in \rho_{s, i-1}]}
+		\cdot
+		\Pr [\rho_{s, i-1}] 
+		\cdot 
+		\frac{\mathbf{w}_{v_{i-1},v_i}}{\sum\limits_{v_{i-1} y \in \mathcal{E} \setminus \rho_{s, i-1}} \mathbf{w}_{v_{i-1}, y}}
+			& \textnormal{if $i > 1$} \\
+		\frac{\mathbf{w}_{v_0,v_1}}{\sum\limits_{v_0 y \in \mathcal{E}} \mathbf{w}_{v_0, y}}
+			& \textnormal{if $i = 1$}.
+	\end{cases}
+\end{equation}
+%
+Then we can express the $\kappa$-path centrality of a vertex $x$ as
 %
 \begin{equation} \label{eq:kpath}
-	\mathcal{C}^{\algoname{Path}}_\kappa(x) = \sum\limits_{y \in \mathcal{V} \setminus \{x\}} 
-		\Pr_{p: \textnormal{$p$ a simple path, $|p| \leq \kappa$}}
- 		\left [ x \in p \right ].
+	\mathcal{C}^{\algoname{Path}}_\kappa(x) = 
+		\sum\limits_{s \in \mathcal{V} \setminus \{x\}} 
+			\sum\limits_{\ell = 1}^k
+				\sum\limits_{\rho_{s, \ell}}
+					\mathbf{1}_{[x \in \rho_{s, \ell}]} \cdot \Pr [\rho_{s, \ell}].
+%		
+%		\Pr_{p: \textnormal{$p$ a simple path, $|p| \leq \kappa$}}
+% 		\left [ x \in p \right ].
 \end{equation}
 %
 
 
 Kourtellis et al. provide a randomized algorithm for approximating the $\kappa$-path centrality of the vertices of a graph, and demonstrate that on real-world networks vertices with high approximate $\kappa$-path centrality empirically correlate well with high betweenness-centrality vertices. 
-Moreover, this algorithm is much more efficient than other attempts to approximate betweenness centrality, as it sidesteps the need to approximate the \algoname{AllPairsAllShortestPaths} problem.
+We reproduce this algorithm in Algorithm~\ref{alg:kpath}.
+The algorithm amounts to a Monte Carlo simulation of $T = 2 \kappa^2 n^{1-2\alpha} \ln n$ random simple paths of lengths chosen uniformly in $[\kappa]$.
+The algorithm counts the number of times that each vertex occurs in the simulation, discounting the random simple paths that reach dead ends, and returns this reweighted count as the estimate of the vertex's $\kappa$-path centrality.
+
+
+\begin{algorithm}[htbp] 
+\caption{$\kappa$-Path Centrality Approximation}\label{alg:kpath}
+\begin{flushleft}
+        \textbf{Input:} 		$\kappa$ - integral walk length \\
+        	\hspace{3.15em}	$\alpha$ - accuracy parameter in $\left [ -\frac{1}{2}, \frac{1}{2} \right ]$  \\
+%        	\hspace{3.15em}	$\mathcal{N}_\mathcal{B}$ - dictionary mapping vertices to outgoing sampled edges in $\mathcal{E}_\mathcal{B}$ \\
+%        	\hspace{3.15em}	$\mathbf{d}$ - degree dictionary \\
+%        	\hspace{3.15em}	$\mathbf{p}$ - playback dictionary, initially $\{0\}^n$ \\
+%        	\hspace{3.15em}	$v_0^{(1)}, v_0^{(2)}, \dots, v_0^{(k)}$ - $k$ starting vertices $\in \mathcal{V}$ \\
+%        	\hspace{2.65em}	$k$ - integral heavy hitter count	 \\
+%        	\hspace{2.65em}	$\mathcal{P}$ - universe of processors	 \\
+%        	\hspace{2.65em}	$\mathcal{D}$ - accumulated \algoname{DegreeSketch} 	 \\
+%        	\hspace{2.65em}	$\mathcal{S}$ - distributed dictionary mapping $\mathcal{P}$ to send queues	 \\
+%        	\hspace{2.65em}	$\mathcal{R}$ - distributed dictionary mapping $\mathcal{P}$ to receive queues	 \\
+%        	\hspace{2.65em}	$f$ - function mapping $\mathcal{V} \rightarrow \mathcal{P}$	 \\
+        \textbf{Output:} $\widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}$ - array of $\kappa$-path centrality estimates
+%        $\mathcal{N}_\mathcal{S}$ - dictionary for edges in $\mathcal{E}_\mathcal{S}$ \\
+%        	\hspace{4.05em}	$\mathcal{N}_\mathcal{B}$ - dictionary for sampled edges in $\mathcal{E}_\mathcal{B}$
+\end{flushleft}
+\begin{flushleft}
+\begin{algorithmic}[1]
+	\For{$x \in \mathcal{V}$}
+		\State $\algoname{Count}[x] \gets 0$
+		\State $\algoname{Explored}[x] \gets \algoname{False}$
+	\EndFor
+	\State $S \gets $ empty stack
+	\State $T \gets 2 \kappa^2 n^{1-2\alpha} \ln n$
+	\For {$i \in [T]$}
+		\State $s \sim_u \mathcal{V}$
+		\State $\ell \sim_u [\kappa]$
+		\State $\algoname{Explored}[s] \gets \algoname{True}$
+		\State $S.\push{s}$
+		\State $j \gets 1$
+		\While{$j \leq \ell $ and $\exists su \in \mathcal{E} : !\algoname{Explored}[u]$}
+			\State $v \sim \{u \mid su \in \mathcal{E} $ and $!\algoname{Explored}[u] \}$ with probability 
+					$\frac{\mathbf{w}_{s,v}}{\sum\limits_{u : su \in \mathcal{E} \textnormal{ and } !\algoname{Explored}[u]} \mathbf{w}_{s.u}}$
+			\State $\algoname{Explored}[v] \gets \algoname{True}$
+			\State $S.\push{v}$
+			\State $s \gets v$
+			\State $j \gets j+1$
+		\EndWhile
+		\While{$S$ is not empty}
+			\State $v \gets S.\pop$
+			\State $\algoname{Explored}[v] \gets \algoname{False}$
+			\If {$j = \ell + 1$}
+				\State $\algoname{Count}[v] \gets \algoname{Count}[v] + 1$
+			\EndIf
+		\EndWhile
+	\EndFor
+	\For{$x \in \mathcal{V}$}
+		\State $\widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x] \gets \kappa n \cdot \frac{\algoname{Count}[x]}{T}$
+	\EndFor
+	\State \Return $\widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}$
+%	\Statex \textbf{Functions}:
+%		\Function{SimulateRandomWalk}{$v_0$}
+%			\For {$i = 0, 1, \dots, t-1$}
+%				\State $a \sim_U [\mathbf{d}[{v_i}]] $
+%				\If {$a \leq |\mathcal{N}_\mathcal{S}[v_i]|$}
+%					\State $v_{i+1} \sim_U \mathcal{N}_\mathcal{S}[v_i]$
+%				\Else
+%					\If {$|\mathcal{N}_\mathcal{B}[v_i]| > 0$}
+%						\State $v_{i+1} \gets$ next item from $\mathcal{N}_\mathcal{B}[v_i]$
+%						\State $\mathcal{N}_\mathcal{B}[v_i] \gets \mathcal{N}_\mathcal{B}[v_i] \setminus \{v_{i+1}\}$
+%					\Else
+%						\State \Return $(v_0, v_1, \dots, v_i)$, FAIL
+%					\EndIf
+%				\EndIf
+%			\EndFor
+%			\State \Return $(v_0, v_1, \dots, v_t)$
+%		\EndFunction
+%	\Statex \textbf{Send Context} $P \in \mathcal{P}$:
+%		\While{$\mathcal{R}[P]$ is not empty}
+%  			\State $(v_0, v_1, \dots, v_j) \gets \mathcal{R}[P].\pop$
+%			\State $Q \gets f(v_j)$
+%			\State $R[Q].\push{v_0, v_1, \dots, v_{j}}$
+%  		\EndWhile
+%	\Statex \textbf{Receive Context} $P \in \mathcal{P}$:
+%		\While{$\mathcal{R}[P]$ is not empty}
+%  			\State $(v_0, v_1, \dots, v_i) \gets \mathcal{R}[P].\pop$
+%			\State $a \sim_U [\mathbf{d}[{v_i}]] $
+%			\If {$a \leq |\mathcal{N}_\mathcal{S}[v_i]|$}
+%				\State $v_{i+1} \sim_U \mathcal{N}_\mathcal{S}[v_i]$
+%			\Else
+%				\If {$|\mathcal{N}_\mathcal{B}[v_i]| = 0$}
+%					\State Refresh $\mathcal{N}_\mathcal{B}[v_i]$ by taking a pass over $\mathcal{M}[x]$
+%				\EndIf
+%				\State $v_{i+1} \gets$ next item from $\mathcal{N}_\mathcal{B}[v_i]$
+%				\State $\mathcal{N}_\mathcal{B}[v_i] \gets \mathcal{N}_\mathcal{B}[v_i] \setminus \{v_{i+1}\}$
+%			\EndIf
+%			\If {$i + 1 = t$}
+%				\State \Return $(v_0, v_1, \dots, v_{i+1})$
+%			\Else
+%				\State $S[P].\push{v_0, v_1, \dots, v_{i+1}}$
+%			\EndIf
+%  		\EndWhile
+%	\Statex \textbf{Execution} $P \in \mathcal{P}$:
+%		\ParFor{$j \in [k]$}
+%			\If {$f\left (v_0^{(j)} \right) = P$}
+%				\State $\mathcal{R}[P].\push{v_0^{(j)}}$
+%			\EndIf
+%		\EndParFor
+\end{algorithmic}
+\end{flushleft}
+\end{algorithm}
+
+This algorithm is much more efficient than other attempts to approximate betweenness centrality, as it sidesteps the need to approximate the \algoname{AllPairsAllShortestPaths} problem.
 Finally, $\kappa$-Path centrality is desirable in that it depends only on $\kappa$-local features of the graph when considering any particular vertex.
-
-
+Kourtellis et al. also proved the following Theorem:
+%
+\begin{theorem} \label{thm:kpath}
+Algorithm~\ref{alg:kpath} runs in $O(\kappa^3 n^{2-2\alpha} \log n)$ time and $O(m)$ space.
+For each $x \in \mathcal{V}$ it produces estimates $\widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x]$ such that 
+$\left | \widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x] - \mathcal{C}_\kappa^{\algoname{Path}}[x] \right | \leq n^{\frac{1}{2} + \alpha}$ with probability at least $1 - \frac{1}{n^2}$.
+\end{theorem}
 
 
 %------------------------------------------------
@@ -5062,8 +5441,8 @@ Finally, $\kappa$-Path centrality is desirable in that it depends only on $\kapp
 
 In order to find a way forward, it is helpful to step back and assess what betweenness centrality purports to measure.
 Vertices with relatively high betweenness centrality scores are those that connect communities - the same vertices should also have high $\kappa$-path centrality scores, as discussed in Section \ref{sec:kpc}. 
-Moreover, the existing $\kappa$-path centrality approximation algorithm operates by way of sampling simple paths from $\mathcal{G}$.
-This algorithm looks suspiciously similar to the vertex-edge adjacency matrix sampling algorithms developed by Ahn, Guha, and McGregor discussed in Section \ref{sec:spanner}. 
+Moreover, the existing $\kappa$-path centrality approximation algorithm operates by way of simulating simple paths from $\mathcal{G}$.
+%This algorithm looks suspiciously similar to the vertex-edge adjacency matrix sampling algorithms developed by Ahn, Guha, and McGregor discussed in Section \ref{sec:spanner}. 
 
 While these results are promising, they do not solve the problem of approximating betweenness centrality in the semi-streaming turnstile model. 
 First, the $\kappa$-path centrality approximation algorithm requires a static graph. 
