@@ -32,6 +32,8 @@
 \usepackage{amsthm}
 
 \usepackage{subcaption}
+
+\usepackage{longtable}
 %\usepackage[demo]{graphicx}
 %\usepackage{tikz,pgfplots} 
 
@@ -207,29 +209,25 @@ Whatever my destination, I hope to travel with her.
 \renewcommand{\abstractname}{Abstract}
 \begin{abstract}
 The identification of important vertices or edges is a ubiquitous problem in the analysis of graphs.
-There are many application-dependent measures of importance, such as centrality indices (e.g. degree centrality, closeness centrality, betweenness centrality, and eigencentrality) and local triangle counts.
-%However, the computation of such indices is usually expensive on large graphs. 
-%Moreover, evolving graphs with edge insertions, updates, and deletions are prevalent in applications. 
+There are many application-dependent measures of importance, such as centrality indices (e.g. degree centrality, closeness centrality, betweenness centrality, and eigencentrality) and local triangle counts, among others.
 Traditional computational models assume that the entire input fits into working memory, which is impractical for very large graphs.
-Exact algorithms on very large graphs in practice hold the graph in distributed memory, where a collection of processors partition the graph.
-Distributed graph algorithms must optimize communication in addition to execution time.
-The data stream model is an alternative approach to large data scale that assumes only sequential access to the input, which is handled in small chunks.
+The distributed memory model and streaming model are popular solutions to this problem of scale.
+In the distributed memory model a collection of processors partition the graph and must optimize communication in addition to execution time.
+The data stream model assumes only sequential access to the input, which is handled in small chunks.
 Data stream algorithms use sublinear memory and a small number of passes and seek to optimize update time, query time, and post processing time.  
 
-In this dissertation, we consider the application of distributed data stream algorithms to the sublinear approximation of several centrality indices and local triangle counts. 
+In this dissertation, we consider the application of distributed data stream algorithms to the sublinear approximation of several centrality indices, local triangle counts, and the simulation of random walks. 
 We pay special attention to the recovery of \emph{heavy hitters} - the largest elements relative to the given index.
 
 The first part of this dissertation focuses on serial graph stream algorithms.
 We present new algorithms providing streaming approximations of degree centrality and a semi-streaming constant-pass approximation of closeness centrality.
-%We present new algorithms providing a streaming approximation of degree centrality, a semi-streaming constant-pass approximation of closeness centrality, and a semi-streaming approximation of HITS on large collections of small graphs.
 We achieve our results by way of counting sketches and sampling sketches.
 
 The second part of this dissertation considers vertex-centric distributed graph stream algorithms.
 We develop hybrid pseudo-asynchronous communication protocols tailored to managing communication on distributed graph algorithms with asymmetric computational loads.
 We use this protocol as a framework to develop distributed streaming algorithms utilizing cardinality sketches.
-We present new algorithms for estimating vertex- and edge-local triangle counts, with special attention paid to heavy hitter recovery.
-We also utilize $\ell_p$ sampling sketches for the adjacency information of high degree vertices to boost the performance of the sampling of random walks and subtrees. 
-We present hybrid exact-approximating distributed algorithms for sublinearly sampling random walks, simple paths, and subtrees from scale-free graphs. 
+We present new algorithms for estimating local neighborhood sizes, as well as vertex- and edge-local triangle counts, with special attention paid to heavy hitter recovery.
+We also utilize reservoir sampling and $\ell_p$ sampling sketches to optimize the semi-streaming simulation of many random walks in parallel in distributed memory.
 We use these algorithms to approximate  $K$-path centrality as a proxy for recovery the top-$k$ betweenness centrality elements.
 
 %These constraints place us in what is sometimes called the turnstile or dynamic streaming model. 
@@ -1784,7 +1782,8 @@ Then for all $x \in \mathcal{V}$,
 \end{equation}
 %
 The implicit algorithm uses $\log k$ passes over $\mathcal{G}$ and $\widetilde{O}(n^{1 + 1/k})$ space.
-Computing $\widetilde{\mathcal{C}}^{\algoname{Close}}_{\mathcal{H}}(\mathcal{V})$ requires $\widetilde{O} \left ( \left (n^{1 + 1/k} + n \log n \right )\log \frac{n}{\varepsilon^3} \right )$ time.
+Computing $\widetilde{\mathcal{C}}^{\algoname{Close}}_{\mathcal{H}}(\mathcal{V})$ requires \\
+$\widetilde{O} \left ( \left (n^{1 + 1/k} + n \log n \right )\log \frac{n}{\varepsilon^3} \right )$ time.
 \end{theorem}
 
 %Unfortunately, this algorithm is not especially practical, even with the reduced computation time afforded by 
@@ -2342,26 +2341,26 @@ We must ensure that each node has an intermediary core responsible for each remo
 This constraint leads to a natural ``layering'' of the nodes, where each notional layer consists of $C$ nodes. 
 For convenience, in addition to their node offset $n \in [N]$, we assign to each node a \emph{layer offset} $\ell = n \mod C$.
 Further, we enforce the rule that $(n,c) \in [N] \times [C]$ is an intermediary for all cores on node $n^\prime$, where $c = n^\prime \mod C$ with corresponding intermediaries $(n^\prime, c^\prime)$ where $c^\prime = n \mod C$. 
-Fig.~\ref{fig:intra_layer_nlnr} depicts such a topology for a single layer, whose connections form a clique. 
+Fig.~\ref{fig:intra_exchange} depicts such a topology for a single layer, whose connections form a clique. 
 Note that cores with addresses of the form $(n, c)$ where $c = n \mod C$ do not participate in any communication within a layer. 
 These cores only communicate with their corresponding cores in nodes whose layer offsets match their own. 
-Fig.~\ref{fig:inter_layer_nlnr} depicts an example inter-layer communication topology  for two layers. 
+Fig.~\ref{fig:inter_exchange} depicts an example inter-layer communication topology  for two layers. 
 Intra-layer edges are suppressed for clarity. 
-The edges in Fig.~\ref{fig:inter_layer_nlnr} mirror those of Fig.~\ref{fig:intra_layer_nlnr} aside from the addition of the self-offset edges missing from Fig.~\ref{fig:intra_layer_nlnr}.
-Note that by adding the edges from Fig.~\ref{fig:intra_layer_nlnr} to both layers, we have a clique.
+The edges in Fig.~\ref{fig:inter_exchange} mirror those of Fig.~\ref{fig:intra_exchange} aside from the addition of the self-offset edges missing from Fig.~\ref{fig:intra_exchange}.
+Note that by adding the edges from Fig.~\ref{fig:intra_exchange} to both layers, we have a clique.
 
 
-\begin{figure}[htbp] 
-\centerline{\includegraphics[width=0.6\columnwidth]{intra_layer_nlnr}}
-\caption{Example of the remote communication topology within a single layer of 4-core machines in the nlnr protocol.
-\label{fig:intra_layer_nlnr}}
-\end{figure}
-
-\begin{figure}[htbp] 
-\centerline{\includegraphics[width=0.6\columnwidth]{inter_layer_nlnr}}
-\caption{Example of the remote communication topology between two layers of 4-core machines in the nlnr protocol.
-\label{fig:inter_layer_nlnr}}
-\end{figure}
+%\begin{figure}[htbp] 
+%\centerline{\includegraphics[width=0.6\columnwidth]{intra_layer_nlnr}}
+%\caption{Example of the remote communication topology within a single layer of 4-core machines in the nlnr protocol.
+%\label{fig:intra_layer_nlnr}}
+%\end{figure}
+%
+%\begin{figure}[htbp] 
+%\centerline{\includegraphics[width=0.6\columnwidth]{inter_layer_nlnr}}
+%\caption{Example of the remote communication topology between two layers of 4-core machines in the nlnr protocol.
+%\label{fig:inter_layer_nlnr}}
+%\end{figure}
 
 In the first local exchange on node $n$, a message from $(n, c)$ with destination $(n^\prime, c^\prime)$ is forwarded to $(n, n^\prime \mod C)$.
 In the remote exchange, this message is sent to $(n^\prime, n \mod C)$.
@@ -2382,12 +2381,43 @@ Such a channel consists of all the address pairs $(n, c)$, $(n^\prime, c^\prime)
 It is worth noting that there are many other specific assignments of cores to channels possible. 
 We did not find that other assignments exhibited sufficiently different behavior, and so we will forgo a discussion thereof. 
 
+
 %----------------------------------------------------------------------------------------
 \section{Experiments} \label{async:sec:experiments}
 %----------------------------------------------------------------------------------------
 
 
 
+\begin{figure}
+	\begin{center}
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{degree_strong_scaling}}
+			\caption{Strong scaling \label{fig:degree_strong_scaling}}
+		\end{subfigure}
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{degree_weak_scaling}}
+			\caption{Weak scaling. \label{fig:degree_weak_scaling}}
+		\end{subfigure}
+		\caption{Weak and strong scaling wall time experiments for degree counting, as the number of nodes varies from 1 up to 1024.
+			\label{fig:degree_scaling}}
+	\end{center}
+\end{figure}
+
+
+\begin{figure}
+	\begin{center}
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{conn_comp_strong_scaling}}
+			\caption{Strong scaling. \label{fig:conn_comp_strong_scaling}}
+		\end{subfigure}
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{conn_comp_weak_scaling}}
+			\caption{Weak scaling. \label{fig:conn_comp_weak_scaling}}
+		\end{subfigure}
+		\caption{Weak and strong scaling wall time experiments for connected components counting, as the number of nodes varies from 1 up to 1024.
+			\label{fig:conn_comp_scaling}}
+	\end{center}
+\end{figure}
 
 
 
@@ -2427,10 +2457,16 @@ To wit, we define the \emph{triangle count centrality} of a vertex $x \in \mathc
 	\mathcal{C}^{\algoname{Tri}}(x) = |\{yz \in \mathcal{E} \mid xy, zx \in \mathcal{E} \wedge |\{x, y, z\}| = 3\}|.
 \end{equation}
 %
-Similarly, we can consider the triangle count centrality of edges as well, defined similarly as
+We can consider the triangle count centrality of edges as well, defined similarly as
 %
 \begin{equation}
 	\mathcal{C}^{\algoname{Tri}}(xy) = |\{z \in \mathcal{V} \setminus \{x,y\} \mid yz, zx \in \mathcal{E}\}|.
+\end{equation}
+%
+We will also refer to the total number of triangles in a graph 
+%
+\begin{equation}
+	\mathcal{T}_\mathcal{G} = |\{ \{xy, yz, zx\} \in \mathcal{E} \mid |\{x, y, z\}| = 3 \} |.
 \end{equation}
 %
 
@@ -2553,7 +2589,7 @@ We use \algoname{HLL}s for implementation due to several attractive features:
 	\item Adequate intersection estimator
 \end{enumerate}
 
-We introduce \algoname{HLL} and discuss these features in greater detail in Section~\ref{DS:sec:hll}.
+We introduce \algoname{HLL} and discuss these features in greater detail in Section~\ref{DS:sec:HLL}.
 FIrst, however, we describe algorithms utilizing \algoname{DegreeSketch} for neighborhood size estimation in Section~\ref{DS:sec:neighborhoods}, recovering edge-local triangle count heavy hitters in Section~\ref{DS:sec:edge_triangles}, and finally recovering vertex-local triangle count heavy hitters in Section~\ref{DS:sec:vertex_triangles}.
 
 %----------------------------------------------------------------------------------------
@@ -2709,7 +2745,8 @@ The proof of the first two claims is the same as the proof of Theorem 1 in \cite
 
 Unlike \algoname{HyperANF}, Algorithm~\ref{alg:ds:anf} is distributed and streaming, and does not require the storage of $\mathcal{G}$ in memory. 
 However, it is also not optimized to take advantage of shared memory task decomposition or multicore optimizations using \emph{broadword programming} like \algoname{HyperANF}.
-It is possible to design an algorithm that supports these features, but we do not produce it here as it would be out of scope. 
+It is possible to design an algorithm that supports these features using a hybrid shared-distributed memory architecture. 
+We will not produce it in detail.
 We will instead describe it at a high level.
 Rather than each core on each node operating independently, each node would act as an instance of \algoname{HyperANF} on a partition of the graph, communicating sketches to other nodes as needed like Algorithm~\ref{alg:ds:anf}.
 Merges and estimates would make use of all of the shared memory cores, utilizing the broadword programming approach given in Section 3 of \cite{boldi2011hyperanf}.
@@ -3121,7 +3158,7 @@ We will assume that all sketches share a hash function throughout the rest of th
 %\vspace{1em}
 %\textbf{Sparse Register Format}.
 %----------------------------------------------------------------------------------------
-\subsection{\algoname{HLL} Improvements: Sparse Register Format}
+\subsection{Sparse Register Format}
  \label{DS:sec:HLL:sparse}
 %----------------------------------------------------------------------------------------
 
@@ -3201,7 +3238,7 @@ Although this method may be practical for applications we will avoid it in our w
 %\vspace{1em}
 %\textbf{Reduced Register Size}.
 %----------------------------------------------------------------------------------------
-\subsection{\algoname{HLL} Improvements: Reduced Register Size}
+\subsection{Reduced Register Size}
  \label{DS:sec:HLL:reduced}
 %----------------------------------------------------------------------------------------
 
@@ -3361,8 +3398,8 @@ Note that these procedures are able to coexist with the sparse register format, 
 %%
 Algorithm~\ref{alg:hll:tc} guarantees order-invariance in the produced sketches, as well as maintaining a true sketch merge.
 These results come at the cost of some additional space, as the cut set $E$ must be stored.
-In a pathological stream $E$ could hold as many as $m-1$ elements, i.e. there is one holdout register index that prevents $b$ from growing in spite of cut insertions. 
-Fortunately, the likelihood of such an event is vanishingly unlikely. 
+In a pathological stream $E$ could hold as many as $r-1$ elements, i.e. there is one holdout register index that prevents $b$ from growing in spite of cut insertions. 
+Fortunately, such an event is vanishingly unlikely when using a reasonable hash function. 
 Furthermore, even this worst case at most doubles the size of the sketch, as so maintains the same asymptotic bounds as the vanilla \algoname{HLL}.
 
 
@@ -3370,7 +3407,7 @@ Furthermore, even this worst case at most doubles the size of the sketch, as so 
 %\vspace{1em}
 %\textbf{Maximum Likelihood Estimation}
 %----------------------------------------------------------------------------------------
-\subsection{\algoname{HLL} Improvements: Maximum Likelihood Estimation}
+\subsection{Maximum Likelihood Estimation}
  \label{DS:sec:HLL:MLE}
 %----------------------------------------------------------------------------------------
 
@@ -3406,7 +3443,7 @@ See Algorithm 8 of \cite{ertl2017new} for the full algorithm description.
 %\vspace{1em}
 %\textbf{Maximum Likelihood Intersection Estimation}
 %----------------------------------------------------------------------------------------
-\subsection{\algoname{HLL} Improvements: Intersection Estimation}
+\subsection{Intersection Estimation}
  \label{DS:sec:HLL:intersection}
 %----------------------------------------------------------------------------------------
 
@@ -3436,18 +3473,25 @@ The algorithm depends on a similar optimization of a Poisson model application, 
 This is Eq.~(70) in \cite{ertl2017new}, which we reproduce in Eq.~(\ref{eq:poisson:joint}) in this work. 
 %
 \begin{equation} \label{eq:poisson:joint}
-	\begin{aligned}
-		\mathclap{\mathcal{L}(\lambda_a, \lambda_b, \lambda_x \mid \mathbf{r}^{(A)}, \mathbf{r}^{(B)}) =} \\
+\begin{alignedat}{1} 
+%	\begin{aligned}
+%		\mathclap{\mathcal{L}(\lambda_a, \lambda_b, \lambda_x \mid \mathbf{r}^{(A)}, \mathbf{r}^{(B)}) =} \\
+		\mathcal{L}(\lambda_a, &\lambda_b, \lambda_x \mid \mathbf{r}^{(A)}, \mathbf{r}^{(B)}) = 
+		\\
 		&\sum_{k=1}^q \log \left ( 1 - e^{-\frac{\lambda_a + \lambda_x}{r2^k}} \right ) \mathbf{c}^{(A), <}_k 
-		+ \log \left ( 1 - e^{-\frac{\lambda_b + \lambda_x}{r2^k}} \right ) \mathbf{c}^{(B), <}_k\\
+		+ \log \left ( 1 - e^{-\frac{\lambda_b + \lambda_x}{r2^k}} \right ) \mathbf{c}^{(B), <}_k
+		\\
 		+ &\sum_{k=1}^{q+1} \log \left ( 1 - e^{-\frac{\lambda_a}{r2^{\min\{k,q\}}}} \right ) \mathbf{c}^{(A), >}_k
-		+ \log \left ( 1 - e^{-\frac{\lambda_b}{r2^{\min\{k,q\}}}} \right ) \mathbf{c}^{(B), >}_k \\
+		+ \log \left ( 1 - e^{-\frac{\lambda_b}{r2^{\min\{k,q\}}}} \right ) \mathbf{c}^{(B), >}_k 
+		\\
 		+ &\sum_{k=1}^{q+1} \log \left ( 1 - e^{-\frac{\lambda_a + \lambda_x}{r2^{\min\{k,q\}}}} 
-				- e^{-\frac{\lambda_b + \lambda_x}{r2^{\min\{k,q\}}}} + e^{-\frac{\lambda_a + \lambda_b + \lambda_x}{r2^{\min\{k,q\}}}} \right ) \mathbf{c}^{=}_k \\
+				- e^{-\frac{\lambda_b + \lambda_x}{r2^{\min\{k,q\}}}} + e^{-\frac{\lambda_a + \lambda_b + \lambda_x}{r2^{\min\{k,q\}}}} \right ) \mathbf{c}^{=}_k 
+		\\
 		- &\frac{\lambda_a}{r} \sum_{k=0}^q \frac{\mathbf{c}^{(A),<}_k + \mathbf{c}^{=}_k + \mathbf{c}^{(A),>}_k}{2^k}
 		- \frac{\lambda_b}{r} \sum_{k=0}^q \frac{\mathbf{c}^{(B),<}_k + \mathbf{c}^{=}_k + \mathbf{c}^{(B),>}_k}{2^k}
-		- \frac{\lambda_x}{r} \sum_{k=0}^q \frac{\mathbf{c}^{(A),<}_k + \mathbf{c}^{=}_k + \mathbf{c}^{(B),<}_k}{2^k}
-	\end{aligned}
+		- \frac{\lambda_x}{r} \sum_{k=0}^q \frac{\mathbf{c}^{(A),<}_k + \mathbf{c}^{=}_k + \mathbf{c}^{(B),<}_k}{2^k}.
+%	\end{aligned}
+\end{alignedat}
 \end{equation}
 %
 Like Eq. \eqref{eq:poisson}, this function depends on the statistics:
@@ -3480,7 +3524,7 @@ They also show evidence suggesting that this estimator can be used to obtain a b
 In the parlance of Algorithm~\ref{alg:hll:vanilla} this is tantamount to computing $\algoname{Estimate} \left ( \algoname{Merge} \left ( S^{(A)}, S^{(B)} \right ) \right )$. 
 We reaffirm these conclusion with our findings in Section \ref{DS:sec:experiments}, where we use this algorithm to estimate the intersection of sets underlying pairs of sketches.
 
-Algorithm~\ref{alg:hll:estimation} summarizes the various estimation procedures that we have described. 
+Algorithm~\ref{alg:hll:estimation} summarizes the various improved estimation procedures that we have described. 
 In practice we use the machinery of Algorithm~\ref{alg:hll:tc} along with the estimators of Algorithm~\ref{alg:hll:estimation}.
 
 
@@ -3540,6 +3584,7 @@ If $A$ dominates $B$, the count statistics given by Eq.~\ref{eq:cs} are unable t
 Given the construction of Eq.~\eqref{eq:poisson:joint}, many and large nonzero values for $\mathbf{c}^{=}_k$ for large $k$ will bias the optimization towards larger intersections, whereas the converse is true if $\mathbf{c}^{=}_k$ is nonzero for only a few small values of $k$.
 If $|A| \gg |B|$, then the latter might occur whether $|A \cap B|$ is large or small.
 Furthermore, note that if $B$ is a subset of $A$, then $A$ will (possibly strictly) dominate $B$. 
+Our experiments in Section~\ref{DS:sec:experiments} indicate that dominations are just as bad as strict dominations in terms of the resulting estimation error.
 
 If $A$ dominates $B$, then $S^{(A \cup B)} = \algoname{Merge}(S^{(A)}, S^{(B)}) = S^{(A)}$.
 Ergo, the inclusion-exclusion na\"ive intersection estimator produces the estimate $\algoname{Na\"iveIntersection} = \algoname{EstimateMLE}(S^{(B)}) = \lambda_{(B)}$.
@@ -3554,9 +3599,10 @@ However, this poses a problem for our applications, as we will frequently have t
 
 We have also noted the problem of small intersections. 
 As discussed above, the intersection estimate optimized by Eq.~\eqref{eq:poisson:joint} is proportional to the number (and size) of the nonzero $\mathbf{c}^{=}_k$ for $k>0$, where larger $k$ biases the estimate toward larger intersections. 
-If the ground truth intersection is small relative to $|A|$ and $|B|$, however, Eq.~\eqref{eq:poisson:joint} might exhibit high variance.
+If the ground truth intersection is small relative to $|A|$ and $|B|$, however, Eq.~\eqref{eq:poisson:joint} will exhibit high variance.
+We explore this phenomenon empirically in Section~\ref{DS:sec:experiments}.
 
-
+One immediate conclusion that we can draw from this analysis is that the intersection estimator is biased -- it will tend to overestimate small intersections and intersections where one sketch dominates the other.
 
 
 %----------------------------------------------------------------------------------------
@@ -3564,17 +3610,587 @@ If the ground truth intersection is small relative to $|A|$ and $|B|$, however, 
  \label{DS:sec:experiments}
 %----------------------------------------------------------------------------------------
 
+%----------------------------------------------------------------------------------------
+\subsection{Intersection Estimation: Small Intersections and Dominations}
+ \label{DS:sec:experiments:intersection}
+%----------------------------------------------------------------------------------------
+
+\noindent
+We will begin with an analysis of the claims in Section~\ref{DS:sec:intersections} having to do with the error of intersection estimation where the intersection is small or where one of the two sets dominates the other.
+We analyzed both the na\"ive and maximum likelihood intersection estimators for 1000 iterations for different settings of two sets, $A$ and $B$. 
+In all experiments, $|A| = 10^7$.
+We considered all settings of $|B| = 10^j$ for $j \in [7]$.
+For $|B| = 10^j$, we considered all settings of $|A \cap B| = {10^i}$ for $i \in [0, j]$, varying from a single element intersection up to $B \subseteq A$. 
+For each setting of $|B|$ and $|A \cap B|$, we ran 1000 experiments over sets of random numbers satisfying the specified relationship between $A$ and $B$, using a fresh hash function and fresh random numbers in each iteration.
+Our implementation uses murmurhash3 \cite{murmurhash3} as the \algoname{HLL} hash function.
+We used prefix size $p=12$.
+Figure~\ref{fig:relative_intersection_size_equal} plots the mean relative error as a function of the size of $|A \cap B|$ for the case where $|A| = |B|$. 
+
+\begin{figure}
+	\begin{center}
+		\begin{subfigure}{0.45\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{relative_intersection_size_vs_relative_error_equal}}
+			\caption{$p = 8$. \label{fig:relative_intersection_size_equal_8}}
+		\end{subfigure}%
+		\hspace{1em}%
+		\begin{subfigure}{0.45\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{relative_intersection_size_vs_relative_error_equal_8}}
+			\caption{$p = 12$. \label{fig:relative_intersection_size_equal_12}}
+		\end{subfigure}%
+%		\begin{subfigure}{0.49\linewidth}
+%			\centerline{\includegraphics[width=1.0\columnwidth]{relative_intersection_size_vs_relative_error_small}}
+%			\caption{Mean relative error as a function of relative intersection size where $|A| = 10^7$ and $|B| = 10^3$. \label{fig:relative_intersection_size_small}}
+%		\end{subfigure}
+%		\begin{subfigure}{0.49\linewidth}
+%			\centerline{\includegraphics[width=1.0\columnwidth]{inter_layer_nlnr}}
+%			\caption{Mean realtive error as a function of $|B|$, where \\ $|A \cap B| = \frac{|B|}{10}$. \label{fig:relative_B_size}}
+%		\end{subfigure}
+		\caption{\algoname{HLL} inclusion-exclusion and maximum likelihood intersection estimator performance where $|A| = |B| = 10^7$ and $|A \cap B|$ varies from $1$ up to $|B|$.
+			Increasing $p$ increases intersection estimator performance.
+			\label{fig:relative_intersection_size_equal}}
+	\end{center}
+\end{figure}
+
+
+Figure~\ref{fig:relative_intersection_size_equal_8} plots the error of the na\"ive inclusion-exclusion estimator and the maximum likelihood estimator of $|A| = |B| = 10^7$ where $|A \cap B|$ varies from $1$ up to $10^7$ and $p=8$.
+The sketches in question then have $r = 2^8 = 256$ registers.
+While the maximum likelihood estimator generally outperforms the na\"ive estimator, both exhibit unacceptably poor performance when the true intersection is very small. 
+Meanwhile, Figure~\ref{fig:relative_intersection_size_equal_12} plots the same parameters where $p=12$ and so $r = 2^{12} = 4096$.
+In particular, the error of the maximum likelihood estimator remains at reasonable levels for much smaller intersections.
+The mean relative error remains below 1 up until about the point where $|A \cap B| = \frac{|A|}{10^2}$.
+
+Clearly, performance can clearly be boosted by increasing the precision parameter $p$, thereby increasing the number of registers. 
+For fixed set sizes, one can choose $p$ to achieve arbitrarily small precision. 
+However, as the sizes of the sets increase a fixed $p$ will cease to suffice, meaning that the size of the sketches is no longer independent of the streaming data size up to logarithmic factors, which is highly undesirable.
+Thus, we can expect the triangle counting algorithms such as those described in Sections~\ref{DS:sec:edge_triangles} and \ref{DS:sec:vertex_triangles} to exhibit poor performance when estimating the incident triangles on an edge linking two hubs where the ground truth triangle count is small.
+In our implementation on commodity hardware, the maximum likelihood estimations took approximately 2.7732824 times as much time as the na\"ive estimations.
+
+\begin{figure}
+	\begin{center}
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{relative_intersection_size_vs_relative_error_small}}
+			\caption{Mean relative error as a function of relative intersection size where $|A| = 10^7$ and $|B| = 10^3$. \label{fig:relative_intersection_size_small}}
+		\end{subfigure}
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{B_size_vs_relative_error_tenth_intersection.png}}
+			\caption{Mean realtive error as a function of $|B|$, where \\ $|A \cap B| = \frac{|B|}{10}$. \label{fig:relative_B_size}}
+		\end{subfigure}
+		\caption{More comparisons between \algoname{HLL} inclusion-exclusion and maximum likelihood intersection estimator performance where $|A| = 10^7$ and $p = 12$.
+			\label{fig:more_intersection_comparisons}}
+	\end{center}
+\end{figure}
+
+
+Meanwhile, Figure~\ref{fig:relative_intersection_size_small} plots the same relationship where $|B| = 10^3 = \frac{|A|}{10^4}$.
+This plot shows us a somewhat different picture. 
+While both estimators perform poorly when the intersection is small, both appear to consistently estimate the intersection to be $|B| = 10^3$.
+This is due to the observation of the effects of dominations from Section~\ref{DS:sec:intersections}.
+Firgure~\ref{fig:relative_intersection_size_small} also plots the error of just the comparisons where $A$ does not dominate $B$ at all (about $25\%$ of the experiments). 
+%Removing only strict dominations does decrease the mean relative error for both algorithms, but they remain asymptotically equivalent.
+Eliminating the strict dominations does not dramatically improve mean performance, which appears asymptotically consistent with the aggregate.
+However, removing all estimates that involve a domination results in \emph{improved} performance of both estimators.
+In fact, the maximum likelihood estimator actually appears to improve as the intersection size decreases. 
+On the other hand, the non-domination inclusion-exclusion estimates appear to exhibit relative error that is better, but not dramatically better, than the domination estimates.
+
+Figure~\ref{fig:relative_B_size} plots the mean relative error as a function of $|B|$, where $|B|$ takes values in $10^j$ for $j \in [7]$ and $|A \cap B|$ is locked to $\frac{|B|}{10}$.
+As $|B|$ gets smaller, the likelihood of a domination increases. 
+At $|B|= 10^4$ dominations occur in $6.6\%$ of cases, at $|B|= 10^3$ dominations occur in $76.9\%$ of cases, at $|B|= 10^2$ dominations occur in $97.5\%$ of cases, and at $|B|= 10$ dominations occur in $99.8\%$ of cases.
+In particular in the two cases where $|B|=10$ and $|A \cap B| = 1$ and a domination does not occur, the maximum likelihood estimator returns exactly 1. 
+So for a fixed intersection size relative to $|B|$, both the inclusion-exclusion and maximum likelihood estimators return more reasonable estimates when dominations do not occur.
+Figure~\ref{fig:relative_intersection_size_small} indicates that the maximum likelihood estimator benefits more as the intersection decreases. 
+
+These results suggest that, had we a means of avoiding dominations, then the maximum likelihood estimator would be at least coarsely reliable when comparing sets of very different size. 
+Unfortunately this is a difficult guarantee to provide.
+We can bound the probability that $A$ dominates $B$ for disjoint $A$ and $B$ building from Eqs.~(1) and (2) of \cite{ertl2017new}.
+However, the resulting expression is very messy and rather uninformative to look at, so we do not reproduce it here.
+Suffice to say that the probability is bounded using the union bound by the normalized sum over all hashings of elements of $A$ and $B$ to their length $r$ register arrays $\mathbf{r}^{(A)}$ and $\mathbf{r}^{(B)}$ of the products of the probabilities that $\mathbf{r}^{(A)}_i \geq \mathbf{r}^{(B)}_i$.
+By increasing $r$, we can make this bound arbitrarily small for a given $|A|$ and $|B|$ by doubling the number of registers for each incremental increase in $p$.
+A similar expression suffices for the case where $|A \cap B| \neq 0$, but the expression grows even more complex.
+However, as $|A \cup B|$ increases the bound also increases.
+Ergo, if we want to bound the probability that a domination occurs among disjoint sets of a given sizes, it requires setting $r$ scaling proportional to $|A \cup B|$.
+This is clearly an infeasible condition for a streaming algorithm, as the size of the sketch is no longer independent of the size of the streaming data.
+
+If $|A| \gg |B|$, then for a fixed precision $p$ $A$ will asymptotically dominate $B$.
+Increasing $p$ may suffice given a ceiling upon the size of the sets, but we have sketched how this is not a valid general purpose solution. 
+Unfortunately, this means that unless the size of possible sets has a reasonable bound, it it not feasible to reliably recover intersections of very differently sized sets.
+
+These negative results set a dour tone for our subsequent analysis. 
+We have shown that the intersection estimator exhibits poor performance on very small intersections of equally sized sets and the intersections of sets of wildly different sizes, and we have explored why these gaps in performance occur.
+Thus, the performance of the algorithms of Sections~\ref{DS:sec:edge_triangles} and \ref{DS:sec:edge_triangles} are dependent upon how prevalent these cases are in the data.
+This is the reason that we limit ourselves to empirical heavy hitter recovery.
+
+%----------------------------------------------------------------------------------------
+\subsection{Local Triangle Counting}
+ \label{DS:sec:experiments:triangles}
+%----------------------------------------------------------------------------------------
+
+We performed experiments on real graph datasets for the purpose of establishing the following of our Algorithms.
+\begin{enumerate}
+	\item \textbf{Estimation Quality} Do the algorithms yield good global and edge- and vertex-local estimates? How is their variance? 
+	\item \textbf{Heavy Hitter recovery	} Do the heavy hitters returned by Algorithms~\ref{alg:ds:edge_local} and \ref{alg:ds:vertex_local} correspond to the ground truth heavy hitters?
+	\item \textbf{Speed} How fast is accumulation? Estimation? How does speed relate to $m = 2^p$?
+	\item \textbf{Scalability} How does wall time relate to $|\mathcal{P}|$?
+\end{enumerate}
+
+
+%Fortunately, we can report some positive results below.
+%Table~\ref{tab:big} lists the performance of Algorithm~\ref{alg:ds:edge_local}, the Edge-Local Triangle Count Heavy Hitters on 58 graphs. 
+
+\noindent
+\textbf{Graphs}: 
+We considered the graphs listed in Table \ref{tab:graphs}.
+We simulated graph streams by randomly ordering and partitioning the edge lists into $|\mathcal{P}|$ separate files, one of which is read by each member of $\mathcal{P}$.
+
+Many of these graphs are provided by Stanford's widely used SNAP dataset \cite{snapnets}.
+These graphs are collected from natural sources, such as email records, transportation networks, peer-to-peer communications, social media, and citation corpora, among others.
+We casted each graph as unweighted, ignoring directionality, self-loops, and repeated edges. 
+
+We also used 5 graphs derived from nonstochastic Kronecker products of smaller graphs.
+Nonstochastic Kronecker graphs \cite{weichsel1962kronecker} have adjacency matrices $C$ that are Kronecker products $C = C_1 \otimes C_2$, where the factors are also adjacency matrices.
+This type of synthetic graph is attractive for testing graph analytics at massive scale \cite{leskovec2010kronecker, kepner2018design}, as ground truth solution is often cheaply computable.
+For such graphs, global triangle count and triangle counts at edges are computed via Kronecker formulas \cite{sanders2018large}: for a graph with $m$ edges, the worst-case cost of computing global triangle counts is sublinear, $O \left ( m^{\frac{3}{4}} \right )$, whereas the cost of computing the full set of edge-local counts is $O \left ( m^{\frac{3}{2}} \right )$.
+
+Here, we build $C = C_1 \otimes C_2$ from identical factors, $C_1=C_2$, that come from a small set of  graphs with $m$ up to $10^5$ from the University of Florida sparse matrix collection ({\tt polbooks}, {\tt celegans}, {\tt geom}, {\tt yeast} \cite{davis2011university}). 
+%, {\tt Oregon-1} -- could not use - catalyst nodes ran out of memory.
+All graphs were forced to be undirected, unweighted, and without self loops.  
+We compute the number of triangles at each edge for $C_1$ and use the Kronecker formula in \cite{sanders2018large} to get the respective quantities for $C$.
+Summing over the edges and dividing by 3 gives the global triangle count for $C$.
 
 
 
 
+\begin{table}[htbp]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+%\begin{longtable}{|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{graph} & $|\mathcal{V}|$ & $|\mathcal{E}|$ & $|\mathcal{T}|$ & \textbf{graph} & $|\mathcal{V}|$ & $|\mathcal{E}|$ & $|\mathcal{T}|$  \\
+\hline
+as20000102 & 6,474 & 12,572 & 6,584 & 
+facebookcombined & 4,039 & 88,234 & 1,612,010  \\
+\hline
+ca-GrQc & 5,242 & 14,484 & 48,260 & 
+p2p-Gnutella30 & 36,682 & 88,328 & 1,590 \\
+\hline
+p2p-Gnutella08 & 6,301 & 20,777 & 2,383 & 
+ca-CondMat & 23,133 & 93,439 & 173,361 \\
+\hline
+oregon1010407 & 10,729 & 21,999 & 15,834 & 
+ca-HepPh & 12,008 & 118,489 & 3,358,500 \\
+\hline
+oregon1010331 &10,670 &  22,002 & 17,144 & 
+p2p-Gnutella31 & 62,586 & 147,892 & 2,024 \\
+\hline
+oregon1010414 & 10,790 &  22,469 & 18,237 & 
+email-Enron & 36,692 & 183,831 & 727,044 \\
+\hline
+oregon1010428 & 10,886 & 22,493 & 17,645 & 
+ca-AstroPh & 18,772 & 198,050 & 1,351,440 \\
+\hline
+oregon1010505 & 10,943 & 22,607 & 17,597 & 
+loc-brightkiteedges & 58,228 & 214,078 & 494,728 \\
+\hline
+oregon1010512 & 11,011 & 22,677 & 17,598 & 
+cit-HepTh & 9,877 & 352,285 & 1,478,740 \\
+\hline
+oregon1010519 & 11,051 & 22,724 & 17,677 & 
+email-EuAll & 265,214 & 364,481 & 267,313  \\
+\hline
+oregon1010421 & 10,859 & 22,747 & 19,108 & 
+\textbf{pb $\boldsymbol{\otimes}$ pb} & 11,024 & 388,962 & 1,881,600 \\
+\hline
+oregon1010526 & 11,174 & 23,409 & 19,894 & 
+soc-Epinions1 & 75,879 & 405,740 & 1,624,480 \\
+\hline
+ca-HepTh & 9,877 & 25,973 & 28,339 & 
+cit-HepPh & 34,546 & 420,877 & 1,276,870 \\
+\hline
+p2p-Gnutella09 & 8,114 & 26,013 & 2,354 & 
+soc-Slashdot0811 & 77,360 & 469,180 & 551,724 \\
+\hline
+oregon2010407 & 10,729 & 30,855 & 78,138 & 
+soc-Slashdot0902 & 82,168 & 504,230 & 602,592 \\
+\hline
+oregon2010505 & 11,157 & 30,943 & 72,182 & 
+amazon0302 & 262,111 & 899,792 & 717,719 \\
+\hline
+oregon2010331 & 10,900 & 31,180 & 82,856 & 
+loc-gowallaedges & 196,591 & 950,327 & 2,273,140 \\
+\hline
+oregon2010512 & 11,260 & 31,303 & 72,866 & 
+roadNet-PA & 1,088,092 & 1,541,898 & 67,150 \\
+\hline
+oregon2010428 & 11,113 & 31,434 & 78,000 & 
+roadNet-TX & 1,379,917 & 1,921,660 & 82,869 \\
+\hline
+p2p-Gnutella06 & 8,717 & 31,525 & 1,142 & 
+flickrEdges & 105,938 & 2,316,948 & 107,987,000 \\
+\hline
+oregon2010421 & 11,080 & 31,538 & 82,129 & 
+amazon0312 & 400,727 & 2,349,869 & 3,686,470 \\
+\hline
+oregon2010414 & 11,019 & 31,761 & 88,905 & 
+amazon0505 & 410,236 & 2,439,437 & 3,951,060 \\
+\hline
+p2p-Gnutella05 & 8,846 & 31,839 & 1,112 & 
+amazon0601 & 403,394 & 2,443,408 & 3,986,510 \\
+\hline
+oregon2010519 & 1,1375 & 32,287 & 83,709 & 
+roadNet-CA & 1,965,206 & 2,766,607 & 120,676 \\
+\hline
+oregon2010526 & 11,461 & 32,730 & 89,541 & 
+graph500-scale18-ef16 & 174,147 & 3,800,348 & 82,287,300 \\
+\hline
+p2p-Gnutella04 & 10,876 & 39,994 & 934 & 
+\textbf{cg $\boldsymbol{\otimes}$ cg} & 205,208 & 8,201,250 & 64,707,900 \\
+\hline
+as-caida20071105 & 26,475 & 53,381 & 36,365 & 
+\textbf{ns $\boldsymbol{\otimes}$ ns} & 2,524,920 & 15,037,128 & 85,006,200 \\
+\hline
+p2p-Gnutella25 & 22,687 & 54,705 & 806 & 
+cit-Patents & 3,774,768 & 16,518,947 & 7,515,020 \\
+\hline
+p2p-Gnutella24 & 26,518 & 65,369 & 986 & 
+\textbf{em $\boldsymbol{\otimes}$ em} & 1,283,688 & 59,426,802 & 171,286,000 \\
+\hline
+& & & & \textbf{ye $\boldsymbol{\otimes}$ ye} & 5,574,320 & 88,338,632 & 74,765,400 \\
+\hline
+%\end{longtable}
+\end{tabular}
+\end{center}
+\caption{Considered moderate graphs \label{tab:graphs}}
+\end{table}
+
+
+
+\noindent
+\textbf{Hardware}: 
+All of the experiments were performed on a cluster of compute nodes with thirty-six 2.1 GHz Intel Xeon E5-2695 v4 cores and 128GB memory per node. 
+We varied the number of nodes per experiment depending on scalability requirements and the size of the graph.
+Each core on each node is responsible for an equally sized partition of the vertices in the graph.
+We consider graph partitioning to be a separate problem, and accordingly use simple round-robin assignment for our experiments.
+
+\noindent
+\textbf{Implementation}:
+We implemented all of our algorithms in C++ and MVAPICH2 2.3. 
+Inter- and intra-node communication is managed using the pseudo-asynchronous MPI-enabled communication software package YGM described in Chapter~\ref{chap:async}.
+% \footnote{put github link here.}.
+%Our implementations are freely available on Github \footnote{put github link here.}.
+We used xxhash as our hash function implementation \cite{xxhash}. 
+
+\noindent
+\textbf{Evaluation}:
+We ran each experiment for a total of 100 iterations using different random seeds, using prefix size $p = 12$. 
+We found in experiments that this size gave the best tradeoff between performance and accuracy.
+We evaluated the accuracy of the estimates of each algorithm in terms of 
+%
+\begin{align}
+\label{eq:global_error}
+\text{global relative error} &= \frac{ \left | T - \widetilde{T} \right |}{T}, \\
+\label{eq:vertex_mre}
+\text{mean relative error (vertices)} &= \frac{1}{|\mathcal{V}|} \sum_{u \in \mathcal{V}} \frac{\left | \mathcal{C}^{\algoname{Tri}}(u) - \widetilde{\mathcal{C}}^{\algoname{Tri}}(u) \right |}{1 + \mathcal{C}^{\algoname{Tri}}(u)}, \text{ and} \\
+\label{eq:edge_mre}
+\text{mean relative error (edges)} &= \frac{1}{|\mathcal{E}|} \sum_{uv \in \mathcal{E}} \frac{\left | \mathcal{C}^{\algoname{Tri}}(uv) - \widetilde{\mathcal{C}}^{\algoname{Tri}}(uv) \right |}{1 + \mathcal{C}^{\algoname{Tri}}(uv)}
+\end{align}
+%
+as appropriate.
+We will abbreviate ``mean relative error'' as MRE in figures and tables.
+%We also examine the element-wise relative error distributions in detail in Section~\ref{sec:estimation}.
+
+In addition, we computed the top $k$ ground truth edge- and vertex-local triangle count elements of each graph, and compared them with the estimated top $k$ elements. 
+We considered multiple performance metrics using this approach.
+
+For an experiment consisting of a graph $G$, a prefix size $p$, a number of heavy hitters $k$, and a number of estimated heavy hitters $k^\prime$, we run an implementation of Algorithm~\ref{alg:ds:edge_local} using HyperLogLog sketches with $m=2^p$ registers and accumulate a $k^\prime$-min-heap $\widetilde{H}_{k^\prime}$. 
+We then compare this heap to $H_k$, the true set of top $k$ triangle count edges in $G$.
+We can also compare $\widetilde{\mathcal{T}}$ to $\mathcal{T}$.
+
+We treat $H_{k^\prime}$ as a one-class classifier of the top $k$ elements in $H_k$, implicitly labelling all other vertices as ``not heavy hitters''.
+Accordingly, an edge $e \in \mathcal{E}$ is a true positive (TP) if $e \in H_{k}$ and $e \in \widetilde{H}_{k^\prime}$, a false negative (FN) if $e \in H_{k}$ and $e \not\in \widetilde{H}_{k^\prime}$, a false positive (FP) if $e \not\in H_{k}$ and $e \in \widetilde{H}_{k^\prime}$, or a true negative (TN) if $e \not\in H_{k}$ and $e \not\in \widetilde{H}_{k^\prime}$.
+We can report the quality of an experiment in terms of its recall $\left ( \frac{TP}{TP + FN} \right )$ versus its precision $\left ( \frac{TP}{TP + FP} \right )$.
+%These are standard measures in information extraction.
+The precision versus recall tradeoff is a common metric in information retrieval, where the goal is to tune model parameters so as to force both the precision and recall as close to one as possible.
+In our experiments, we vary $k^\prime$ around a stationary $k$ to demonstrate the tradeoffs of accumulating more or less than the target number of heavy hitters.
+Although these measures are know to exhibit bias, they are accepted as being reasonable for heavily uneven classification problems such as ours, where the class of interest is a small proportion of the samples \cite{boughorbel2017optimal}. 
+
+Figure~\ref{fig:graph_challenge} shows the edge local precision versus recall curves for all of the graphs in Table~\ref{tab:graphs} for $k = 10, 100, 1000$, where we vary $k^\prime$ from $0.2k$ to $2k$. 
+The figure also plots the mean relative error of these top 10, top 100, and top 1000 edges.
+They also plot the global mean relative error and the mean relative errors of the false positives and the false negatives.
+This false positive relative error is the mean error observed by false positives - edges that are incorrectly identified as heavy hitters.
+Similarly, the false negative relative error is the mean error observed by false negatives -edges that the algorithm fails to correctly identify as heavy hitters. 
+Low false positive error indicates that the true heavy hitters are still accurately estimated, while low false negative error indicates that those edges falsely identified as top $k^\prime$ elements are still
+These results were published by Priest, Pearce and Sanders in \cite{priest2018estimating}.
+
+\begin{figure}
+	\centerline{\includegraphics[width=1.0\columnwidth]{graph_challenge_plot}}
+	\caption{Precision vs. recall and mean relative error (MRE) for the top 10, top 100, and top 1000 ground truth heavy hitters of all graphs listed in Table~\ref{tab:graphs} using $p=12$.
+	Also plots the mean relative error for the global estimates and the top 10 false positives and false negatives.
+	All mean relative error plots use $k^\prime = k$.
+	\label{fig:graph_challenge}}
+\end{figure}
+
+
+Figure~\ref{fig:graph_challenge} indicates that while the edge-local algorithm returns good performance on heavy hitter recovery for many of these graphs, some exhibit poor performance.
+Figure~\ref{fig:hh_comp} compares three of these poor performers (em $\otimes$ em, p2pGnutella24, and ca-HepTh) with a graph that exhibits good performance (cit-Patents).
+The figure plots the triangle count for the ordered top $10^4$ edges in each graph, as well as the triangle density for the same edges, in the same order.
+The cit-Patent graph demonstrates near-optimal features of a graph given our approach.
+The triangle count distribution is roughly scale-free, making it easier to differentiate top $k$ elements from others for small $k$. 
+Furthermore, the triangle density of most of these edges is nontrivial, avoiding the noted problem stemming from estimating small intersections. 
+We will discuss how the other three graphs fail to 
+
+Consider first the the em $\otimes$ em graph. 
+This is a synthetic kronecker graph, whose formula tends to promote the jagged triangle count distribution seen in Figure~\ref{fig:hh_comp}.
+This results in many triangle count ties, which is problematic for our analysis. 
+Indeed, this is a weakness of the approach.
+Furthermore, all of the heavy hitter edges exhibit low triangle density, with the majority being trivial. 
+This leads to increased estimation error as discussed in Section~\ref{DS:sec:intersections}, which can be observed in Figure~\ref{fig:graph_challenge}.
+This error exacerbates the problems introduced by having many ties.
+
+Now consider the p2p-Gnutella24 graph. 
+This graph also exhibits many ties, but this is due to extreme sparsity of triangles present in the graph. 
+Indeed, all but 14 edges in the graph have 2 or fewer incident triangles, and nearly all edges exhibit trivial triangle density.
+This graph also exhibits the most estimation error of those considered in our experiments for this reason.
+This indicates that our approach is probably not suitable for graphs with very few triangles.
+It is worth noting, however, that we are reliably able to capture the top 2 triangle count elements. 
+
+Finally, consider the ca-HepTh graph, which encodes the collaboration network of the Arxiv high energy physics theory community.
+This graph proves to be a pathological for this problem. 
+Note that, save the top 2 edges, the top $\sim 300$ edges are tied in triangle count.
+Although our algorithm is able to reliably recover these top 2 elements, even an algorithm with prefect accuracy would fail up to ties on this graph for $k >2$ and $k < \sim 300$, which our results reflect.
+Indeed, Figure~\ref{fig:graph_challenge} indicates that this graph exhibits some of the lowest relative error in our experiments.
+This indicates that, even for graphs with favorable triangle density, ties can lead to poor heavy hitter recovery. 
+This problem could be partially ameliorated via a dynamically sized heap like that utilized in Theorem~\ref{thm:dchh:cashregister}.
+%However, this would still be thwarted by near-regular local triangle count graphs like ca-HepTh if size.
+
+
+\begin{figure}
+	\centerline{\includegraphics[width=1.0\columnwidth]{hh_comp_4}}
+	\caption{The triangle counts and triangle densities of the edge-local triangle count heavy hitters up to $10^4$ for four graphs.
+	The cit-Patent graph exhibits good performance in Figure~\ref{fig:graph_challenge}, and demonstrates a reasonable triangle count distribution as well as high triangle density throughout.
+	The other three graphs demonstrate poor performance in Figure~\ref{fig:graph_challenge}.
+	The kronecker em $\otimes$ em graph exhibits an unusual number of ties in its triangle count distribution due to its construction, in addition to low triangle density among its heavy hitters.
+	The P2P-Gnutella24 graph has very low triangle density, and a 3 or fewer triangles for the vast majority of its edges.
+	The ca-HepTh graph exhibits an unusual triangle distribution, where a huge portion of its edges tie at 30 triangles.
+	Consequently, even a perfect heavy hitter extraction procedure will fail on this graph.
+	Notably, the two edges with increased 
+	\label{fig:hh_comp}}
+\end{figure}
+
+Figure~\ref{fig:graph_challenge} also tells us that as $k$ increases, the relative estimation error of the top $k$ elements tends to increase.
+This is sensible, as both the true triangle counts and triangle density tend to decrease as we begin to consider smaller elements.
+It is worth noting that some of these graphs would exhibit better performance for different settings of $k$, such as noted p2p-Gnutella and ca-HepTh perform well when $k=2$, because the top two elements stand out above the others.
+Unfortunately, in practice we typically cannot know how many outliers there are in practice.
+
+Furthermore, the global mean relative error for most of these graphs is reasonable. 
+However, there are some notable outliers, which are mostly overestimates due to many small intersections. 
+In any case, 
+
+We perform a similar comparison using Vigna's additive hyperbolic weighted $\tau_{h, \phi}$, an extension to the well-studied Kendall's $\tau$ statistic \cite{vigna2015weighted}.
+$\tau_{h, \phi}$ is a correlation coefficient on two indexings $\{s_i\}_{i=1}^n$ and $\{r_i\}_{i=1}^n$ of the set of elements $\{1, 2, \dots, n\}$.
+Assume that $\phi : \{1, 2, \dots, n\} \rightarrow \{1, 2, \dots, n, \infty\}$ is the map of elements to their ground truth rank, where $\phi(i) = \infty$ indicates that $i$ has null rank. 
+Let
+%
+\begin{equation} \label{eq:tau_inner}
+\langle r, s \rangle_{h, \phi} = \sum_{i < j} \algoname{sgn}(x_i - x_j)\algoname{sgn}(y_i - y_j) \left ( \frac{1}{\phi(i)+ 1} + \frac{1}{\phi(j)+ 1} \right ),
+\end{equation}
+%
+where 
+%
+\begin{equation} \label{eq:sgn}
+\algoname{sgn}(z) \coloneqq 
+\begin{cases}
+	1 &\text{if $x > 0$}\\
+	0 &\text{if $x = 0$}\\
+	-1 &\text{if $x < 0$}
+\end{cases}. 
+\end{equation}
+%
+If we further define the norm $\| r \|_{h, \phi} = \sqrt{ \langle r, r \rangle_{h, \phi}}$, $\tau_{h, \phi}$ can be expressed as 
+%
+\begin{equation} \label{eq:tau}
+\tau_{h, \phi} = \frac{\langle r, s \rangle_{h, \phi}} {\| r \|_{h, \phi} \| s \|_{h, \phi}}.
+\end{equation}
+%
+This coefficient yields a value $-1 \leq \tau_h \leq 1$, where $\tau_h = 1$ indicates perfect agreement between the indexings.
+The use of the hyperbolic function ensures that higher ground truth priority elements bear a greater impact upon the correlation. 
+We use the ranking function
+%
+\begin{equation} \label{eq:phi}
+\phi_k(z) \coloneqq 
+\begin{cases}
+	i &\text{if $i \leq k$ and $z$ is the $i$th largest element}\\
+	\infty &\text{else}
+\end{cases},
+\end{equation}
+%
+using $\tau_{h,\phi_k}$ to measure top $k$ correlation.
+We used $k = 100$ in our experiments.
+
+
+\begin{figure}
+	\begin{center}
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{patents_edge_distn_density_vs_rel_err.png}}
+			\caption{cit-Patents. \label{fig:patents_edge_density_vs_rel_err}}
+		\end{subfigure}
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{twitter_edge_distn_density_vs_rel_err.png}}
+			\caption{Twitter. \label{fig:twitter_edge_density_vs_rel_err}}
+		\end{subfigure}
+		\caption{Heat maps displaying the distribution of edge-local triangle count relative error for two large graphs where $p = 12$.
+			Heat values asigned to cells are the logarithm of the number of edges matching that triangle density and relative error.
+			\label{fig:edge_density_vs_rel_err}}
+	\end{center}
+\end{figure}
+
+\begin{table}[htbp]
+\caption{Graph Scaling \label{tab:graphs}}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+\textbf{graph} & $|\mathcal{V}|$ &  $|\mathcal{E}|$ & $|\mathcal{T}|$ & Type \\
+\hline
+\hline
+patents & 3,774,768 & 16,518,947   & 7,515,020& Citation \\
+\hline
+\textbf{ye $\boldsymbol{\otimes}$ ye} & 5,574,320 & 88,338,632 & 74,765,400 & Kronecker \\
+\hline
+\textbf{or $\boldsymbol{\otimes}$ or} & \#\#\# & \#\#\# & \#\#\# & Kronecker \\
+\hline
+Twitter & 41,652,224 & \#\#\# &  \#\#\# & Soc. Net. \\
+\hline
+WebData & 3,563,602,788 & \#\#\# &  \#\#\# & Web \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
 
 
 
 
-
-
-
+%\begin{longtable}{|c|c|c|c|c|c|c|c|}
+%\hline
+%\textbf{graph} & $|E|$ & $|T|$ & $\frac{|T|}{|E|}$ & $\frac{||T| - |\tilde{T}||}{|T|}$ & top 10 MRE & top 100 MRE & top 1000 MRE \\
+%\hline
+%as20000102 & 12572 & 6584 & 0.52 & 3.2815 & 0.0781 & 0.1719 & 0.4974 \\
+%\hline
+%ca-GrQc & 14484 & 48260 & 3.33 & 0.0072 & 0.0125 & 0.0133 & 0.0127 \\
+%\hline
+%p2p-Gnutella08 & 20777 & 2383 & 0.11 & 0.0923 & 0.0549 & 0.0932 & 0.2424 \\
+%\hline
+%oregon1010407 & 21999 & 15834 & 0.72 & 1.4523 & 0.0795 & 0.1244 & 0.3531 \\
+%\hline
+%oregon1010331 & 22002 & 17144 & 0.78 & 1.2731 & 0.1 & 0.121 & 0.2807 \\
+%\hline
+%oregon1010414 & 22469 & 18237 & 0.81 & 1.2338 & 0.0604 & 0.1147 & 0.3056 \\
+%\hline
+%oregon1010428 & 22493 & 17645 & 0.78 & 1.4769 & 0.0659 & 0.1234 & 0.3274 \\
+%\hline
+%oregon1010505 & 22607 & 17597 & 0.78 & 1.2909 & 0.0684 & 0.1258 & 0.3187 \\
+%\hline
+%oregon1010512 & 22677 & 17598 & 0.78 & 1.3222 & 0.0666 & 0.1202 & 0.3137 \\
+%\hline
+%oregon1010519 & 22724 & 17677 & 0.78 & 1.396 & 0.0643 & 0.1234 & 0.315 \\
+%\hline
+%oregon1010421 & 22747 & 19108 & 0.84 & 1.1561 & 0.0648 & 0.1087 & 0.2862 \\
+%\hline
+%oregon1010526 & 23409 & 19894 & 0.85 & 1.3068 & 0.0717 & 0.1178 & 0.2838 \\
+%\hline
+%ca-HepTh & 25973 & 28339 & 1.09 & 0.0058 & 0.0079 & 0.0074 & 0.007 \\
+%\hline
+%p2p-Gnutella09 & 26013 & 2354 & 0.09 & 0.1347 & 0.0626 & 0.094 & 0.2683 \\
+%\hline
+%oregon2010407 & 30855 & 78138 & 2.53 & 0.2687 & 0.0607 & 0.0606 & 0.0485 \\
+%\hline
+%oregon2010505 & 30943 & 72182 & 2.33 & 0.3038 & 0.0499 & 0.0607 & 0.057 \\
+%\hline
+%oregon2010331 & 31180 & 82856 & 2.66 & 0.264 & 0.0674 & 0.0584 & 0.0473 \\
+%\hline
+%oregon2010512 & 31303 & 72866 & 2.33 & 0.3406 & 0.0525 & 0.06 & 0.0563 \\
+%\hline
+%oregon2010428 & 31434 & 78000 & 2.48 & 0.2612 & 0.0529 & 0.0583 & 0.0567 \\
+%\hline
+%p2p-Gnutella06 & 31525 & 1142 & 0.04 & 0.1909 & 0.0296 & 0.114 & 0.2764 \\
+%\hline
+%oregon2010421 & 31538 & 82129 & 2.6 & 0.3039 & 0.0478 & 0.0583 & 0.0532 \\
+%\hline
+%oregon2010414 & 31761 & 88905 & 2.8 & 0.2745 & 0.0501 & 0.0585 & 0.0493 \\
+%\hline
+%p2p-Gnutella05 & 31839 & 1112 & 0.03 & 0.5652 & 0.0557 & 0.1493 & 0.2506 \\
+%\hline
+%oregon2010519 & 32287 & 83709 & 2.59 & 0.2927 & 0.0569 & 0.0535 & 0.0557 \\
+%\hline
+%oregon2010526 & 32730 & 89541 & 2.74 & 0.3163 & 0.0487 & 0.0488 & 0.0531 \\
+%\hline
+%p2p-Gnutella04 & 39994 & 934 & 0.02 & 0.1534 & 0.0676 & 0.0825 & 0.1849 \\
+%\hline
+%as-caida20071105 & 53381 & 36365 & 0.68 & 0.9618 & 0.1049 & 0.1176 & 0.2616 \\
+%\hline
+%p2p-Gnutella25 & 54705 & 806 & 0.01 & 0.1521 & 0.037 & 0.0642 & 0.1341 \\
+%\hline
+%p2p-Gnutella24 & 65369 & 986 & 0.02 & 0.4879 & 0.0272 & 0.3085 & 0.3786 \\
+%\hline
+%facebookcombined & 88234 & 1612010 & 18.27 & 0.0675 & 0.0311 & 0.0234 & 0.0142 \\
+%\hline
+%p2p-Gnutella30 & 88328 & 1590 & 0.02 & 0.0596 & 0.0506 & 0.0616 & 0.1286 \\
+%\hline
+%ca-CondMat & 93439 & 173361 & 1.86 & 0.0074 & 0.0183 & 0.0199 & 0.0268 \\
+%\hline
+%ca-HepPh & 118489 & 3358500 & 28.34 & 0.0101 & 0.0108 & 0.0119 & 0.0117 \\
+%\hline
+%p2p-Gnutella31 & 147892 & 2024 & 0.01 & 0.3307 & 0.0525 & 0.0603 & 0.1043 \\
+%\hline
+%email-Enron & 183831 & 727044 & 3.95 & 0.0454 & 0.0438 & 0.0597 & 0.078 \\
+%\hline
+%ca-AstroPh & 198050 & 1351440 & 6.82 & 0.0085 & 0.0169 & 0.024 & 0.0233 \\
+%\hline
+%loc-brightkiteedges & 214078 & 494728 & 2.31 & 0.2306 & 0.0426 & 0.0308 & 0.0241 \\
+%\hline
+%cit-HepTh & 352285 & 1478740 & 4.2 & 0.0476 & 0.0259 & 0.0543 & 0.0744 \\
+%\hline
+%email-EuAll & 364481 & 267313 & 0.73 & 1.4844 & 0.0223 & 0.0727 & 0.1487 \\
+%\hline
+%\textbf{pb $\boldsymbol{\otimes}$ pb} & 388962 & 1881600 & 4.84 & 0.0215 & 0.044 & 0.0482 & 0.0523 \\
+%\hline
+%soc-Epinions1 & 405740 & 1624480 & 4.0 & 1.8267 & 0.0702 & 0.074 & 0.0832 \\
+%\hline
+%cit-HepPh & 420877 & 1276870 & 3.03 & 0.0269 & 0.0213 & 0.0292 & 0.036 \\
+%\hline
+%soc-Slashdot0811 & 469180 & 551724 & 1.18 & 0.1829 & 0.0883 & 0.0447 & 0.0548 \\
+%\hline
+%soc-Slashdot0902 & 504230 & 602592 & 1.2 & 0.2646 & 0.0204 & 0.0415 & 0.0523 \\
+%\hline
+%amazon0302 & 899792 & 717719 & 0.8 & 0.139 & 0.0441 & 0.0523 & 0.0457 \\
+%\hline
+%loc-gowallaedges & 950327 & 2273140 & 2.39 & 0.3591 & 0.1708 & 0.1834 & 0.2103 \\
+%\hline
+%roadNet-PA & 1541898 & 67150 & 0.04 & 0.014 & 0.0034 & 0.0035 & 0.0036 \\
+%\hline
+%roadNet-TX & 1921660 & 82869 & 0.04 & 0.0048 & 0.0033 & 0.0031 & 0.0033 \\
+%\hline
+%flickrEdges & 2316948 & 107987000 & 46.61 & 0.0108 & 0.0126 & 0.0109 & 0.0138 \\
+%\hline
+%amazon0312 & 2349869 & 3686470 & 1.57 & 0.0948 & 0.057 & 0.0474 & 0.049 \\
+%\hline
+%amazon0505 & 2439437 & 3951060 & 1.62 & 0.158 & 0.0656 & 0.044 & 0.0508 \\
+%\hline
+%amazon0601 & 2443408 & 3986510 & 1.63 & 0.1734 & 0.0612 & 0.0459 & 0.051 \\
+%\hline
+%roadNet-CA & 2766607 & 120676 & 0.04 & 0.0062 & 0.0047 & 0.0054 & 0.0041 \\
+%\hline
+%graph500-scale18-ef16 & 3800348 & 82287300 & 21.65 & 3.7168 & 0.0516 & 0.0523 & 0.0742 \\
+%\hline
+%\textbf{cg $\boldsymbol{\otimes}$ cg} & 8201250 & 64707900 & 7.89 & 0.3832 & 0.031 & 0.064 & 0.1362 \\
+%\hline
+%\textbf{ns $\boldsymbol{\otimes}$ ns} & 15037128 & 85006200 & 5.65 & 0.0015 & 0.018 & 0.0155 & 0.0158 \\
+%\hline
+%cit-Patents & 16518947 & 7515020 & 0.45 & 0.0044 & 0.0105 & 0.0127 & 0.016 \\
+%\hline
+%\textbf{em $\boldsymbol{\otimes}$ em} & 59426802 & 171286000 & 2.88 & 0.0222 & 0.1093 & 0.0985 & 0.0953 \\
+%\hline
+%\textbf{ye $\boldsymbol{\otimes}$ ye} & 88338632 & 74765400 & 0.85 & 0.054 & 0.0516 & 0.0605 & 0.0636 \\
+%\hline
+%\caption{Edge-Local Aggregate Performance \label{tab:big}}
+%\end{longtable}
 
 
 
@@ -5185,9 +5801,9 @@ However, this requires $t$ passes over the entire graph.
 This approach can be made somewhat less wasteful via the simulation of $k$ random walks in parallel, as the space complexity and update times increase by a factor of $k$ and the pass complexity remains the same. 
 
 One might be tempted, for unweighted simple graphs, to simply sample many vertices ahead of time and upon simulation ignore the samples that match a history to be ignored.
-However, we may not know which, if any of $\left \{ v_0, v_1, \dots, v_{i-1} \right \}$ are actually adjacent to $v_0$. 
-If $\left \{ v_0, v_1, \dots, v_{i-1} \right \} \not \subseteq \mathcal{N}_\mathcal{S}$, then we are unable to flip a coin with probability 
-$\frac{|\mathcal{N}_\mathcal{S} \setminus \left \{ v_0, v_1, \dots, v_{i-1} \right \}|}
+However, we may not know which, if any of $\left \{ v_0, v_1, \dots, v_{i-1} \right \}$ are actually adjacent to $v_i$. 
+If $\left \{ v_0, v_1, \dots, v_{i-1} \right \} \not \subseteq \mathcal{N}_\mathcal{S}[v_i]$, then we are unable to flip a coin with probability 
+$\frac{|\mathcal{N}_\mathcal{S}[v_i] \setminus \left \{ v_0, v_1, \dots, v_{i-1} \right \}|}
 {|\{ x \in \mathcal{B} \mid (v_i, x) \in \mathcal{E}_\mathcal{B} \} \setminus \left \{ v_0, v_1, \dots, v_{i-1} \right \}|}$
 , because we do not know the size of the denominator without taking another pass over $M[v_i] = \{ x \in \mathcal{B} \mid (v_i, x) \in \mathcal{E}_\mathcal{B} \}$.
 Hence, even for unweighted simple graphs, we must pass over $M[x]$ each time we sample from non-source $x$.
@@ -5278,8 +5894,17 @@ This is because betweenness centrality is defined in terms of the number of all 
 \label{sec:kpc}
 %----------------------------------------------------------------------------------------
 
+In order to find a way forward, it is helpful to step back and assess what betweenness centrality purports to measure.
+Vertices with relatively high betweenness centrality scores are those that connect communities, as many shortest paths pass through them.
+Some have attempted to relax the computation of betweenness centrality by considering random walks instead - calculating the probability that a vertex appears along a random walk from source $s$ to destination $d$ \cite{newman2005measure}.
+Unfortunately, the exact method provided depends upon inverting an augmented Laplacian \emph{and then solving the flow betweenness problem  on it} \cite{freeman1991centrality}, requiring $O((m + n) n^2)$ time and $\Theta(m)$ memory, and failing to yield a reasonable sublinearization using existing techniques short of relying upon spectral sparsifiers.
+However, the method still depends upon inverting a (possibly sparse) $n \times n$ matrix, which is an expensive process, and the flow betweenness problem appears even less likely to yield a sublinearization than betweenness.
+Similar random-walk based approaches exist for closeness centrality as well \cite{noh2002stability}.
+
+However, utilizing random walks seems a fruitful possible line of inquiry.
 Kourtellis et al. attempt to approximate the top-$k$ betweenness central vertices by way of relaxing its computation with the related $\kappa$-path centrality \cite{alahakoon2011k, kourtellis2013identifying}.
-The authors define the $\kappa$-path centrality of a vertex $x$ as the sum, over all $y \in \mathcal{V} \setminus \{x\}$, of the probability that a random simple path beginning at $y$ of length at most $k$ passes through $x$. 
+The authors define the $\kappa$-path centrality of a vertex $x$ as the sum, over all $y \in \mathcal{V} \setminus \{x\}$, of the probability that a random simple path beginning at $y$ of length at most $\kappa$ passes through $x$. 
+Here a random simple path is a history-avoiding random walk as described in Section~\ref{walks:sec:walks:augmented}.
 Let $\rho_{s, \ell} = (v_0 = s, v_1, \dots, v_\ell)$ be a random variable consisting of a history-avoiding random walk of length $\ell$ starting at $s \in \mathcal{V}$. 
 Then $\Pr [ \rho_{s, \ell}]$ is given by the recurrence relation
 %
@@ -5312,7 +5937,7 @@ Then we can express the $\kappa$-path centrality of a vertex $x$ as
 %
 
 
-Kourtellis et al. provide a randomized algorithm for approximating the $\kappa$-path centrality of the vertices of a graph, and demonstrate that on real-world networks vertices with high approximate $\kappa$-path centrality empirically correlate well with high betweenness-centrality vertices. 
+Kourtellis et al. provide a randomized algorithm for approximating the $\kappa$-path centrality of the vertices of a graph, and demonstrate that on real-world networks vertices with high approximate $\kappa$-path centrality empirically correlate well with high betweenness-centrality vertices \cite{kourtellis2013identifying}. 
 We reproduce this algorithm in Algorithm~\ref{alg:kpath}.
 The algorithm amounts to a Monte Carlo simulation of $T = 2 \kappa^2 n^{1-2\alpha} \ln n$ random simple paths of lengths chosen uniformly in $[\kappa]$.
 The algorithm counts the number of times that each vertex occurs in the simulation, discounting the random simple paths that reach dead ends, and returns this reweighted count as the estimate of the vertex's $\kappa$-path centrality.
@@ -5423,53 +6048,45 @@ The algorithm counts the number of times that each vertex occurs in the simulati
 \end{flushleft}
 \end{algorithm}
 
-This algorithm is much more efficient than other attempts to approximate betweenness centrality, as it sidesteps the need to approximate the \algoname{AllPairsAllShortestPaths} problem.
+This algorithm is much more efficient than other attempts to approximate betweenness centrality, as it sidesteps the need to solve instances of the \algoname{SingleSourceAllShortestPaths} problem.
 Finally, $\kappa$-Path centrality is desirable in that it depends only on $\kappa$-local features of the graph when considering any particular vertex.
 Kourtellis et al. also proved the following Theorem:
 %
 \begin{theorem} \label{thm:kpath}
-Algorithm~\ref{alg:kpath} runs in $O(\kappa^3 n^{2-2\alpha} \log n)$ time and $O(m)$ space.
+Algorithm~\ref{alg:kpath} runs in $O(\kappa^3 n^{2-2\alpha} \log n)$ time and $\Theta(m)$ space, where accuracy parameter 
+$\alpha \in \left [ -\frac{1}{2}, \frac{1}{2} \right ]$.
 For each $x \in \mathcal{V}$ it produces estimates $\widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x]$ such that 
 $\left | \widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x] - \mathcal{C}_\kappa^{\algoname{Path}}[x] \right | \leq n^{\frac{1}{2} + \alpha}$ with probability at least $1 - \frac{1}{n^2}$.
 \end{theorem}
 
 
 %------------------------------------------------
-\subsection{Approximation of Heavy Hitters via $\kappa$-Path Centrality} 
+\subsection{Approximation of Betweenness Heavy Hitters via Sublinear $\kappa$-Path Centrality} 
 \label{sec:kpc:hh}
 %------------------------------------------------
 
-In order to find a way forward, it is helpful to step back and assess what betweenness centrality purports to measure.
-Vertices with relatively high betweenness centrality scores are those that connect communities - the same vertices should also have high $\kappa$-path centrality scores, as discussed in Section \ref{sec:kpc}. 
-Moreover, the existing $\kappa$-path centrality approximation algorithm operates by way of simulating simple paths from $\mathcal{G}$.
+%In order to find a way forward, it is helpful to step back and assess what betweenness centrality purports to measure.
+%Vertices with relatively high betweenness centrality scores are those that connect communities - the same vertices should also have high $\kappa$-path centrality scores, as discussed in Section \ref{sec:kpc}. 
+%Moreover, the existing $\kappa$-path centrality approximation algorithm operates by way of simulating simple paths from $\mathcal{G}$.
 %This algorithm looks suspiciously similar to the vertex-edge adjacency matrix sampling algorithms developed by Ahn, Guha, and McGregor discussed in Section \ref{sec:spanner}. 
 
 While these results are promising, they do not solve the problem of approximating betweenness centrality in the semi-streaming turnstile model. 
-First, the $\kappa$-path centrality approximation algorithm requires a static graph. 
-Second, there is at present no known algorithm that can approximate $\kappa$-path centrality using $o(m)$ space. 
-Third, as discussed by Kourtellis et al. in \cite{kourtellis2013identifying}, the sampling algorithm requires $2 \kappa n^{1-2\alpha} \ln n$ independent samples, where $\alpha$ is an accuracy parameter. 
-Finally, while empirical correlation is promising, there are no theoretical guarantees that $\kappa$-path centrality will accurately capture the top-$k$ betweenness central vertices, which is a highly desirable result. 
+First, Algorithm~\ref{alg:kpath} requires a static graph.
+Second, it requires $\theta(m)$ memory. 
+Third, it requires $T = 2 \kappa^2 n^{1-2\alpha} \ln n$ independent samples, where $\alpha \in \left [ -\frac{1}{2}, \frac{1}{2} \right ]$ is an accuracy parameter. 
+Finally, while empirical correlation is promising, there are no theoretical guarantees that the heavy hitters of $\widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}$ will correlate with those of $\mathcal{C}^{\algoname{Btw}}$, which is a highly desirable result. 
 If an algorithm were to arise that simultaneously solves the first three problems, it might be used to approximate the betweenness centrality of the vertices of an arbitrary evolving graph in the semi-streaming model. 
 
-It is the authors' belief that $\ell_p$-sparsification sketches of the type discussed in Section \ref{sec:cc} might afford such an algorithm. 
-Such methods certainly allow for randomly sampling trees (or, with some minor modifications, simple paths) in $G$ in the semi-streaming model.
-The $\kappa$-path centrality approximation algorithm given by Kourtellis et al. is a simple Monte Carlo simulation, which affords a loose additive error.
-It may well be that a modified algorithm, or indeed a slightly different measure of centrality, suffices to easily sublinearize the approximation problem.
+However, we have shown in Section~\ref{walks:sec:walks:distributed:playback} how to efficiently implement semi-streaming parallel random walk simulation with playback on a distributed compute instance with access to fast external memory.
+In Section~\ref{walks:sec:walks:augmented} we expanded this approach to handle history avoiding random walks. 
+The main wrinkle is that playbacks must occur at almost every hop sample.
+Meanwhile, Algorithm~\ref{alg:kpath} consists of the Monte Carlo simulation of $T = 2 \kappa^2 n^{1-2\alpha} \ln n$ history avoiding random walks of length at most $\kappa$, while keeping tallies of the vertices that occur in paths that do not dead end.
+Thus, we can directly apply these algorithms to estimating $\kappa$ path centrality using a set of distributed processors by simulating $k = T$ simultaneous random walks of lengths at most $\kappa$ with playback. 
+This affords a direct reproduction of the work of Algorithm~\ref{alg:kpath} in the semi-streaming model, with the same error guarantees.
+Moreover, it allows us to scale the estimation of $\kappa$ path centrality to truly massive graphs.
 
-Even in this best case, however, it is important to note that the best we can hope is a semi-streaming algorithm that solves \algoname{UBApproxCentral}$(\textnormal{BC}, \mathcal{G})$ well in practice. 
-A solution to \algoname{UBApproxTopCentral}$(C, \mathcal{G}, k)$ is also desirable, but would require a single-pass algorithm that simultaneously maintains a heap - similar to the \algoname{CountSketch} heap algorithm discussed in Section \ref{sec:countsketch}. 
-Hence, even once such an algorithm is derived it will require extensive empirical evaluation on both real and synthetic data.
-Similar to the evaluation proposed in Section \ref{sec:asdc}, we propose an extensive performance comparison between such an algorithm once derived and existing techniques. 
-Even if the empirical accuracy is substandard compared to state-of-the-art techniques, significant time and space improvements represent a contribution toward improving the state of the art. 
-
-
-%----------------------------------------------------------------------------------------
-\section{Sublinear Distributed $\kappa$-Path Centrality}
- \label{kpath:sec:alg}
-%----------------------------------------------------------------------------------------
-
-
-
+While this chapter has described many claims in the language of algorithms, they suggest practicable implementations. 
+Such applications are the subject of future work. 
 
 
 
