@@ -505,6 +505,26 @@ Ahn, Guha, and McGregor's algorithm depends upon building random subtrees by ite
 We then compute the closeness centrality of this subgraph, which bounds the shortest paths distance error by design.
 For an almost-linear runtime, we can instead employ the fast, scalable algorithm due to Cohen et al. at the expense of some additional error \cite{cohen2014computing}. 
 
+We describe algorithms that accept a turnstile graph stream and estimates the closeness centrality of all vertices.
+We obtain the following results:
+\begin{enumerate}
+	\item We demonstrate an algorithm that guarantees, for all $x \in \mathcal{V}$,  
+%
+\begin{equation*}
+\mathcal{C}^{\algoname{Close}}(x) - \widetilde{\mathcal{C}}^{\algoname{Close}}(x) \leq \left ( 1 - \frac{1}{k^{\log 5} - 1} \right ) \mathcal{C}^{\algoname{Close}}(x).
+\end{equation*}
+%
+	This algorithm requires $\log k$ passes, $\widetilde{O}(n^{1 + 1/k})$ space and $\widetilde{O}(n^{2 + 1/k})$ time
+	\item We demonstrate an algorithm that guarantees, for all $x \in \mathcal{V}$, 
+%
+\begin{equation*}
+\mathcal{C}^{\algoname{Close}}(x) - \widetilde{\mathcal{C}}^{\algoname{Close}}(x) \leq \left ( 1 - \frac{1 - O(\varepsilon)}{k^{\log 5}} \right ) \mathcal{C}^{\algoname{Close}}(x).
+\end{equation*}
+%
+The algorithm requires $\log k$ passes, $\widetilde{O}(n^{1 + 1/k})$ space, and $\widetilde{O} \left ( \left (n^{1 + 1/k} + n \log n \right )\log \frac{n}{\varepsilon^3} \right )$ time.
+\end{enumerate}
+
+
 
 
 %We here omit the details for brevity.
@@ -548,6 +568,7 @@ We propose three protocols that route messages from source to destination over M
 	\item \textbf{Node Local Node Remote Routing} (\textbf{NLNR}). Cores locally exchange messages, followed by a remote exchange via a lattice, followed by a second local exchange. 
 \end{enumerate}
 %
+We implement these protocols in an C++11/MPI library: You've Got Mail (\algoname{YGM}), to be open-sourced.
 We show in rigorous experiments that these routing exchanges exhibit better scaling characteristics than Pregel- or fully-asynchronous-style communication protocols on distributed algorithms over large graphs.
 
 \noindent
@@ -566,51 +587,41 @@ We explore various algorithmic optimizations to \algoname{HyperLogLog}, includin
 We introduce novel improvements to the compressed register implementation described in \cite{xiao2017better}, affording lossless merging of compressed sketches.
 We also discuss the tradeoffs of using different cardinality sketches in implementations, such as \algoname{MinCount} \cite{giroire2009order}.
 
-We demonstrate DegreeSketch as a tool for estimating the edge- and vertex-local triangle count heavy hitters of large graphs. 
+We demonstrate DegreeSketch as a tool for estimating local neighborhood sizes, as well as the edge- and vertex-local triangle count heavy hitters of large graphs. 
 %
 \begin{enumerate}
-	\item \textbf{Edge-local triangle count heavy hitters}. We estimate the edge-local triangle count heavy hitters of a graph using linear time and $O(n (\varepsilon^{-2} \log\log n + \log n))$ worst-case distributed memory
+	\item \textbf{Local neighborhood size and neighborhood function}. We estimate the local neighborhood sizes and global neighborhood function of a graph using linear time and $O(n (\varepsilon^{-2} \log\log n + \log n))$ worst-case distributed memory
+	\item \textbf{Edge-local triangle count heavy hitters}. We estimate the edge-local triangle count heavy hitters of a graph using the same asymptotic time and memory requirements.
 	\item \textbf{Vertex-local triangle counts}. We estimate the vertex-local triangle counts (or, alternately, the heavy hitters) of a graph using the same asymptotic time and memory requirements.
 %	linear time and \\$O(n (\varepsilon^{-2} \log\log n + \log n))$ worst-case distributed memory
 \end{enumerate}
 %
 We analyze the performance of these algorithms on numerous large graphs, and discuss many practical optimizations to the underlying algorithms. 
-We also discuss the limitations of the approach relating to high variance on small intersections.
+We also discuss the limitations of the approach relating to high variance on small intersections and intersections of sets of differing sizes.
 
 \noindent
 \textbf{Distributed sampling of random walks and simple paths via fast $\ell_p$-sampling sketches}:
 The sampling of random walks is a core subroutine in many graph algorithms.
 However, random walks suffer from sampling from high degree vertices in scale-free graphs. 
 Very large vertex neighborhoods stored in RAM can overwhelm the space and computation constraints of a graph partitioning in a Pregel-like system, whereas each sampling incurs nontrivial communication overhead in a delegated subpartitioning. 
-We address this problem by applying fast $\ell_p$ sampling sketches to high degree vertices in scale free graphs. 
+We address this problem by applying reservoir samplers and fast $\ell_p$ sampling sketches to high degree vertices in scale free graphs. 
 While the adjacency neighborhoods of most vertices are small enough to be stored explicitly in a vertex-centric distributed graph, we record substreams of high degree vertices in fast memory, e.g. NVRAM. 
 We make the following contributions:
 %
 \begin{enumerate}
-	\item \textbf{Hybrid sublinear random walk sampling}. 
-	We ingest a graph using some partitioning and store sparse columns of the adjacency matrix. 
-	Once a column grows sufficiently large, we write it as a stream to NVRAM and construct a logarithmic number of $\ell_p$ sampling sketches, where $p \in \{0,1\}$. 
-	All subsequent additions to the row are appended to the NVRAM stream and inserted into the sketches. 
-	When sampling a neighbor from a high degree vertex, we consume one of the sampling sketches to yield the next neighbor.
-	Once all sampling sketches of a particular vertex are consumed, we take another pass over its recorded stream and accumulate new sketches.
-	The algorithm requires
-	%
-	\begin{equation*}
-	O\left ( \sum_{x \in \mathcal{V}} \min \left \{ \mathbf{d}_x, \log^3 n \log (1/\delta) \right \} \right )
-	\end{equation*}
-	%
-	space for unweighted graphs, and 
-	%
-	\begin{equation*}
-	O \left ( \sum_{x \in \mathcal{V}} \min \left \{ \mathbf{d}_x, \varepsilon^{-1} \log (1 / \varepsilon) \log^3 n \log (1/\delta) \right \} \right )
-	\end{equation*}
-	%
-	space for weighted graphs, where $\mathbf{d}_x$ is the degree of vertex $x$.
-	%
-	\item \textbf{Hybrid sublinear random simple path sampling}.
-	In a manner similar to random walk sampling, we construct $\ell_p$ sampling sketches on demand, while forwarding sampled path histories.
-	We use these path histories when accumulating sampling sketches so as to ignore edges that would result in loops.
-	The resulting scheme has the same asymptotic costs as random walk sampling, but does not permit the a priori accumulation of sampling sketches, which must be accumulated from passes over recorded streams as needed. 
+	\item \textbf{Semi-streaming simulation of $k$ random walks of length $t$ lower bound}.
+	We prove that for $t, k = O(n^2)$, simulating $k$ $t$-step random walks in the insertion-only model within error $\frac{1}{3}$ requries $\Omega(n\sqrt{kt})$ space.
+	\item \textbf{Semi-streaming simulation of $k$ random walks of length $t$ upper bound}.
+	We demonstrate an algorithm that can sample $k$ $t$-step random walks on an undirected graph in the insertion-only model within error $\varepsilon$  using $O \left ( n\sqrt{kt}\frac{q}{\log q} \right )$ words of memory, where $q = 2 + \frac{\log(1/\varepsilon)}{\sqrt{kt}}$, with some assumptions placed upon the distribution of the starting vertices.
+	\item \textbf{Hybrid distributed semi-streaming simulation of $k$ random walks of length $t$}.
+	We demonstrate an algorithm framework similar to that undergirding \algoname{DegreeSketch} that allows the easy generalization of the above algorithm to distributed memory. 
+	We also describe the method by which compute nodes can store adjacency substreams in fast memory to obtain more samples on the fly, using a methodology we call \emph{playback}.
+	Finally, we describe generalizations of the algorithm framework to support the simulation of augmented random walks - e.g. random walks that use history to bias future hop probabilities.
+%	\item \textbf{}
+%	\item \textbf{Hybrid sublinear random simple path sampling}.
+%	In a manner similar to random walk sampling, we construct $\ell_p$ sampling sketches on demand, while forwarding sampled path histories.
+%	We use these path histories when accumulating sampling sketches so as to ignore edges that would result in loops.
+%	The resulting scheme has the same asymptotic costs as random walk sampling, but does not permit the a priori accumulation of sampling sketches, which must be accumulated from passes over recorded streams as needed. 
 %	\item \textbf{Hybrid sublinear random subtree sampling}.
 %	In a manner similar to random simple path sampling, we construct $\ell_p$ sampling sketches of sparse column vectors of the vertex-edge incidence matrix. 
 %	Exact or sketched columns are transmitted along with walk histories so that they can be summed together with the next sampled column, allowing us to sample from tree neighbors without forming loops.
@@ -622,7 +633,7 @@ We make the following contributions:
 The $\kappa$-path centrality of a vertex is the probability that a random simple path (a non-self-intersecting random walk) of length $\leq \kappa$ will include it.
 $\kappa$-path centrality was introduced as a cheaper, more scalable alternative to betweenness centrality \cite{alahakoon2011k}, and is shown to empirically agree on heavy hitters \cite{kourtellis2013identifying}.
 $\kappa$-path centrality can be approximated via a Monte Carlo simulation of $T = 2 \kappa^2 n^{1-2\alpha} \ln n$ random simple paths, where $\alpha$ is an accuracy parameter. 
-We sublinearize this simulation algorithm to estimate the $\kappa$-path centrality of an input graph using our hybrid sublinear random simple path sampling scheme. 
+We use our distributed semi-streaming augmented random walk with playback framework to derive a distributed algorithm capable of estimating $\kappa$-path centrality.
 This affords us an algorithm that can empirically recover the betweenness centrality heavy hitters of a graph using space sublinear in the size of the graph.  
 
 
@@ -2383,43 +2394,283 @@ We did not find that other assignments exhibited sufficiently different behavior
 
 
 %----------------------------------------------------------------------------------------
+\section{Implementation Details} 
+\label{async:sec:implementation}
+%----------------------------------------------------------------------------------------
+
+We implemented the communication protocols discussed in Section~\ref{async:sec:async} in the \algoname{YGM} : You've Got Mail library.
+We implemented YGM in C++11 and the MVAPICH2 2.3 implementation of MPI.  
+We discuss and analyze the library in detail in \cite{priest2019you}.
+In this section we expose a few implementation details that have relevance to later applications. 
+
+%----------------------------------------------------------------------------------------
+\subsection{Imbalance Detection} 
+\label{async:sec:imbalance}
+%----------------------------------------------------------------------------------------
+
+The mailbox size controls the quantity of messages to be sent from any individual core, which implements built-in pushback against very talkative cores and prevents them from flooding the protocol with messages.
+On the other hand, it is possible to observe imbalances on the receive side. 
+In the worst case, if every message from every core is destined for cores on the same compute node, that node can potentially run out of memory from receiving all of these messages.
+
+Within the context of graph analytics, this situation can arise in exact triangle counting \cite{pearce2017triangle}. 
+Many applications proceed by performing wedge checks, in which a vertex queries each pair of its neighbors to see if the edge closing the triangle exists.
+For a vertex $x$, the number of messages $x$ sends is potentially $O(\mathbf{d}_x^2)$, where $\mathbf{d}_x$ is the degree of $x$. 
+The same vertex $x$ might be responsible for receiving a number of messages equal to the sum of each of its neighbors' degrees.
+Similar operations arise in many graph traversal algorithms.
+
+To combat this, we add a local check to avoid sending large numbers of messages to individual nodes. 
+Let $M$ be the size of each mailbox in message count and $N$ be the number of compute nodes. 
+Take $\alpha \geq 1$ to be some constant. 
+Then the average number of messages a core will send to any other compute node, assuming a uniform distribution over recipients, is $\frac{M}{N}$. 
+When we queue messages into a mailbox, we check if the number of queued messages for the destination node is greater than $\alpha \frac{M}{N}$. 
+If it is, we flush the mailbox by entering the next exchange, even if the mailbox is not completely full.
+
+This extra mailbox flushing can serve to reduce the effective size of mailboxes, but only when a core is skewed in the destination of its messages. 
+This reduction in mailbox size is somewhat alleviated by the fact that we can check for imbalances at the level of destination nodes rather than destination cores. 
+This makes the threshold for an individual core to cause early flushing even higher.
+
+Performing these checks guarantees that each compute node receives at most $\alpha * M * C$ messages, where $C$ is the number of cores per node. 
+Therefore, on average, each core receives at most $\alpha$ times as many messages as it sends.
+
+%----------------------------------------------------------------------------------------
+\subsection{Variable-Length Messages} 
+\label{async:sec:serialization}
+%----------------------------------------------------------------------------------------
+
+In many applications, it may be necessary to send messages of different lengths. 
+For example, the sparse registers in Chapter~\ref{chap:DS} are of variable size, and require variable size messages to be transmitted efficiently. 
+YGM supports variable-length messages through the use of cereal, a C++ serialization library \cite{cereal}. 
+Serialization provides a way of packing and unpacking messages on the source and destination cores. 
+Support for C++ standard template library containers is provided by cereal, making it unnecessary for users to implement their own serialization functions in most cases.
+Fortunately, the authors of cereal streamline the creation of these serialization functions, adding only a small amount of development overhead to serialization
+
+YGM supports serialization by templating mailboxes on the underlying object that performs the communication, the
+\emph{exchanger}. 
+For applications in which variable-length messages are necessary, a serialized exchanger is available.
+The serialization does add computational overhead on both the send and receive sides, however, and so this exchanger is best used only when variable length messages are expected.
+For applications where message sizes are a constant known at compile-time, an exchanger without serialization support is provided. 
+%Serialization introduces an overhead to message queueing and receiving and should only be used when necessary.
+
+%----------------------------------------------------------------------------------------
 \section{Experiments} \label{async:sec:experiments}
 %----------------------------------------------------------------------------------------
 
+We performed experiments on synthetic datasets for the purpose of establishing the following of our protocols.
+\begin{enumerate}
+	\item \textbf{Bandwidth Utilization} Do the protocols yield good bandwidth utilization?
+	\item \textbf{Wall Time Versus Baseline} Do the protocols accomplish communication tasks faster than a point-to-point solution?
+	\item \textbf{Strong Scaling} Do the protocols scale well to fixed problems as computing resources increase?
+	\item \textbf{Weak Scaling} Do the protocols scale well to problems that also scale as computing resources increase?
+\end{enumerate}
 
+\noindent
+\textbf{Data}: 
+As we are concerned only with communication performance, we generate our data on the fly as needed, using probabilistic parameters to set their features.
+
+\noindent
+\textbf{Hardware}: 
+All of the experiments were performed on a cluster of compute nodes with thirty-six 2.1 GHz Intel Xeon E5-2695 v4 cores and 128GB DRAM per node. 
+We varied the number of nodes per experiment from 1 all the way up to 1024.
+Each core on each node is responsible for an equally sized partition of the vertices in the graph.
+We consider graph partitioning to be a separate problem, and accordingly use simple round-robin assignment for our experiments.
+
+\noindent
+\textbf{Implementation}:
+We implemented all of our algorithms in C++ and MVAPICH2 2.3 in the YGM library. 
+The software suite supports a simple interface for abstracting mailbox communication.
+The client need only specify when to submit messages to the mailbox and the expected behavior upon message receipt. 
+YGM automatically coalesces small messages into large messages during each exchange phase.
+The implementation supports additional features, such as those discussed in Section~\ref{async:sec:implementation}.
+See the work by Priest, Steil, Pearce and Sanders for more implementation details \cite{priest2019you}.
+
+\noindent
+\textbf{Evaluation}:
+In order to test the characteristics of the mailbox under different routing schemes, we developed two applications that feature large amounts of communication relative to computation.
+Both degree counting and connected component identification utilize a graph data structure. 
+We assume a round-robin partitioning of vertices to cores. 
+We will discuss graph partitioning in more detail in Chapter~\ref{chap:DS}.
+
+We compared our experiments to a baseline: a pseudo-asynchronous mailbox similar to our protocols but without any internal routing. 
+We call this protocol ``no routing'' in figures. 
+We also compared our methods to cyclic repetitions of MPI\_Alltoallv and strictly asynchronous point to point communications, but found that our methods outperformed both so significantly as to not warrant their inclusion in further analysis. 
+
+In each experiment, we varied $N$, the number of compute nodes from 1 up to 1024 in multiples of 2. 
+Recall that each compute node is host to $C=36$ cores. 
+In the weak scaling experiments we generated graphs with vertices and sampled edges scaled to the size of $N$. 
+In the strong scaling experiments we used graphs of fixed size as $N$ increases.
+%Due to the resource needs of the larger jobs we were unable to run
+
+
+\noindent
+\textbf{Bandwidth Maximization}:
+
+Assume that a hybrid distributed memory instance consists of $N$ nodes with $C$ cores each.
+We assume $N$ is at least 2 to guarantee remote communications must occur in the routing schemes described in Section~\ref{async:sec:async}. 
+For the ease of analysis, we will assume message traffic is uniform across all pairs of cores, and that each core generates $M$ bytes worth of communication in each exchange round (not including message headers and other overhead).
+
+The No Routing protocol will prompt each core to participate in direct remote communication with $(N-1)C$ partners.
+So then each partner will receive $\Theta \left ( \frac{M}{NC} \right )$ remote bytes from this core in a round.
+This is the average size of a remote message sent by the core.
+Meanwhile, Node Local and Node Remote protocols prompt each core to communicate remotely with $(N-1)$ partners, each of whom forward to $C-1$ other cores, and so the average remote message contains $\Theta \left ( \frac{M}{N} \right )$ bytes. 
+Similarly, NLNR cores communicate remotely with $\frac{N-1}{C}$ partners, leading to an averagre remote message size of $\Theta \left ( \frac{MC}{N} \right )$ bytes.
+
+\begin{figure}
+	\centerline{\includegraphics[width=0.8\columnwidth]{ping_pong}}
+	\caption{Network bandwidth for various message sizes in a ping-pong test.
+			\label{fig:ping_pong}}
+\end{figure}
+
+The difference in average message sizes between routing schemes can have a large impact on mailbox performance on a real network. 
+Fig. \ref{fig:ping_pong} shows the network bandwidth for various message sizes using a ping-pong test in which a single pair of processes is sending messages. 
+The available bandwidth increases as message sizes increase with a downward jump as MPI switches from using an eager protocol to a rendezvous protocol at a size of 16KB. 
+For a fixed message volume, we have labeled possible bandwidth values for the above routing schemes using the scaling of average
+message sizes discussed, assuming a configuration that features 32 cores per node. 
+NLNR being farther to the right on this plot allows it to scale to larger numbers of nodes without increasing the size of mailbox used.
+
+We do not see an asymptotic improvement in the average message size as the number of nodes increases. 
+For all routing schemes, a doubling of the number of nodes results in a halving of the average message size. 
+We have assumed, however, that $C$ remains constant. 
+While this value is constant for a given system, the number of cores per node on new systems has been increasing over time. 
+As the number of cores available increases, the lateral distance between no routing, Node Remote, and NLNR increases, making effective routing even more useful for large numbers of nodes.
+
+\noindent
+\textbf{Degree Counting}:
+In the \emph{degree counting} experiments we generate graphs by uniformly sampling edge endpoints from the universe of vertices.
+Each processor samples two endpoints and sends a message to the owner of each vertex, indicating that they should increase the counter for the corresponding vertex. 
+We streams through the edges of a graph to calculate the degree of each vertex. 
+All edges samplings prompt at most two messages, each of which correspond to a single addition. 
+Edges are generated and counted in batches to isolate the time of degree counting from that of edge generation.
 
 \begin{figure}
 	\begin{center}
-		\begin{subfigure}{0.49\linewidth}
-			\centerline{\includegraphics[width=1.0\columnwidth]{degree_strong_scaling}}
-			\caption{Strong scaling \label{fig:degree_strong_scaling}}
-		\end{subfigure}
 		\begin{subfigure}{0.49\linewidth}
 			\centerline{\includegraphics[width=1.0\columnwidth]{degree_weak_scaling}}
 			\caption{Weak scaling. \label{fig:degree_weak_scaling}}
 		\end{subfigure}
-		\caption{Weak and strong scaling wall time experiments for degree counting, as the number of nodes varies from 1 up to 1024.
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{degree_strong_scaling}}
+			\caption{Strong scaling \label{fig:degree_strong_scaling}}
+		\end{subfigure}
+		\caption{Weak and strong scaling wall time experiments for degree counting, as the number of nodes $N$ varies from 1 up to 1024.
+			Weak scaling experiments (a) assumed a universe of $N2^{28}$ vertices and sampled a total of $N2^{32}$ edges.
+			Strong scaling experiments (b) assumed a universe of $2^{32}$ vertices and sampled a total of $2^{37}$ edges. 
+			Edge samplings uniformly sample two vertices without replacement from the universe of vertices.
+			In all experiments mailbox sizes are fixed at $2^{18}$ messages.
 			\label{fig:degree_scaling}}
 	\end{center}
 \end{figure}
 
+Figure \ref{fig:degree_scaling} shows the scaling properties of our degree-counting application using various routing
+schemes in YGM.
+We see that the No Routing mailbox scales very poorly past 4 compute nodes.
+Even with coalescing, a mailbox without additional routing makes poor use of network bandwidth. 
+Each core must split its messages to be sent to all other $|\mathcal{P}|-1$ cores on the system. 
+This provides limited opportunities for coalescing to occur.
+
+Node Local and Node Remote routing demonstrate good strong and weak scaling up to 128 compute nodes. 
+Past this certain point, these mailboxes face a similar scalability issue to that of the No Routing mailbox. 
+Consider a single core in a system. 
+If an additional compute node is added, that core has one additional core it must communicate with in its remote channel. 
+Keeping the mailbox size fixed, we eventually reach a point where coalescing loses its effectiveness as we add additional compute nodes. 
+
+It is worth noting that in degree counting with uniformly sampled edges, every pair of cores is expected to send the same number of messages as all other pairs of cores. 
+This makes broadcasts and delegate vertices (see Section~\ref{DS:sec:intro}) unnecessary to keep computation and communication balanced across cores. 
+Under these circumstances without broadcasts, we expect to see Node Local and Node Remote routing performing very similarly, which agrees with our results.
+
+NLNR routing demonstrates excellent scalability out to 1024 compute nodes. 
+For a system with $C$ cores per compute node, an additional $C$ compute nodes must be added to the system before each existing core sees an increase in the size of remote communication channels due to the organization of nodes into layers. 
+Thus, the effectiveness of coalescing is maintained much longer for NLNR routing than the previous routing schemes.
+
+Fig.~\ref{fig:degree_scaling} demonstrates some of the considerations when choosing a routing scheme. 
+For small numbers of nodes ($N < C$), NLNR performance is much worse than all other routing schemes.
+This is because there are not enough nodes to form a full ``layer'' of nodes.
+Until this point, all remote communications are routed through a subset of available cores, leaving many with no remote exchange partners. 
+For instance, when two compute nodes are used, all remote communications are routed through a single pair of cores, regardless of the total number of cores available. 
+In Fig.~\ref{fig:degree_weak}, we see good weak scaling for NLNR beyond 32 compute nodes, at which point the system begins
+making use of all cores during remote communications.
+
+Additionally, for moderate numbers of compute nodes where Node Local, Node Remote, and NLNR routing are scaling well, we
+see better absolute performance for Node Local and Node Remote routing. 
+This difference in performance shows the effect of the additional local exchange phase in NLNR routing.
+This overhead consistently results in slightly suboptimal performance for NLNR, up until the point where the other protocols cease to scale efficiently.  
+
+
+\noindent
+\textbf{Connected Components}:
+In our second suite of experiments we find the connected components within a graph. 
+The algorithm proceeds as follows.
+Each vertex stores a label that is initialized to its own global ID. 
+For every edge in the graph, a vertex sends its current label to its neighbor. 
+When receiving a label from a neighbor, a vertex stores the minimum of its label and the neighbor's label. 
+The entire graph is passed over with each vertex sending its label to all neighbors until no labels are changed.
+
+This algorithm terminates with all vertices storing the minimum vertex ID in its connected component. 
+For a graph $\mathcal{G} =(\mathcal{V}, \mathcal{E})$, this algorithm can take $O(\textnormal{diam}(G))$ passes over the graph to complete.
+Here $\textnormal{diam}(\mathcal{G})$ is the diameter of $G$.
+A pass generates $O(|\mathcal{V}|)$ messages, each of which corresponds to $O(1)$ work. 
+By using the Shiloach-Vishkin connected components algorithm, we could find connected components using $O(\log(|\mathcal{V}|))$ passes over the graph \cite{shiloach1982an}. 
+Our implementation was developed to be simple test of scalability for our mailbox.
+
+\noindent
+\textbf{Use of Asynchronous Broadcasts}:
+To test YGM in our connected components algorithm, we generate graphs using an RMAT generator \cite{chakrabarti2004r}. 
+RMAT graphs are characterized by degree distributions that approximately follow a power-law distribution \cite{seshadhri2013depth}.  
+The presence of high-degree vertices can lead to computation and communication imbalances among processors. 
+One way of handling these vertices is through a 2D decomposition of the adjacency matrix \cite{bulucc2011parallel}. 
+After this decomposition, matrix blocks can become hypersparse, that is, have fewer edges than vertices \cite{buluc2008representation}.
+We discuss the benefits and tradeoffs of different graph partitioning schemes in greater detail in Section~\ref{DS:sec:intro}.
+
+Instead, we use delegates to handle the high-degree vertices \cite{pearce2014faster}. 
+With this method, we identify high-degree vertices and \emph{delegate} them. 
+All non-delegates are assigned to cores using a round-robin paritioning.
+Delegate vertices are distributed across all cores with \emph{colocated} edges.
+That is, if $x \in \mathcal{V}$ crosses the delegate threshold, its core issues a broadcast to the rest of $\mathcal{P}$.
+This broadcast includes $x$'s label.
+For each subsequent $xy \in \mathcal{E}$ the core responsible for $y$ stores this delegated edge $xy$.
+
+When running the connected components algorithm, each core holds a label for each of its delegates.
+After each pass over the graph's edges, we synchronize these delegate labels across all cores. 
+We implement this synchronization by utilizing more asynchronous broadcasts.
 
 \begin{figure}
 	\begin{center}
 		\begin{subfigure}{0.49\linewidth}
-			\centerline{\includegraphics[width=1.0\columnwidth]{conn_comp_strong_scaling}}
-			\caption{Strong scaling. \label{fig:conn_comp_strong_scaling}}
-		\end{subfigure}
-		\begin{subfigure}{0.49\linewidth}
 			\centerline{\includegraphics[width=1.0\columnwidth]{conn_comp_weak_scaling}}
 			\caption{Weak scaling. \label{fig:conn_comp_weak_scaling}}
 		\end{subfigure}
-		\caption{Weak and strong scaling wall time experiments for connected components counting, as the number of nodes varies from 1 up to 1024.
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{conn_comp_strong_scaling}}
+			\caption{Strong scaling. \label{fig:conn_comp_strong_scaling}}
+		\end{subfigure}
+		\caption{Weak and strong scaling wall time experiments for connected components counting, as the number of nodes $N$ varies from 1 up to 1024.
+			Weak scaling experiments (a) assumed a universe of $N2^{26}$ vertices and sampled a total of $N2^{30}$ edges.
+			Strong scaling experiments (b) assumed a universe of $2^{30}$ vertices and sampled a total of $2^{34}$ edges. 
+%			Edge samplings uniformly sample two vertices without replacement from the universe of vertices.
+			In all experiments mailbox sizes are fixed at $2^{18}$ messages.
 			\label{fig:conn_comp_scaling}}
 	\end{center}
 \end{figure}
 
+Figure \ref{fig:conn_comp_scaling} shows the scaling properties of our connected components algorithm using various routing schemes in YGM.
+It tells a similar story to that of Figure~\ref{fig:degree_scaling}, with some exceptions.
+Note that now, in the weak scaling case, the number of broadcasts also increases with $N$.
+As this broadcast load increases, the protocols that are not optimized for broadcasts suffer.
 
+We see that the No Routing mailbox scales somewhat better than in the degree scaling case.
+It remains asymptotically competitive with the other schemes until it begins to diverge around 32 nodes. 
+Unlike in the previous experiment, this experiment requires that the protocols be robust to broadcasts. 
+In addition to the same coalescing shortcomings we discussed with degree counting, broadcasts begin to hammer this protocol, to the point that the largest weak scaling experiment was unable to finish in a reasonable amount of time. 
+
+
+Node Local and Node Remote routing both demonstrate better strong scaling, although they are beaten by NLNR above 128 compute nodes. 
+However, the presence of broadcasts exposes the difference in the two protocols. 
+They exhibit similar strong and weak scaling up to 256 nodes, but past that point the advantages of Node Remote as it pertains to broadcasts become obvious. 
+Indeed, Node Remote even outperforms NLNR at the highest end of the weak scaling experiment, while Node Local hits a wall as coalescing and its disadvantageous structure vis a vis broadcasts catch up to it. 
+
+
+NLNR routing similarly demonstrates excellent scalability out to 1024 compute nodes. 
+The same advantages that made NLNR robust to scale in the simple degree counting experiment apply to this more sophisticated experiment as well. 
+On the highest end of the weak scaling, we see that NLNR begins to suffer from the broadcast weight of the label synchronization.
 
 
 
@@ -3726,10 +3977,9 @@ This is the reason that we limit ourselves to empirical heavy hitter recovery.
 
 We performed experiments on real graph datasets for the purpose of establishing the following of our Algorithms.
 \begin{enumerate}
-	\item \textbf{Estimation Quality} Do the algorithms yield good global and edge- and vertex-local estimates? How is their variance? 
 	\item \textbf{Heavy Hitter recovery	} Do the heavy hitters returned by Algorithms~\ref{alg:ds:edge_local} and \ref{alg:ds:vertex_local} correspond to the ground truth heavy hitters?
-	\item \textbf{Speed} How fast is accumulation? Estimation? How does speed relate to $m = 2^p$?
-	\item \textbf{Scalability} How does wall time relate to $|\mathcal{P}|$?
+	\item \textbf{Estimation Quality} Do the algorithms yield good global and edge- and vertex-local estimates? How does the maximum likelihood estimator compare to the na\"ive estimator?
+	\item \textbf{Speed \& Scalability} How fast is accumulation? Estimation? How does wall time relate to $|\mathcal{P}|$?
 \end{enumerate}
 
 
@@ -3765,6 +4015,7 @@ Summing over the edges and dividing by 3 gives the global triangle count for $C$
 %\begin{longtable}{|c|c|c|c|c|c|c|c|}
 \hline
 \textbf{graph} & $|\mathcal{V}|$ & $|\mathcal{E}|$ & $|\mathcal{T}|$ & \textbf{graph} & $|\mathcal{V}|$ & $|\mathcal{E}|$ & $|\mathcal{T}|$  \\
+\hline
 \hline
 as20000102 & 6,474 & 12,572 & 6,584 & 
 facebookcombined & 4,039 & 88,234 & 1,612,010  \\
@@ -3900,6 +4151,56 @@ We will abbreviate ``mean relative error'' as MRE in figures and tables.
 In addition, we computed the top $k$ ground truth edge- and vertex-local triangle count elements of each graph, and compared them with the estimated top $k$ elements. 
 We considered multiple performance metrics using this approach.
 
+One can make a similar comparison to the precision vs recall tradeoff by directly comparing the orderings.
+Kendall's rank correlation coefficient, often colloquially referred to as Kendall's $\tau$, is a canonical non-parametric statistic that quantifies the similarity between different indexings of the same data \cite{kendall1938new}.
+Vigna generalized Kendall's $\tau$ to a correlation coefficient that is robust to ties within indexings and permits weightings of different indices.
+
+We shall utilize Vigna's additive hyperbolic weighted $\tau_{h, \phi}$, is an extension to the well-studied Kendall's $\tau$ statistic \cite{vigna2015weighted}.
+$\tau_{h, \phi}$ is a correlation coefficient on two indexings $\{s_i\}_{i=1}^n$ and $\{r_i\}_{i=1}^n$ of the set of elements $\{1, 2, \dots, n\}$.
+Assume that $\phi : \{1, 2, \dots, n\} \rightarrow \{1, 2, \dots, n, \infty\}$ is the map of elements to their ground truth rank, where $\phi(i) = \infty$ indicates that $i$ has null rank. 
+Let
+%
+\begin{equation} \label{eq:tau_inner}
+\langle r, s \rangle_{h, \phi} = \sum_{i < j} \algoname{sgn}(x_i - x_j)\algoname{sgn}(y_i - y_j) \left ( \frac{1}{\phi(i)+ 1} + \frac{1}{\phi(j)+ 1} \right ),
+\end{equation}
+%
+where 
+%
+\begin{equation} \label{eq:sgn}
+\algoname{sgn}(z) \coloneqq 
+\begin{cases}
+	1 &\text{if $x > 0$}\\
+	0 &\text{if $x = 0$}\\
+	-1 &\text{if $x < 0$}
+\end{cases}. 
+\end{equation}
+%
+If we further define the norm $\| r \|_{h, \phi} = \sqrt{ \langle r, r \rangle_{h, \phi}}$, $\tau_{h, \phi}$ can be expressed as 
+%
+\begin{equation} \label{eq:tau}
+\tau_{h, \phi} = \frac{\langle r, s \rangle_{h, \phi}} {\| r \|_{h, \phi} \| s \|_{h, \phi}}.
+\end{equation}
+%
+This coefficient yields a value $-1 \leq \tau_{h, \phi} \leq 1$, where $\tau_{h, phi} = 1$ indicates perfect agreement and $\tau_{h, phi} = -1$ indicates perfect disagreement between the indexings.
+The use of the hyperbolic function ensures that higher ground truth priority elements bear a greater impact upon the correlation. 
+We use the ranking function
+%
+\begin{equation} \label{eq:phi}
+\phi_r(z) \coloneqq 
+\begin{cases}
+	i &\text{if $i \leq r$ and $z$ is the $i$th largest element}\\
+	\infty &\text{else}
+\end{cases},
+\end{equation}
+%
+using $\tau_{h,\phi_r}$ to measure top $r$ correlation.
+Vigna suggests this function in \cite{vigna2015weighted} as a means of performing top-$r$ correlation comparisons.
+When one of the indexings is a ground truth ordering and the other is an estimate, $\tau_{h, \phi_r}$ is affected by only the top $r$ estimated elements, as well as the estimated indices of each of the ground truth elements.
+This allows us to efficiently compute Vigna's $\tau_{h, \phi_r}$ on massive orderings in a distributed fashion in a single pass in $\widetilde{O}(n)$ time and $\widetilde{O}(1)$ space, where $r$ is treated as a constant.
+We used $r = 100$ in our experiments.
+
+\subsubsection{Heavy Hitter Recovery}
+
 For an experiment consisting of a graph $G$, a prefix size $p$, a number of heavy hitters $k$, and a number of estimated heavy hitters $k^\prime$, we run an implementation of Algorithm~\ref{alg:ds:edge_local} using HyperLogLog sketches with $m=2^p$ registers and accumulate a $k^\prime$-min-heap $\widetilde{H}_{k^\prime}$. 
 We then compare this heap to $H_k$, the true set of top $k$ triangle count edges in $G$.
 We can also compare $\widetilde{\mathcal{T}}$ to $\mathcal{T}$.
@@ -3912,7 +4213,16 @@ The precision versus recall tradeoff is a common metric in information retrieval
 In our experiments, we vary $k^\prime$ around a stationary $k$ to demonstrate the tradeoffs of accumulating more or less than the target number of heavy hitters.
 Although these measures are know to exhibit bias, they are accepted as being reasonable for heavily uneven classification problems such as ours, where the class of interest is a small proportion of the samples \cite{boughorbel2017optimal}. 
 
+\begin{figure}
+	\centerline{\includegraphics[width=1.0\columnwidth]{graph_challenge_plot}}
+	\caption{Precision vs. recall and mean relative error (MRE) for the top 10, top 100, and top 1000 ground truth heavy hitters of all graphs listed in Table~\ref{tab:graphs} using $p=12$ and the na\"ive estimator.
+	Also plots the mean relative error for the global estimates and the top 10 false positives and false negatives.
+	All mean relative error plots use $k^\prime = k$.
+	\label{fig:graph_challenge}}
+\end{figure}
+
 Figure~\ref{fig:graph_challenge} shows the edge local precision versus recall curves for all of the graphs in Table~\ref{tab:graphs} for $k = 10, 100, 1000$, where we vary $k^\prime$ from $0.2k$ to $2k$. 
+These figures are generated using the na\"ive estimator.
 The figure also plots the mean relative error of these top 10, top 100, and top 1000 edges.
 They also plot the global mean relative error and the mean relative errors of the false positives and the false negatives.
 This false positive relative error is the mean error observed by false positives - edges that are incorrectly identified as heavy hitters.
@@ -3920,13 +4230,6 @@ Similarly, the false negative relative error is the mean error observed by false
 Low false positive error indicates that the true heavy hitters are still accurately estimated, while low false negative error indicates that those edges falsely identified as top $k^\prime$ elements are still
 These results were published by Priest, Pearce and Sanders in \cite{priest2018estimating}.
 
-\begin{figure}
-	\centerline{\includegraphics[width=1.0\columnwidth]{graph_challenge_plot}}
-	\caption{Precision vs. recall and mean relative error (MRE) for the top 10, top 100, and top 1000 ground truth heavy hitters of all graphs listed in Table~\ref{tab:graphs} using $p=12$.
-	Also plots the mean relative error for the global estimates and the top 10 false positives and false negatives.
-	All mean relative error plots use $k^\prime = k$.
-	\label{fig:graph_challenge}}
-\end{figure}
 
 
 Figure~\ref{fig:graph_challenge} indicates that while the edge-local algorithm returns good performance on heavy hitter recovery for many of these graphs, some exhibit poor performance.
@@ -3971,99 +4274,385 @@ This problem could be partially ameliorated via a dynamically sized heap like th
 	The P2P-Gnutella24 graph has very low triangle density, and a 3 or fewer triangles for the vast majority of its edges.
 	The ca-HepTh graph exhibits an unusual triangle distribution, where a huge portion of its edges tie at 30 triangles.
 	Consequently, even a perfect heavy hitter extraction procedure will fail on this graph.
-	Notably, the two edges with increased 
+	Notably, the two edges with the largest triangle counts are reliably returned.
 	\label{fig:hh_comp}}
 \end{figure}
 
 Figure~\ref{fig:graph_challenge} also tells us that as $k$ increases, the relative estimation error of the top $k$ elements tends to increase.
 This is sensible, as both the true triangle counts and triangle density tend to decrease as we begin to consider smaller elements.
 It is worth noting that some of these graphs would exhibit better performance for different settings of $k$, such as noted p2p-Gnutella and ca-HepTh perform well when $k=2$, because the top two elements stand out above the others.
-Unfortunately, in practice we typically cannot know how many outliers there are in practice.
+Unfortunately, in practice we typically cannot know how many outliers there are ahead of time.
 
 Furthermore, the global mean relative error for most of these graphs is reasonable. 
 However, there are some notable outliers, which are mostly overestimates due to many small intersections. 
-In any case, 
+We will show that the maximum likelihood estimator dramatically increases the estimation accuracy in practice.
 
-We perform a similar comparison using Vigna's additive hyperbolic weighted $\tau_{h, \phi}$, an extension to the well-studied Kendall's $\tau$ statistic \cite{vigna2015weighted}.
-$\tau_{h, \phi}$ is a correlation coefficient on two indexings $\{s_i\}_{i=1}^n$ and $\{r_i\}_{i=1}^n$ of the set of elements $\{1, 2, \dots, n\}$.
-Assume that $\phi : \{1, 2, \dots, n\} \rightarrow \{1, 2, \dots, n, \infty\}$ is the map of elements to their ground truth rank, where $\phi(i) = \infty$ indicates that $i$ has null rank. 
-Let
+\subsubsection{Performance comparison between MLE and na\"ive estimators}
+
+We have shown some results concerning the na\"ive estimators. 
+It is interesting to compare the performance of the na\"ive estimator to the noted superior performance of the MLE estimator.
+
+We choose to present the results in terms of the distribution of signed error for vertices and edges. 
+The signed error of edges and vertices are given by
 %
-\begin{equation} \label{eq:tau_inner}
-\langle r, s \rangle_{h, \phi} = \sum_{i < j} \algoname{sgn}(x_i - x_j)\algoname{sgn}(y_i - y_j) \left ( \frac{1}{\phi(i)+ 1} + \frac{1}{\phi(j)+ 1} \right ),
-\end{equation}
+\begin{align}
+\label{eq:vertex_sre}
+\text{signed relative error (vertex $x$)} &= \frac{\widetilde{\mathcal{C}}^{\algoname{Tri}}(x) - \mathcal{C}^{\algoname{Tri}}(x)}{1 + \mathcal{C}^{\algoname{Tri}}(x)}, \text{ and} \\
+\label{eq:edge_sre}
+\text{signed relative error (edge $xy$)} &= \frac{\widetilde{\mathcal{C}}^{\algoname{Tri}}(xy) - \mathcal{C}^{\algoname{Tri}}(xy)}{1 + \mathcal{C}^{\algoname{Tri}}(xy)}.
+\end{align}
 %
-where 
-%
-\begin{equation} \label{eq:sgn}
-\algoname{sgn}(z) \coloneqq 
-\begin{cases}
-	1 &\text{if $x > 0$}\\
-	0 &\text{if $x = 0$}\\
-	-1 &\text{if $x < 0$}
-\end{cases}. 
-\end{equation}
-%
-If we further define the norm $\| r \|_{h, \phi} = \sqrt{ \langle r, r \rangle_{h, \phi}}$, $\tau_{h, \phi}$ can be expressed as 
-%
-\begin{equation} \label{eq:tau}
-\tau_{h, \phi} = \frac{\langle r, s \rangle_{h, \phi}} {\| r \|_{h, \phi} \| s \|_{h, \phi}}.
-\end{equation}
-%
-This coefficient yields a value $-1 \leq \tau_h \leq 1$, where $\tau_h = 1$ indicates perfect agreement between the indexings.
-The use of the hyperbolic function ensures that higher ground truth priority elements bear a greater impact upon the correlation. 
-We use the ranking function
-%
-\begin{equation} \label{eq:phi}
-\phi_k(z) \coloneqq 
-\begin{cases}
-	i &\text{if $i \leq k$ and $z$ is the $i$th largest element}\\
-	\infty &\text{else}
-\end{cases},
-\end{equation}
-%
-using $\tau_{h,\phi_k}$ to measure top $k$ correlation.
-We used $k = 100$ in our experiments.
+The signed error of edge $xy$ varies from -1, where $\widetilde{\mathcal{C}}^{\algoname{Tri}}(xy)$ is incorrectly zero, to $\min \{ \mathbf{d}_x, \mathbf{d}_y \}$, where $\widetilde{\mathcal{C}}^{\algoname{Tri}}(x) = 0$ and a domination occurs, in which case the returned estimate is $\min \{ \mathbf{d}_x, \mathbf{d}_y \}$.
+The signed error of a vertex $x$ is similarly bounded above by $\frac{1}{2} \sum_{y : xy \in \mathcal{E}} \min \{\mathbf{d}_x, \mathbf{d}_y \}$.
+
+We ran two experiments of Algorithms~\ref{alg:ds:edge_local} and \ref{alg:ds:vertex_local} on the graphs in Table~\ref{tab:graphs}, disregarding loc-brightkite and loc-gowalla, one using the na\"ive estimator and another using the maximum likelihood estimator.
+We used $p=12$ for each experiment. 
+We collected the distribution of signed relative error for vertices and edges in each experiment.
+As there are a huge number of observations of each phenomenon in each experiment, we only ran each experiment once.
+
 
 
 \begin{figure}
+	\centerline{\includegraphics[width=1.0\columnwidth]{distn_edge_total}}
+	\caption{The edge-local relative error of most of the  Table~\ref{tab:scaling_graphs} using $p=12$.
+	Note that the experimental error appears to be largely unbiased.
+	\label{fig:distn_edge}}
+\end{figure}
+
+\begin{figure}
+	\centerline{\includegraphics[width=1.0\columnwidth]{distn_naive_edge_total}}
+	\caption{The edge-local relative error of most of the  Table~\ref{tab:scaling_graphs} using $p=12$ and the na\"ive inclusion-exclusion intersection estimator. 
+	Note that we have had to widen horizontal axis to account for large overestimates in graphs. 
+	Note the degraded performance compared to Figure~\ref{fig:distn_edge}.
+	\label{fig:distn_naive_edge}}
+\end{figure}
+
+
+Figure~\ref{fig:distn_edge} plots the distributions of edge local signed errors for the graphs using the maximum likelihood estimator. 
+Note that the experimental distributions for all vertices appear roughly unbiased around 0, which is highly desirable.
+Compare these results with those of the na\"ive inclusion-exclusion estimator in Figure~\ref{fig:distn_naive_edge}.
+We have widened the horizontal axis to account for signed error larger than 1.
+The jaggedness of the distributions is due to the fact that we round our approximations to the nearest integer.
+Note that a few plots have spikes at 5. 
+This is because 5 is the largest histogram bucket that we maintained in our experiments, and so anything larger than 5 gets counted as 5. 
+In any case, these plots indicate that not only are the na\"ive results biased in most observed graphs, but also they have a propensity to severely overestimate edge local triangle counts.
+Thus, the MLE estimator is much more reliable for estimation in general, and can also be used for heavy hitter recovery.
+
+
+\begin{figure}
+	\centerline{\includegraphics[width=1.0\columnwidth]{distn_vertex_total}}
+	\caption{The vertex-local relative error of most of the  Table~\ref{tab:scaling_graphs} using $p=12$.
+	\label{fig:distn_vertex}}
+\end{figure}
+
+
+
+\begin{figure}
+	\centerline{\includegraphics[width=1.0\columnwidth]{distn_naive_vertex_total}}
+	\caption{The edge-local relative error of most of the  Table~\ref{tab:scaling_graphs} using $p=12$ and the na\"ive inclusion-exclusion intersection estimator. 
+	Note that we have had to widen horizontal axis to account for large overestimates in graphs. 
+	Note the degraded performance compared to Figure~\ref{fig:distn_vertex}.
+	\label{fig:distn_naive_vertex}}
+\end{figure}
+
+
+Figure~\ref{fig:distn_vertex} plots the distributions of vertex local signed errors for the graphs using the maximum likelihood estimator. 
+We should expect worse performance for vertex local triangle count estimation, as the estimates are composed of many triangle count estimates.
+Indeed, we find that the experimental results no longer appear unbiased, as many vertices appear to underestimate their true triangle counts in most graphs. 
+Compare these results with those of the na\"ive inclusion-exclusion estimator in Figure~\ref{fig:distn_naive_vertex}.
+Similar to Figure~\ref{fig:distn_naive_edge}, we have widened the horizontal axis and some plots exhibit spikes at 5.
+Figure~\ref{fig:distn_naive_vertex} tells a similar story to Figure~\ref{fig:distn_naive_edge}, with large overestimates in a large proportion of the vertex population.
+Again, we find that the MLE estimator is much more reliable.
+
+\begin{figure}
+	\centerline{\includegraphics[width=0.8\columnwidth]{dist_twitter}}
+	\caption{The edge local relative error distribution of the twitter graph (see Table~\ref{tab:scaling_graphs}).
+	The distribution over all intersections (a) displays the heavy tail of overestimates.
+	The distribution over only intersections not involving a domination (b) does not exhibit this tail, indicating that minimizing dominations results in improved relative error performance.
+	\label{fig:dist_twitter}}
+\end{figure}
+
+
+We should be careful about generalizing these results to truly massive graphs, however.
+As we noted in Section~\ref{DS:sec:experiments:intersection}, maintaining a constant bound on dominations is dependent upon graph size. 
+That is, for fixed $p$, there will be a point as we increase the size of scale-free graphs where the error distribution will cease to look like the better examples in Figure~\ref{fig:distn_edge}. 
+For example, consider Figure~\ref{fig:dist_twitter}, which plots the edge local signed error distributions for the larger Twitter graph (see Table~\ref{tab:scaling_graphs}).
+This plot shows that the larger twitter graph involves a large number of dominations, which result in a heavy tail in the error distribution. 
+When dominations are discounted, however, the result is a much more well behaved distribution.
+While maintaining a low proportion of dominations is key, as we have established the only way to do so in the presence of increasing set size is to increase $p$.
+Thus, in order to scale to immense graphs sketch size must increase as well, which is an undesirable feature. 
+
+\begin{figure}
 	\begin{center}
-		\begin{subfigure}{0.49\linewidth}
-			\centerline{\includegraphics[width=1.0\columnwidth]{patents_edge_distn_density_vs_rel_err.png}}
-			\caption{cit-Patents. \label{fig:patents_edge_density_vs_rel_err}}
+		\begin{subfigure}{0.32\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{em_x_em_edge_dist_p8}}
+			\caption{em $\otimes$ em, $p=8$. \label{fig:em_x_em_edge_density_vs_rel_err_p8}}
 		\end{subfigure}
-		\begin{subfigure}{0.49\linewidth}
-			\centerline{\includegraphics[width=1.0\columnwidth]{twitter_edge_distn_density_vs_rel_err.png}}
-			\caption{Twitter. \label{fig:twitter_edge_density_vs_rel_err}}
+		\begin{subfigure}{0.32\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{em_x_em_edge_dist_p12}}
+			\caption{em $\otimes$ em, $p=12$. \label{fig:em_x_em_edge_density_vs_rel_err_p12}}
 		\end{subfigure}
-		\caption{Heat maps displaying the distribution of edge-local triangle count relative error for two large graphs where $p = 12$.
+		\begin{subfigure}{0.32\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{twitter_edge_dist_p12}}
+			\caption{Twitter, $p=12$. \label{fig:twitter_edge_density_vs_rel_err_p12}}
+		\end{subfigure}
+		\caption{Heat maps displaying the distribution of edge-local triangle count relative error versus triangle density for the em $\otimes$ em and Twitter graphs. 
 			Heat values asigned to cells are the logarithm of the number of edges matching that triangle density and relative error.
+		 	Note that performance drastically improves for the em $\otimes$ em graph when $p$ increases from 8 to 12.
 			\label{fig:edge_density_vs_rel_err}}
 	\end{center}
 \end{figure}
 
+Consider also Figure~\ref{fig:edge_density_vs_rel_err}. 
+This figure plots the distribution of observed relative errors versus triangle density for the em $\otimes$ em graph and the same Twitter graph explored in Figure~\ref{fig:dist_twitter}.
+Note that the twitter graph is about two orders of magnitude larger than the em $\otimes$ em graph. 
+We see a marked improvement in the distribution of error for the em $\otimes$ em graph as $p$ increases. 
+While $p=12$ is clearly sufficient for the em $\otimes$ em graph, scaling to the Twitter graph clearly requires larger $p$.
+
+
+
+
+\subsubsection{MLE performance statistics}
+
+Table~\ref{tab:mle_performance} examines the maximum likelihood estimator performance on the graph in Table~\ref{tab:graphs} in specific detail. 
+Note that these are the data from only a single run of the algorithm on each graph, as this is sufficient information to glean the distribution of errors on edge and vertex local estimates because each operation is performed a large number of times in each experiment.
+The table plots the global relative error Eq.~\eqref{eq:global_error}, the number of dominations, the edge mean relative error Eq.~\eqref{eq:edge_mre}, the edge variance, the edge Vigna's $\tau_{h, \phi_{100}}$, the vertex mean relative error Eq.~\eqref{eq:vertex_mre}, the vertex variance, and the vertex Vigna's $\tau_{h, \phi_{100}}$.
+The Vigna's $\tau_{h, \phi_{100}}$ statistics provide a quantificaton of the heavy hitter recovery performance similar to the precision versus recall, where elements at the very top of the ground truth triangle count are weighted more heavily than those near $100$.
+It also serves as a better general purpose statistic. 
+
+\begin{table}
+\caption{MLE performance on all graphs, including global MRE, \# dominations, MRE and variance and $\tau_{h, \phi_{100}}$ for edges and vertices. \label{tab:mle_performance}}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+\hline
+&  & & \multicolumn{3}{c}{edges} & \multicolumn{3}{c}{vertices} \\
+\textbf{graph name} & global MRE & \# doms & MRE & variance & $\tau_{h, \phi_{100}}$ &  MRE & variance & $\tau_{h, \phi_{100}}$ \\
+\hline
+\hline
+amazon0302&0.000410871 & 37258 & 0.00511415 & 0.00236737 & 0.948169 & 0.00617304 & 0.00174465 & 0.862339 \\
+\hline
+amazon0312&0.00101454 & 97923 & 0.0147273 & 0.0066181 & 0.969474 & 0.0109858 & 0.00210728 & 0.910493 \\
+\hline
+amazon0505&0.0045002 & 105156 & 0.0157157 & 0.00815814 & 0.971034 & 0.011564 & 0.00238126 & 0.9086 \\
+\hline
+amazon0601&0.000363835 & 101666 & 0.0147765 & 0.00686827 & 0.971244 & 0.0110941 & 0.00214676 & 0.90911 \\
+\hline
+as-caida20071105&0.0329567 & 1848 & 0.0592927 & 0.0292914 & 0.854042 & 0.0394628 & 0.0159984 & 0.765845 \\
+\hline
+as20000102&0.0321906 & 425 & 0.040091 & 0.0139573 & 0.694214 & 0.0271399 & 0.00551577 & 0.764055 \\
+\hline
+ca-AstroPh&0.0020574 & 8326 & 0.0183591 & 0.00194955 & 0.915358 & 0.00705243 & 0.0014227 & 0.678024 \\
+\hline
+ca-CondMat&0.00014373 & 3740 & 0.00790223 & 0.00135315 & 0.870845 & 0.00701574 & 0.00271152 & 0.720792 \\
+\hline
+ca-GrQc&0.00554309 & 500 & 0.00440433 & 0.000970238 & 0.506617 & 0.00647719 & 0.00275309 & 0.678824 \\
+\hline
+ca-HepPh&0.00248209 & 4927 & 0.0107195 & 0.00133045 & 0.899939 & 0.00842168 & 0.00227844 & 0.684348 \\
+\hline
+ca-HepTh&0.00359288 & 1112 & 0.00499942 & 0.00117584 & 0.788572 & 0.00820159 & 0.0037099 & 0.771194 \\
+\hline
+\textbf{cg $\boldsymbol{\otimes}$ cg}&0.00450143 & 80556 & 0.180783 & 0.059384 & 0.979046 & 0.115359 & 1.10753 & 0.0957111 \\
+\hline
+cit-HepPh&0.000491567 & 17143 & 0.0383193 & 0.00859173 & 0.930214 & 0.0150293 & 0.00176638 & 0.717774 \\
+\hline
+cit-HepTh&3.17927e-05 & 16412 & 0.0389419 & 0.00744493 & 0.929648 & 0.0137159 & 0.00178527 & 0.764128 \\
+\hline
+cit-Patents&0.00780909 & 692085 & 0.0238169 & 0.0134303 & 0.98958 & 0.0183164 & 0.0102654 & 0.97152 \\
+\hline
+\textbf{em $\boldsymbol{\otimes}$ em}&0.0269762 & 618030 & 0.361598 & 0.694572 & 0.970543 & 1.39935 & 29.4262 & 0.935464 \\
+\hline
+email-Enron&0.00237792 & 8728 & 0.0308221 & 0.00570846 & 0.904239 & 0.0125266 & 0.00314965 & 0.791837 \\
+\hline
+email-EuAll&0.0071636 & 10901 & 0.0438659 & 0.0250123 & 0.925389 & 0.00995284 & 0.00762299 & 0.91131 \\
+\hline
+facebook\_combined&0.00280804 & 3362 & 0.0115543 & 0.000545316 & 0.834189 & 0.00737009 & 0.000233799 & 0.536985 \\
+\hline
+flickrEdges&0.00341508 & 102572 & 0.0471881 & 0.0218786 & 0.983674 & 0.195658 & 32.6787 & 0.730175 \\
+\hline
+graph500-scale18-ef16&0.0165722 & 160923 & 0.138074 & 0.0367471 & 0.977851 & 0.133161 & 0.0554794 & 0.230933 \\
+\hline
+\textbf{ns $\boldsymbol{\otimes}$ ns}&0.000667794 & 155908 & 0.0160818 & 0.00657722 & 0.953689 & 0.0199951 & 0.0686846 & 0.90299 \\
+\hline
+oregon1\_010331&0.0120226 & 973 & 0.0374072 & 0.0105397 & 0.81614 & 0.0283393 & 0.00623208 & 0.761701 \\
+\hline
+oregon1\_010407&0.00341295 & 923 & 0.0392721 & 0.0110109 & 0.800534 & 0.0297942 & 0.00548587 & 0.736287 \\
+\hline
+oregon1\_010414&0.0394825 & 1577 & 0.0413332 & 0.0159812 & 0.82125 & 0.0302528 & 0.00780099 & 0.751239 \\
+\hline
+oregon1\_010421&0.0119283 & 725 & 0.0397194 & 0.0180728 & 0.800203 & 0.0284574 & 0.00844028 & 0.758715 \\
+\hline
+oregon1\_010428&0.0178996 & 500 & 0.0450234 & 0.0149815 & 0.810885 & 0.0323162 & 0.00681453 & 0.733992 \\
+\hline
+oregon1\_010505&0.00514401 & 635 & 0.0374775 & 0.0133416 & 0.815531 & 0.0262984 & 0.00580777 & 0.764276 \\
+\hline
+oregon1\_010512&0.00372097 & 1369 & 0.0363218 & 0.0100373 & 0.812308 & 0.0266561 & 0.00477533 & 0.787779 \\
+\hline
+oregon1\_010519&0.00167728 & 839 & 0.0544582 & 0.0216188 & 0.805998 & 0.040216 & 0.0112947 & 0.756786 \\
+\hline
+oregon1\_010526&0.0257453 & 779 & 0.0394423 & 0.0163412 & 0.790612 & 0.0278942 & 0.00708625 & 0.77016 \\
+\hline
+oregon2\_010331&0.00215726 & 1065 & 0.0313933 & 0.0110602 & 0.814389 & 0.0265301 & 0.00632335 & 0.732991 \\
+\hline
+oregon2\_010407&0.0102734 & 1798 & 0.0399965 & 0.0124726 & 0.812382 & 0.0374412 & 0.0079474 & 0.764744 \\
+\hline
+oregon2\_010414&0.00214211 & 1139 & 0.0348277 & 0.00999769 & 0.828402 & 0.0317464 & 0.00610695 & 0.741403 \\
+\hline
+oregon2\_010421&0.00696287 & 1697 & 0.0349412 & 0.0116954 & 0.807914 & 0.0297692 & 0.00620846 & 0.763229 \\
+\hline
+oregon2\_010428&0.000930958 & 1518 & 0.0378781 & 0.0110547 & 0.829194 & 0.0321114 & 0.00601949 & 0.775626 \\
+\hline
+oregon2\_010505&0.00920473 & 1016 & 0.0361535 & 0.0133905 & 0.82981 & 0.0288103 & 0.00774782 & 0.78395 \\
+\hline
+oregon2\_010512&0.000384439 & 1312 & 0.0425334 & 0.0146203 & 0.801557 & 0.0366068 & 0.00780288 & 0.787347 \\
+\hline
+oregon2\_010519&0.00208633 & 1194 & 0.0378019 & 0.0107673 & 0.839299 & 0.0333108 & 0.00662257 & 0.754128 \\
+\hline
+oregon2\_010526&0.00106532 & 1473 & 0.0514426 & 0.0174551 & 0.835291 & 0.0515479 & 0.0123812 & 0.769886 \\
+\hline
+p2p-Gnutella04&0.148558 & 1555 & 0.0177248 & 0.0168244 & 0.695298 & 0.0489285 & 0.111457 & 0.762134 \\
+\hline
+p2p-Gnutella05&0.121239 & 1310 & 0.0151124 & 0.0137138 & 0.808389 & 0.034442 & 0.0241619 & 0.728775 \\
+\hline
+p2p-Gnutella06&0.063464 & 1191 & 0.0146142 & 0.0124697 & 0.802282 & 0.0345433 & 0.0267341 & 0.66756 \\
+\hline
+p2p-Gnutella08&0.0728463 & 754 & 0.0174324 & 0.0119514 & 0.752416 & 0.0241876 & 0.0191441 & 0.6 \\
+\hline
+p2p-Gnutella09&0.135828 & 1110 & 0.0200961 & 0.0146221 & 0.804122 & 0.0272512 & 0.0165108 & 0.6878 \\
+\hline
+p2p-Gnutella24&0.219074 & 2730 & 0.0109942 & 0.0103753 & 0.819203 & 0.0219898 & 0.0254313 & 0.859488 \\
+\hline
+p2p-Gnutella25&0.291334 & 2322 & 0.00901289 & 0.00842632 & 0.758603 & 0.0191121 & 0.0239306 & 0.820848 \\
+\hline
+p2p-Gnutella30&0.173799 & 3829 & 0.0107415 & 0.0101481 & 0.851817 & 0.0216437 & 0.0322464 & 0.808806 \\
+\hline
+p2p-Gnutella31&0.228864 & 6211 & 0.0102196 & 0.00964274 & 0.886073 & 0.0204559 & 0.020475 & 0.767571 \\
+\hline
+\textbf{pb $\boldsymbol{\otimes}$ pb}&0.0142477 & 4671 & 0.0801485 & 0.0248473 & 0.858059 & 0.0969235 & 0.6582 & 0.569607 \\
+\hline
+roadNet-CA&0.0059839 & 113001 & 0.000806493 & 0.000731067 & 0.567993 & 0.00130683 & 0.00097556 & 0.985063 \\
+\hline
+roadNet-PA&0.00545083 & 63207 & 0.000781687 & 0.000702402 & 0.590963 & 0.00126972 & 0.000967292 & 0.99904 \\
+\hline
+roadNet-TX&0.0053398 & 78363 & 0.000763467 & 0.000690403 & 0.579244 & 0.00126706 & 0.000940359 & 1.0 \\
+\hline
+soc-Epinions1&0.0041685 & 19872 & 0.0823205 & 0.025062 & 0.927086 & 0.0256688 & 0.0086639 & 0.841355 \\
+\hline
+soc-Slashdot0811&0.0219384 & 19301 & 0.152505 & 0.0902361 & 0.937038 & 0.0713931 & 0.044451 & 0.855897 \\
+\hline
+soc-Slashdot0902&0.0153844 & 20220 & 0.145098 & 0.0816233 & 0.949649 & 0.0664616 & 0.0370551 & 0.890315 \\
+\hline
+\textbf{ye $\boldsymbol{\otimes}$ ye}&0.128437 & 926066 & 0.381506 & 0.930024 & 0.991193 & 2.15683 & 110.979 & 0.943107 \\
+\hline
+\end{tabular}}
+\end{table}
+
+The results in Table~\ref{tab:mle_performance} indicate that our algorithms produce surprisingly good estimates on all edges and vertices, not just heavy hitters, for sufficiently large $p$. 
+Note that the worst performers in terms of mean relative error are the large synthetic Kronecker graphs $em \otimes em$ and $ye \otimes ye$, which also experience a large volume of dominations. 
+Increasing $p$, of course, improves performance on these graphs at the expense of increased memory, communication, and computation overhead. 
+
+
+
+
+%}
+%----------------------------------------------------------------------------------------
+\subsubsection{Scaling to Massive Graphs}
+%----------------------------------------------------------------------------------------
+
+We have already discussed the challenges in scaling intersections to large graphs. 
+We will now examine the performance scaling of the algorithms as a function of data and computing resource sizes.
+An advantage of this analysis is that it extends to other applications of \algoname{DegreeSketch}, such as the distributed neighborhood estimation algorithm discussed in Section~\ref{DS:sec:neighborhoods}.
+
 \begin{table}[htbp]
-\caption{Graph Scaling \label{tab:graphs}}
+\caption{Scaling Graphs \label{tab:scaling_graphs}}
 \begin{center}
-\begin{tabular}{|c|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|}
 \hline
-\textbf{graph} & $|\mathcal{V}|$ &  $|\mathcal{E}|$ & $|\mathcal{T}|$ & Type \\
+\textbf{graph} & $|\mathcal{V}|$ &  $|\mathcal{E}|$ & Type \\
 \hline
 \hline
-patents & 3,774,768 & 16,518,947   & 7,515,020& Citation \\
+patents & 3,774,768 & 16,518,947 & Citation \\
 \hline
-\textbf{ye $\boldsymbol{\otimes}$ ye} & 5,574,320 & 88,338,632 & 74,765,400 & Kronecker \\
+\textbf{ye $\boldsymbol{\otimes}$ ye} & 5,574,320 & 88,338,632 & Kronecker \\
 \hline
-\textbf{or $\boldsymbol{\otimes}$ or} & \#\#\# & \#\#\# & \#\#\# & Kronecker \\
+\textbf{or $\boldsymbol{\otimes}$ or} & 131,859,288 & 1,095,962,562 & Kronecker \\
 \hline
-Twitter & 41,652,224 & \#\#\# &  \#\#\# & Soc. Net. \\
+Twitter & 41,652,224 & 1,201,045,942 & Soc. Net. \cite{kunegis2013konect} \\
 \hline
-WebData & 3,563,602,788 & \#\#\# &  \#\#\# & Web \\
+WebDataCommons & 3,563,602,788 & 128,736,914,864 & Web \\
 \hline
 \end{tabular}
 \end{center}
 \end{table}
 
+
+For our scaling experiments we ran Algorithm~\ref{alg:ds:accumulation} (accumulation) and Algorithm~\ref{alg:ds:vertex_local} (vertex local estimation) on each graph in Table~\ref{tab:scaling_graphs}.
+Note that some of these graphs are much larger than those considered in Table~\ref{tab:graphs}.
+We used $p=8$ for efficacy, as we are interested in scaling and not concerned with the estimation quality in this case. 
+We discounted the I/O time spent on reading data streams from files.
+
+It is worth noting that a competing state-of-the-art exact triangle counting algorithm required $N=256$ compute nodes to even load the largest WebDataCommons graph into distributed memory \cite{pearce2017triangle}.
+
+\begin{figure}
+	\centerline{\includegraphics[width=0.8\columnwidth]{ds_scaling}}
+	\caption{The time in seconds to accumulate and estimate using $N=72$ compute nodes, each of which have 24 cores, for all graphs listed in Table~\ref{tab:scaling_graphs} using $p=8$.
+	We have ignored the time taken reading from streams and included only the time spend on local computations and communication.
+	This shows that linear scaling in $|\mathcal{E}|$ extends out to truly massive graphs.
+	\label{fig:ds_scaling}}
+\end{figure}
+
+\begin{figure}
+	\centerline{\includegraphics[width=0.8\columnwidth]{patents_scaling}}
+	\caption{The time in seconds to accumulate and estimate using $N=1$ up to $72$ compute nodes, each of which have 24 cores, for the citation-Patents graph using $p=8$.
+	We have ignored the time taken reading from streams and included only the time spend on local computations and communication.
+	This shows inverse linear scaling as $N$ increases and the workload remains the same.
+	\label{fig:patents_scaling}}
+\end{figure}
+
+Figure~\ref{fig:ds_scaling} measures the the time in seconds spent accumulating $\algoname{DegreeSketch}$ and performing the vertex-local estimation on each graph, plotted against the number of edges in each graph. 
+We used $N=72$ compute nodes in each case. 
+As promised, the wall time is linear in the number edges for both accumulation and estimation.
+Similarly, Figure~\ref{fig:patents_scaling} measures the the time in seconds spent accumulating $\algoname{DegreeSketch}$ and performing the vertex-local estimation on the cit-Patents graph, where $N$ varies from 1 up to 72. 
+The wall time gain of increasing $N$ is linear in this case as well. 
+
+
+
+%\begin{figure}
+%	\begin{center}
+%		\begin{subfigure}{0.49\linewidth}
+%			\centerline{\includegraphics[width=1.0\columnwidth]{patents_edge_distn_density_vs_rel_err.png}}
+%			\caption{cit-Patents. \label{fig:patents_edge_density_vs_rel_err}}
+%		\end{subfigure}
+%		\begin{subfigure}{0.49\linewidth}
+%			\centerline{\includegraphics[width=1.0\columnwidth]{twitter_edge_distn_density_vs_rel_err.png}}
+%			\caption{Twitter. \label{fig:twitter_edge_density_vs_rel_err}}
+%		\end{subfigure}
+%		\caption{Heat maps displaying the distribution of edge-local triangle count relative error for two large graphs where $p = 12$.
+%			Heat values asigned to cells are the logarithm of the number of edges matching that triangle density and relative error.
+%			\label{fig:edge_density_vs_rel_err}}
+%	\end{center}
+%\end{figure}
+
+%\begin{table}[htbp]
+%\caption{Graph Scaling \label{tab:graphs}}
+%\begin{center}
+%\begin{tabular}{|c|c|c|c|c|c|}
+%\hline
+%\textbf{graph} & $|\mathcal{V}|$ &  $|\mathcal{E}|$ & $|\mathcal{T}|$ & Type \\
+%\hline
+%\hline
+%patents & 3,774,768 & 16,518,947   & 7,515,020& Citation \\
+%\hline
+%\textbf{ye $\boldsymbol{\otimes}$ ye} & 5,574,320 & 88,338,632 & 74,765,400 & Kronecker \\
+%\hline
+%\textbf{or $\boldsymbol{\otimes}$ or} & 131,859,288 & 1,095,962,562 & 7,123,882,248 & Kronecker \\
+%\hline
+%Twitter & 41,652,224 & 1,201,045,942 &  104,079,430,149 & Soc. Net. \cite{konect2016twitter} \\
+%\hline
+%WebData & 3,563,602,788 & 128,736,914,864 &  \#\#\# & Web \\
+%\hline
+%\end{tabular}
+%\end{center}
+%\end{table}
 
 
 
@@ -6254,7 +6843,32 @@ Such applications are the subject of future work.
 %\end{itemize}
 %\end{itemize}
 
+%----------------------------------------------------------------------------------------
+%----------------------------------------------------------------------------------------
+\chapter{Future Work}
+ \label{chap:future_work}
+%----------------------------------------------------------------------------------------
+%----------------------------------------------------------------------------------------
 
+In this chapter we propose some future work based upon the research in this document.
+
+\section{\algoname{DegreeSketch} for Distributed Neighborhood Estimation}
+
+Although the utility of \algoname{DegreeSketch} to triangle counting is limited by the accuracy of sublinear intersection estimation, this is not the case of the other major application that we discussed, namely local neighborhood size estimation.
+Local neighborhood size is an important feature in many applications such as ad-hoc networks.
+When the cost of computing an analytic in a communication network scales with $p$th neighborhood size of the operator, it is important to maintain a cheap estimate of neighborhood size,
+This allows the network to automatically avoid very expensive  so as to avoid high cost compute nodes.
+
+\algoname{DegreeSketch} is well-suited to this task.
+Although we did not implement the ANF-style distributed neighborhood estimation algorithm, it might be viable for application in many related areas in cloud and high-performance computing. 
+
+
+\section{Practical Distributed Semi-Streaming Random Walk Simulation}
+
+We discussed a framework for performing distributed random walks in the semi-streaming models that blurs the line between a classical theory of computing algorithm and a high-performance computing application.
+Random walk simulation is a ubiquitous task in high-performance graph algorithms, and an implementation of a semi-streaming software kernel to accomplish this may prove useful to the community.
+Reservoir sampling-based algorithms for insert-only streams are particularly practicable, as they avoid large constants associated with $\ell_p$ sampling sketches. 
+In particular, some variation of the playback mechanism we describe is critical for high-performance applications where even a low probability of failure is not acceptable. 
 
 
 
