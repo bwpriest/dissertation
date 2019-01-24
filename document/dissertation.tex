@@ -15,7 +15,7 @@
 %	PACKAGES AND THEMES
 %----------------------------------------------------------------------------------------
 
-\documentclass{report}
+\documentclass[10]{report}
 \pagestyle{plain}
 
 \usepackage{graphicx} % Allows including images
@@ -33,6 +33,9 @@
 
 \usepackage{subcaption}
 
+\usepackage{setspace}
+%\onehalfspacing
+\doublespacing
 \usepackage{longtable}
 %\usepackage[demo]{graphicx}
 %\usepackage{tikz,pgfplots} 
@@ -647,10 +650,9 @@ This affords us an algorithm that can empirically recover the betweenness centra
 %------------------------------------------------
 
 This chapter introduces the basic concepts and notation that we will use throughout this document.
-Section \ref{background:sec:graphdef} lays out the basic graph definitions and notation conventions that will be referenced later. 
-Section \ref{background:sec:matdef} defines the vector and matrix definitions used throughout the rest of the document. 
-Section \ref{background:sec:hashing} describes $k$-universal hash families, an important concept for many sketches.
-Section \ref{background:sec:sketch} describes some of the sketching concepts that we will reference throughout this document.
+We will lay out the basic graph, probability, and linear algebraic definitions and notation conventions that will be referenced later
+We also describe centrality indices as a class of functions on graphs.
+Finally, we describe $k$-universal hash families, an important concept for many sketches, as well as some approximation definitions.
 %Section \ref{sec:approx} introduces the major approximation paradigms we will consider throughout this document. 
 %Section \ref{sec:turnstile} describes the turnstile model of computation and formally defines important streaming data primitives. 
 %Section \ref{sec:sketch} discusses sketching in detail, and introduces the most important classes of sketches that we will use throughout this document. 
@@ -1588,7 +1590,7 @@ It is worth pointing out that Eq.~(\ref{eq:cc}) is not defined if the underlying
 While there are generalizations to the definition that account for disconnected graphs, their details are out of the scope of this document .
 
 Computing the closeness centrality of an evolving graph is an interesting problem, but one that is eclipsed by the attention paid to its cousin betweenness centrality.
-We discuss some of this literature in Section~\ref{kpath:sec:intro}.
+%We discuss some of this literature in Section~\ref{kpath:sec:intro}.
 However, online solutions have been suggested in the literature \cite{wei2014real}. 
 In particular, given the information required to solve betweenness centrality for all vertices one can also solve the closeness centrality.
 Thus, it might be expected that a solution for betweenness centrality can be adapted into a solution for closeness centrality. 
@@ -2254,7 +2256,7 @@ An implementation must utilize MPI or a similar remote message passing protocol.
 			\centerline{\includegraphics[width=1.0\columnwidth]{remote}}
 			\caption{Remote exchange \label{fig:remote_exchange}}
 		\end{subfigure}
-		\caption{Local and remote exchange diagrams where $N = C = 4$. \label{fig:exchange}}
+		\caption{Local and remote exchange diagrams for Node Local and Node Remote where $N = C = 4$. \label{fig:exchange}}
 	\end{center}
 \end{figure}
 
@@ -2337,7 +2339,7 @@ In NLNR, there is only one channel connecting each such pair of nodes.
 			\centerline{\includegraphics[width=1.0\columnwidth]{inter_layer_nlnr}}
 			\caption{Inter-layer communication \label{fig:inter_exchange}}
 		\end{subfigure}
-		\caption{Intra- and inter-layer exchange diagrams where $N = 8$ and $C = 4$. \label{fig:nlnr}}
+		\caption{NLNR Intra- and inter-layer exchange diagrams where $N = 8$ and $C = 4$. \label{fig:nlnr}}
 	\end{center}
 \end{figure}
 
@@ -2586,7 +2588,7 @@ For small numbers of nodes ($N < C$), NLNR performance is much worse than all ot
 This is because there are not enough nodes to form a full ``layer'' of nodes.
 Until this point, all remote communications are routed through a subset of available cores, leaving many with no remote exchange partners. 
 For instance, when two compute nodes are used, all remote communications are routed through a single pair of cores, regardless of the total number of cores available. 
-In Fig.~\ref{fig:degree_weak}, we see good weak scaling for NLNR beyond 32 compute nodes, at which point the system begins
+In Fig.~\ref{fig:degree_weak_scaling}, we see good weak scaling for NLNR beyond 32 compute nodes, at which point the system begins
 making use of all cores during remote communications.
 
 Additionally, for moderate numbers of compute nodes where Node Local, Node Remote, and NLNR routing are scaling well, we
@@ -2695,7 +2697,7 @@ We discuss the advantages and limitations of this approach, and present empirica
  \label{DS:sec:intro}
 %----------------------------------------------------------------------------------------
 
-Counting the number of triangles in graphs is a canonical problem in both the RAM and streaming models.
+Counting the number of triangles in simple graphs is a canonical problem in both the RAM and streaming models.
 A ``triangle'' is a trio of co-adjacent vertices, and is the smallest nontrivial community structure.
 Consequently, triangles and triangle counting arise often in applications.
 Both the global count of triangles and the vertex-local counts, i.e. the number of triangles incident upon each vertex, are key to network analysis and graph theory topics such as cohesiveness \cite{lim2015mascot}, global and local clustering coefficients \cite{tsourakakis2008fast}, and trusses \cite{cohen2008trusses}.
@@ -2777,10 +2779,12 @@ We assume that the undirected graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ i
 $\boldsymbol{\sigma}$ is further partitioned by some unknown means into $|\mathcal{P}|$ substreams.
 We assume that each processor $P \in \mathcal{P}$ has send and receive buffers $\mathcal{S}[P]$ and $\mathcal{R}[P]$, respectively.
 We will make no assumptions in the following algorithms how processors handle switching context between processing and sending and receiving communication. 
-In our implementations we use the software package \algoname{YGM} described in Chapter~\ref{chap:async}.
+In our implementations we use the software package \algoname{YGM}, developed as a part of this thesis and described in Chapter~\ref{chap:async}.
+\algoname{YGM} manages the send and receive buffers, as well as switching contexts, in a manner that is opaque to the client algoirthm.
 We further assume that there is some partitioning of vertices to processors $f : \mathcal{V} \rightarrow \mathcal{P}$. 
 We will occasionally abuse notation and use $f(P)$ to describe the set of vertices that map to $P \in \mathcal{P}$.
 We make no assumptions about the particulars of $f$, noting that vertex partitionings are a subject of intense academic scrutiny as discussed in Section~\ref{async:sec:intro:partitioning}.
+In effect, our algorithms are designed to work alongside any decent partitioning mechanism. 
 
 Algorithm~\ref{alg:ds:accumulation} describes the distributed accumulation of a \algoname{DegreeSketch} instance.
 In a distributed pass over the partitioned stream, processors use the partition function $f$ to send edges to the cognizant processors for each endpoint. 
@@ -2876,7 +2880,7 @@ If we have $A_{:,x}$, then we can compute an estimate of $\mathcal{N}^2(x)$ by c
 %
 \begin{equation} \label{eq:estimate:nbhd}
 	\widetilde{\mathcal{N}}^2(x) 
-	= \widetilde{\bigcup}_{y: A_{y,x} \neq 0} \mathcal{D}[y].
+	= \widetilde{\bigcup}_{y: xy \in \mathcal{E}} \mathcal{D}[y].
 \end{equation}
 %
 
@@ -3021,7 +3025,7 @@ Specifically,
 The reverse is not true. 
 
 Edge-local triangle counts have understandably not received much attention in the streaming literature, considering that even enumerating them requires $\Omega(m)$ space. 
-Given an accumulated \algoname{DegreeSketch} $\mathcal{D}$ and intersection operator $\widetilde{\cap}$, for $xy \in \mathcal{E}$ we can estimate $\mathcal{C}^{\algoname{Tri}}(xy)$ using 
+Given an accumulated \algoname{DegreeSketch} $\mathcal{D}$ and some approximate intersection operator $\widetilde{\cap}$, for $xy \in \mathcal{E}$ we can estimate $\mathcal{C}^{\algoname{Tri}}(xy)$ using 
 %
 \begin{equation} \label{eq:tri:edge}
 	\widetilde{\mathcal{C}}^{\algoname{Tri}}(xy) 
@@ -3340,7 +3344,7 @@ where the bias correction term $\alpha_r$ is given by
 \end{equation}
 is a good estimator of the number of unique elements in $\sigma$.
 If the true cardinality of the streamed multiset is $D$, the error of estimate $\widetilde{D}$, $|D - \widetilde{D}|$, has standard error $\approx 1.04 / \sqrt{r}$. 
-In expectation, $\widetilde{D}$ satisfies
+$\widetilde{D}$ satisfies
 %
 \begin{equation} \label{eq:error_bound}
 |D - \widetilde{D}| \leq (1.04/\sqrt{r}) D.
@@ -3471,10 +3475,11 @@ Algorithm~\ref{alg:hll:sparse} describes the changes and additions to Algorithm~
 \end{algorithm}
 
 
-We use sparse registers in our algorithms, although we will not go into the details of their maintenance in the interest of clarity.
+We use sparse registers in our algorithms, although we will not go into the gory details of their maintenance in the interest of parsimony.
+We instead describe the procedure at a high level.
 The sparse sketch representation $R$ can be implemented efficiently by maintaining a list sorted by register index, containing at most one entry per register, and a set of unsorted pairs that is periodically folded into the sorted list.
 In a practical implementation, these pairs are encoded into a single value that must be decoded when read.
-We obfuscate the details of the efficient implementation in our algorithms for the sake of clarity, and invite the interested reader to investigate Figures 6 \& 7 of \cite{heule2013hyperloglog}.
+We obfuscate the details of the efficient implementation in our algorithms, and invite the interested reader to investigate Figures 6 \& 7 of \cite{heule2013hyperloglog}.
 
 The authors of \cite{heule2013hyperloglog} also describe a procedure by which the sparse elements of $R$ might be stored at higher precision than the elements of $\mathbf{r}$.
 Although this method may be practical for applications we will avoid it in our work to avoid unnecessary confusion.
@@ -3496,7 +3501,7 @@ Although this method may be practical for applications we will avoid it in our w
 In practice, $N= 2^{64}$, and so the registers require 6 bits apiece.
 This small register size is one of the advantages of \algoname{HLL}s over other cardinality sketches.
 For example, \algoname{MinCount} requires the storage of the same number of 64-bit hashes for the same universe size. 
-Cardinality sketches are known to require $\Omega(\varepsilon^{-2} + \log N)$ space, although the known optimal algorithm is not considered practical \cite{kane2010optimal}.
+Cardinality sketches are known to require $\Omega(\varepsilon^{-2} + \log N)$ space, where $2^p = m = O(\varepsilon^{-2})$, although the known optimal algorithm is not considered practical \cite{kane2010optimal}.
 This reliance upon $\Omega(\varepsilon^{-2})$ registers implies that \algoname{HLL}s are about as optimal as we can get in implementations without sacrificing performance.
 
 The authors of \algoname{HyperLogLog-TailCut} reduced the footprint of the \algoname{HyperLogLog} algorithm by reducing the registers to 4 bits \cite{xiao2017better}.
@@ -3649,7 +3654,7 @@ Note that these procedures are able to coexist with the sparse register format, 
 %%
 Algorithm~\ref{alg:hll:tc} guarantees order-invariance in the produced sketches, as well as maintaining a true sketch merge.
 These results come at the cost of some additional space, as the cut set $E$ must be stored.
-In a pathological stream $E$ could hold as many as $r-1$ elements, i.e. there is one holdout register index that prevents $b$ from growing in spite of cut insertions. 
+An adversarial stream could result in $E$ could hold as many as $r-1$ elements, i.e. there is one holdout register index that prevents $b$ from growing in spite of cut insertions. 
 Fortunately, such an event is vanishingly unlikely when using a reasonable hash function. 
 Furthermore, even this worst case at most doubles the size of the sketch, as so maintains the same asymptotic bounds as the vanilla \algoname{HLL}.
 
@@ -3767,7 +3772,7 @@ The Na\"ive inclusion-exclusion estimator implemented using the maximum likeliho
   \end{alignedat}
 \end{equation} 
 %
-which loses information present in the more detailed count statistics statistics in Eq.~\eqref{eq:cs}.
+which lose information present in the more detailed count statistics statistics in Eq.~\eqref{eq:cs}.
 %and Jaccard difference estimators do not utilize the information in the statistic \eqref{eq:cs}.
 Algorithm 9 of \cite{ertl2017new} describes the estimation of $|A \setminus B|$, $|B \setminus A|$, and $|A \cap B|$ by accumulating the sufficient statistic \eqref{eq:cs} and using it to find the maximum of Eq.~\eqref{eq:poisson:joint} via maximum likelihood estimation.
 The author shows extensive simulation evidence indicating that this method significantly improves upon the estimation error of a na\"ive estimator.
@@ -3998,7 +4003,7 @@ We casted each graph as unweighted, ignoring directionality, self-loops, and rep
 We also used 5 graphs derived from nonstochastic Kronecker products of smaller graphs.
 Nonstochastic Kronecker graphs \cite{weichsel1962kronecker} have adjacency matrices $C$ that are Kronecker products $C = C_1 \otimes C_2$, where the factors are also adjacency matrices.
 This type of synthetic graph is attractive for testing graph analytics at massive scale \cite{leskovec2010kronecker, kepner2018design}, as ground truth solution is often cheaply computable.
-For such graphs, global triangle count and triangle counts at edges are computed via Kronecker formulas \cite{sanders2018large}: for a graph with $m$ edges, the worst-case cost of computing global triangle counts is sublinear, $O \left ( m^{\frac{3}{4}} \right )$, whereas the cost of computing the full set of edge-local counts is $O \left ( m^{\frac{3}{2}} \right )$.
+For such graphs, global triangle count and triangle counts at edges are computed via Kronecker formulas \cite{sanders2018large}: for a graph with $m$ edges, the worst-case cost of computing global triangle counts is sublinear, $O \left ( m^{\frac{3}{4}} \right )$, whereas the cost of computing the full set of edge-local counts is $O \left ( m \right )$.
 
 Here, we build $C = C_1 \otimes C_2$ from identical factors, $C_1=C_2$, that come from a small set of  graphs with $m$ up to $10^5$ from the University of Florida sparse matrix collection ({\tt polbooks}, {\tt celegans}, {\tt geom}, {\tt yeast} \cite{davis2011university}). 
 %, {\tt Oregon-1} -- could not use - catalyst nodes ran out of memory.
@@ -4154,8 +4159,7 @@ We considered multiple performance metrics using this approach.
 One can make a similar comparison to the precision vs recall tradeoff by directly comparing the orderings.
 Kendall's rank correlation coefficient, often colloquially referred to as Kendall's $\tau$, is a canonical non-parametric statistic that quantifies the similarity between different indexings of the same data \cite{kendall1938new}.
 Vigna generalized Kendall's $\tau$ to a correlation coefficient that is robust to ties within indexings and permits weightings of different indices.
-
-We shall utilize Vigna's additive hyperbolic weighted $\tau_{h, \phi}$, is an extension to the well-studied Kendall's $\tau$ statistic \cite{vigna2015weighted}.
+This generalization is an additive hyperbolic weighted correlation coefficient, and we will refer to it as Vigna's $\tau_{h, \phi}$ \cite{vigna2015weighted}.
 $\tau_{h, \phi}$ is a correlation coefficient on two indexings $\{s_i\}_{i=1}^n$ and $\{r_i\}_{i=1}^n$ of the set of elements $\{1, 2, \dots, n\}$.
 Assume that $\phi : \{1, 2, \dots, n\} \rightarrow \{1, 2, \dots, n, \infty\}$ is the map of elements to their ground truth rank, where $\phi(i) = \infty$ indicates that $i$ has null rank. 
 Let
@@ -4256,9 +4260,9 @@ This indicates that our approach is probably not suitable for graphs with very f
 It is worth noting, however, that we are reliably able to capture the top 2 triangle count elements. 
 
 Finally, consider the ca-HepTh graph, which encodes the collaboration network of the Arxiv high energy physics theory community.
-This graph proves to be a pathological for this problem. 
+This graph, a union of cliques, proves to be a pathological for this problem. 
 Note that, save the top 2 edges, the top $\sim 300$ edges are tied in triangle count.
-Although our algorithm is able to reliably recover these top 2 elements, even an algorithm with prefect accuracy would fail up to ties on this graph for $k >2$ and $k < \sim 300$, which our results reflect.
+Although our algorithm is able to reliably recover these top 2 elements, even an algorithm with perfect accuracy would fail up to ties on this graph for $k >2$ and $k < \sim 300$, which our results reflect.
 Indeed, Figure~\ref{fig:graph_challenge} indicates that this graph exhibits some of the lowest relative error in our experiments.
 This indicates that, even for graphs with favorable triangle density, ties can lead to poor heavy hitter recovery. 
 This problem could be partially ameliorated via a dynamically sized heap like that utilized in Theorem~\ref{thm:dchh:cashregister}.
