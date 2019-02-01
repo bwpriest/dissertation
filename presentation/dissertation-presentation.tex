@@ -151,8 +151,8 @@
 %	TITLE PAGE
 %----------------------------------------------------------------------------------------
 
-\title[Sublinear Centrality]{Sublinear-Space Approximations of Centrality in Evolving Massive Graphs} % The short title appears at the bottom of every slide, the full title is only on the title page
-%\subtitle{Thesis Proposal}
+\title[Semi-Streaming Centrality]{Semi-Streaming Approximations of Centrality Indices in Massive Graphs} % The short title appears at the bottom of every slide, the full title is only on the title page
+\subtitle{A thesis submitted to the faculty in partial fulfillment of the requirements for the degree of Doctor of Philosophy}
 
 \author[Priest]{Benjamin W. Priest} % Your name
 \institute[Dartmouth] % Your institution as it will appear on the bottom of every slide, may be shorthand to save space
@@ -187,7 +187,7 @@ Thayer School of Engineering \\
 {\large
 \begin{enumerate}
 	\setlength\itemsep{1em}
-	\item {\color<3-6>{gray}Introduction \& Background}
+	\item {\color<3-7>{gray}Introduction \& Background}
 	\only<2>{
 	\begin{enumerate}
 		\setlength\itemsep{0.5em}
@@ -197,18 +197,29 @@ Thayer School of Engineering \\
 		\item Sketching Definitions
 	\end{enumerate}
 	}
-	\item {\color<2, 4-6>{gray}Summary of Results}
+	\item {\color<2, 4-7>{gray}Summary of Results}
 	\only<3>{
 	\begin{enumerate}
 		\setlength\itemsep{0.5em}
 		\item Streaming Degree Centrality
 		\item $O(1)$-Pass Semi-Streaming Closeness Centrality
 		\item $2$-Pass Semi-Streaming Triangle Count Heavy Hitters
+		\item Distributed Semi-Streaming Simulation of Random Walks
 		\item Distributed Sublinear $\kappa$-Path Centrality
 	\end{enumerate}
 	}
-	\item {\color<2-3,5-6>{gray}Pseudo-Asynchronous Communication for Distributed Algorithms}
-	\only<4>{
+%	\item {\color<2-3,5-7>{gray}Serial Sublinear Degree and Closeness Centrality}
+%	\only<4>{
+%	\begin{enumerate}
+%		\setlength\itemsep{0.5em}
+%		\item \algoname{CountMinSketch}
+%		\item Streaming Degree Centrality
+%		\item $\ell_p$ Sampling Sketches
+%		\item $O(1)$-pass Semi-Streaming Closeness Centrality
+%	\end{enumerate}
+%	}
+	\item {\color<2-4,6-7>{gray}Pseudo-Asynchronous Communication for Distributed Algorithms}
+	\only<5>{
 	\begin{enumerate}
 		\setlength\itemsep{0.5em}
 		\item Vertex-Centric Algorithm Challenges
@@ -216,18 +227,20 @@ Thayer School of Engineering \\
 		\item Verification \& Implementation Details
 	\end{enumerate}
 	}
-	\item {\color<2-4, 6>{gray}DegreeSketch and Local Triangle Count Heavy Hitters}
-	\only<5>{
+	\item {\color<2-5, 7>{gray}DegreeSketch and Generalizations of Degree Centrality}
+	\only<6>{
 	\begin{enumerate}
 		\setlength\itemsep{0.5em}
-		\item Local Triangle Counting
+		\item Local Neighborhood Size
 		\item HyperLogLog Cardinality Sketches
+		\item DegreeSketch and Local Neighborhood Size
+		\item Local Triangle Counting
 		\item DegreeSketch and Triangle Counting
 		\item Verification \& Implementation Details
 	\end{enumerate}
 	}
-	\item {\color<2-5>{gray}Sublinear $\kappa$-Path Centrality}
-	\only<6>{
+	\item {\color<2-6>{gray}Semi-Streaming Random Walk Simulation and $\kappa$-Path Centrality}
+	\only<7>{
 	\begin{enumerate}
 		\setlength\itemsep{0.5em}
 		\item Betweenness Centrality Challenges
@@ -379,7 +392,7 @@ Thayer School of Engineering \\
 \begin{columns}
 \begin{column}{0.6\textwidth}
 	\begin{itemize}
-		\item Assign scores to vertices
+		\item Assign scores to vertices or edges
 		\begin{itemize}
 			\item Higher score $\rightarrow$ more important
 			\item Depends on graph structure
@@ -387,7 +400,7 @@ Thayer School of Engineering \\
 		\end{itemize}
 		\item Scores are not informative
 		\begin{itemize}
-			\item Usually want top $k$ vertices
+			\item Usually want top $k$ elements
 		\end{itemize}
 		\item Relative order-preserving approximation is acceptable
 	%	\item Data warehousing becomes difficult
@@ -547,7 +560,7 @@ Assume throughout that $\mathcal{G}=(\mathcal{V}, \mathcal{E}, \mathbf{w})$, whe
 
 $\mathcal{G}$ is given by a \emph{stream} $\sigma$
 \begin{itemize}
-	\item A list of edge insertions
+	\item A list of edge insertions (\emph{insert-only})
 	\item If deletions exist, say \emph{turnstile stream}
 \end{itemize}
 
@@ -714,6 +727,58 @@ Closeness Centrality
 \begin{dynblock}
 % First block
 \opaqueblock<1->{
+Local $t$th Neighborhood Centrality
+%
+\vspace{-0.2cm}
+%
+\begin{align*}
+	\mathcal{N}(t)  
+	&= |\{(x, y) \in \mathcal{V} \times \mathcal{V} | d_\mathcal{G}(x, y) < t\}| 
+	& \textnormal{(global) $t$th neighborhood} \\
+	\mathcal{C}^{\algoname{Nbhd}}_t(x)  
+	&= |\{y \in \mathcal{V} | d_\mathcal{G}(x, y) < t\}|
+	& \textnormal{(local) $t$th neighborhood} \\	
+\end{align*}
+%
+\vspace{-1.3cm}
+%
+\begin{itemize}
+	\item Serial estimation algorithms ANF \cite{palmer2002anf} and HyperANF \cite{boldi2011hyperanf}
+\end{itemize}
+}
+\end{dynblock}
+
+
+%close/between centrality
+\begin{dynblock}
+% First block
+\opaqueblock<2>{
+%\vspace{-1.1em}
+We demonstrate a $t$-pass, semi-streaming, distributed \algoname{DegreeSketch}-based algorithm for estimating $\mathcal{N}(t)$ and $\mathcal{C}^{\algoname{Nb}}_t(x)$ for each $x \in \mathcal{V}$
+\cite{priest2019degreesketch}.
+%[PPS18, PPS19]
+%\footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``Estimating Edge-Local Triangle Count Heavy Hitters in Edge-Linear Time and Almost-Vertex-Linear Space,'' HPEC 2018}
+\footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``\algoname{DegreeSketch}: Distributed Cardinality Sketches on Graphs, with Applications,'' In preparation for SigKDD 2019}
+}
+
+\end{dynblock}
+
+
+
+\end{frame}
+
+
+
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Summary of Results: Distributed Streaming Algorithms}
+
+%Degree centrality
+\begin{dynblock}
+% First block
+\opaqueblock<1->{
 Triangle Count Centrality
 %
 \vspace{-0.2cm}
@@ -746,14 +811,18 @@ Triangle Count Centrality
 % First block
 \opaqueblock<2>{
 %\vspace{-1.1em}
-We show 2-pass, semi-streaming, distributed sketch-based query algorithms for estimating heavy hitters 
+We show 2-pass, semi-streaming, distributed \algoname{DegreeSketch}-based algorithms for estimating heavy hitters 
 \cite{priest2018estimating, priest2019degreesketch}
 %[PPS18, PPS19]
 \footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``Estimating Edge-Local Triangle Count Heavy Hitters in Edge-Linear Time and Almost-Vertex-Linear Space,'' HPEC 2018}
-\footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``\algoname{DegreeSketch}: Distributed Cardinality Sketches on Graphs, with Applications to Counting Triangles,'' In preparation for SigKDD 2019}
+\footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``\algoname{DegreeSketch}: Distributed Cardinality Sketches on Graphs, with Applications,'' In preparation for SigKDD 2019}
 }
 
 \end{dynblock}
+
+
+
+\end{frame}
 
 
 
@@ -762,7 +831,52 @@ We show 2-pass, semi-streaming, distributed sketch-based query algorithms for es
 
 
 
+\begin{frame}
+\frametitle{Summary of Results: Distributed Streaming Algorithms}
+
+%Degree centrality
+\begin{dynblock}
+% First block
+\opaqueblock<1->{
+Semi-streaming simulation of $k$ random walks of length $t$
+%
+%\vspace{-0.2cm}
+%
+%\begin{equation*}
+%	\mathcal{C}^{\algoname{$\kappa$}}(x)  =  \Pr_{p: |p| \leq \kappa} [x \in p \wedge \text{$p$ a simple path } ]
+%\end{equation*}
+%
+%\vspace{-0.6cm}
+%
+\begin{itemize}	
+	\item $O(nkt)$-space trivial algorithm
+	\item $\Omega \left ( n\sqrt{t} \right )$ lower bound and almost-tight upper bound for simulating a single random walk \cite{jin2018simulating}.
+%	\begin{itemize}
+%		\item Online exact and approximate $O(n^2)$- and $O(m)$-space algorithms exist \cite{green2012fast, wei2014real, kourtellis2015scalable, bergamini2014approximating}%, [GMB12], [WC14], [KMB15], [BMS15]
+%	\end{itemize}
+\end{itemize}
+}
+\end{dynblock}
+
+
+%close/between centrality
+\begin{dynblock}
+% First block
+\opaqueblock<2>{
+\begin{itemize}
+	\item	We show $\Omega \left ( n\sqrt{kt} \right )$ space lower bound
+	\item	We demonstrate an $O \left ( n\sqrt{kt}\frac{\log q}{q} \right )$ algorithm with failure probability $\varepsilon$, where $q = 2 + \frac{\log (1/\varepsilon)}{\sqrt{kt}}$ on insert-only streams.
+	\item We demonstrate a distributed version of this algorithm, and describe how to generalize it to a faultless system utilizing the \emph{playback} of adjacency substreams.
+\end{itemize}
+}
+
+\end{dynblock}
+
 \end{frame}
+
+
+
+%------------------------------------------------
 
 
 
@@ -799,7 +913,7 @@ $\kappa$-Path Centrality
 % First block
 \opaqueblock<2>{
 \begin{itemize}
-	\item	We show distributed sublinear vertex-centric random walk and simple path sampling algorithms
+	\item	We show how to use the distributed random walk simulation framework with playback to estimate $\kappa$-path centrality at scale
 	\item	Yields sublinear distributed $\kappa$-path centrality approximation algorithm
 \end{itemize}
 }
@@ -1486,6 +1600,14 @@ $\kappa$-Path Centrality
 
 
 
+%%----------------------------------------------------------------------------------------
+%%----------------------------------------------------------------------------------------
+%\section{Serial Sublinear Degree and Closeness Centrality}
+%%----------------------------------------------------------------------------------------
+%%----------------------------------------------------------------------------------------
+%
+%\againframe<4>{overview}
+
 
 
 
@@ -1496,7 +1618,7 @@ $\kappa$-Path Centrality
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
 
-\againframe<4>{overview}
+\againframe<5>{overview}
 
 \begin{frame}
 \frametitle{Motivation: Vertex-Centric Algorithms}
@@ -1745,36 +1867,38 @@ Aggregate and route messages ``asynchronously'', allowing processors to drop out
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
 
-\againframe<5>{overview}
+\againframe<6>{overview}
+
+%----------------------------------------------------------------------------------------
 
 \begin{frame}
-\frametitle{Motivation: Local Triangle Counting}
+\frametitle{Motivation: Local $t$th Neighborhood Size}
 
 \textbf{The Problem}:
 \begin{itemize}
-	\item Local triangle counting a common big data analytic
+	\item $t$th neighborhood important for applications, e.g. effective diameter, load balancing, edge prediction, and probabilistic distance estimation
 	\begin{itemize}
-		\item Exact computation expensive $O \left ( m^{\frac{3}{2}} \right )$!
+		\item Exact computation expensive!
 	\end{itemize}
-	\item Recall
+	\item Neighborhood Functions:
 \end{itemize}
 %
 \vspace{-0.5em}
 \begin{align*}
-	\mathcal{C}^{\algoname{Tri}}(x) 
-	&= |\{yz \in \mathcal{E} \mid xy, yz, xz \in \mathcal{E} \}| 
-	& \textnormal{(vertex-local)} \\
-	\mathcal{C}^{\algoname{Tri}}(xy) 
-	&= |\{z \in \mathcal{E} \mid xy, yz, xz \in \mathcal{E} \}|
-	& \textnormal{(edge-local)} 
+	\mathcal{C}^{\algoname{Nbhd}}_t(x) 
+	&= |\{y \in \mathcal{V} | d_\mathcal{G}(x, y) < t\}| 
+	& \textnormal{local $t$th neighborhood} \\
+	\mathcal{N}(t)  
+	&=  |\{(x, y) \in \mathcal{V} \times \mathcal{V} | d_\mathcal{G}(x, y) < t\}|
+	& \textnormal{(global) $t$th neighborhood}  \\
+	&= \sum_{x \in \mathcal{V}} \mathcal{C}^{\algoname{Nbhd}}_t(x)  &
 \end{align*}
 %\vspace{-1.0em}
 %
-\textbf{Existing Solutions}:
+\textbf{Existing Approximate Solutions}:
 \begin{itemize}
-	\item Many exact distributed algorithms \cite{arifuzzaman2013patric, pearce2017triangle}
-	\item Many approximate streaming algorithms via sampling \cite{lim2015mascot, stefani2017triest}
-	\item ... and some utilizing both models \cite{shin2018tri, shin2018dislr}
+	\item ANF algorithm \cite{palmer2002anf}
+	\item HyperANF algorithm \cite{boldi2011hyperanf}
 \end{itemize}
 
 
@@ -1783,32 +1907,30 @@ Aggregate and route messages ``asynchronously'', allowing processors to drop out
 %----------------------------------------------------------------------------------------
 
 \begin{frame}
-\frametitle{Approach: Sublinear Intersection Method}
+\frametitle{Approach: \algoname{DegreeSketch} via Cardinality Sketches}
 
 
 \begin{columns}
 \begin{column}{0.65\textwidth}
-	\textbf{Idea}: Intersection method, but using cardinality sketches
+	\textbf{Idea}: Sketch and iteratively merge adjacency sets
 	\begin{itemize}
 		\item Cardinality sketches summarize set size
-		\item Support union operation, and some support limited intersection operation
+		\item Supports approximate union operation $\widetilde{\cup}$
+		\item Assume some partitioning $f : \mathcal{V} \rightarrow \mathcal{P}$
+		\item Distributed data structure $\mathcal{D}$
 		\begin{itemize}
-			\item High variance if intersection is small
-			\item Likely best performance on heavy hitters
+			\item $\mathcal{D}[x]$ holds cardinality sketch for $x \in \mathcal{V}$
+			\item $|\mathcal{D}[x]|$ estimates $\mathbf{d}_x$
 		\end{itemize}
-		\item Affords edge- and vertex-local triangle count estimation
-		\item Outputs only reliable if \emph{triangle density} is nontrivial
-		\begin{itemize}
-			\item Triangle density = $\frac{\textnormal{\# triangles}}{\textnormal{\# possible triangles}}$
-		\end{itemize}
+		\item Let $\mathcal{D}^1[x] = \mathcal{D}[x]$ 
+		\item Set $\mathcal{D}^k[x] = \widetilde{\bigcup}_{y: xy \in \mathcal{E}} \mathcal{D}^{k-1}[y]$
+		\item Then $\widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) = | \mathcal{D}^t[x]|$ and 
+				$\widetilde{\mathcal{N}}(t) = \sum_{x \in \mathcal{V}} \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x)$
 	\end{itemize}
 \end{column}
 \begin{column}{0.35\textwidth}  %%<--- here
 	\begin{center}
-		\includegraphics[width=1.0\textwidth]{edge_local}
-	\end{center}
-	\begin{center}
-		\includegraphics[width=1.0\textwidth]{vertex_local}
+		\includegraphics[width=1.0\textwidth]{nbhd_fig}
 	\end{center}
 \end{column}
 
@@ -1845,7 +1967,7 @@ Maintain $r = 2^p$ 6-bit registers $M$ and a 64-bit hash function $h$
 \vspace{-0.5cm}
 %
 \begin{center}
-Outputs $\widetilde{C}$ such that for cardinality C, w.h.p. $| C - \widetilde{C} | \leq \frac{1.04}{\sqrt{m}} C$ \cite{flajolet2007hyperloglog}
+Outputs $\widetilde{C}$ such that for cardinality C, w.h.p. $| C - \widetilde{C} | \leq \frac{1.04}{\sqrt{r}} C$ \cite{flajolet2007hyperloglog}
 \end{center}
 }
 \end{dynblock}
@@ -1857,14 +1979,14 @@ Outputs $\widetilde{C}$ such that for cardinality C, w.h.p. $| C - \widetilde{C}
 \opaqueblock<3>{
 %
 \begin{tabular*}{\textwidth}{l @{\extracolsep{\fill}} r}
-\textbf{Useful results}  & 
+\textbf{Useful improvements}  & 
 %[CW09]
 \end{tabular*}
 %
 \vspace{-0.5cm}
 %
 \begin{itemize}
-	\item Native intersection operator (elementwise maximum)
+	\item Native union operator (elementwise maximum)
 	\item Various improved harmonic \cite{heule2013hyperloglog, qin2016loglog} and maximum likelihood estimators \cite{xiao2017better, lang2017back, ertl2017new}
 	\item Sparsification for low cardinality sets \cite{heule2013hyperloglog}
 	\item Compression to 4 and 3 bit registers \cite{xiao2017better}
@@ -1879,38 +2001,6 @@ Outputs $\widetilde{C}$ such that for cardinality C, w.h.p. $| C - \widetilde{C}
 
 \end{frame}
 
-
-%----------------------------------------------------------------------------------------
-
-\begin{frame}
-\frametitle{Set operation estimation with \algoname{HLL}s}
-
-Streaming sets $X$ and $Y$ with \algoname{HLL}s $S_X$ and $S_Y$
-\begin{columns}
-\begin{column}{0.5\textwidth}
-	\begin{itemize}
-		\item $S_X \approx |X|$
-		\item $S_Y \approx |Y|$
-		\item $S_X \widetilde{\cup} S_Y \approx |X \cup Y|$
-		\begin{itemize}
-			\item Same error guarantees
-		\end{itemize}
-		\item $S_X \widetilde{\cap} S_Y \approx |X \cap Y|$
-		\begin{itemize}
-			\item High variance if $|X \cap Y|$ small
-		\end{itemize}
-	\end{itemize}
-\end{column}
-\begin{column}{0.5\textwidth}  %%<--- here
-	\begin{center}
-		\includegraphics[width=1.0\textwidth]{edge_local}
-	\end{center}
-\end{column}
-
-\end{columns}
-
-
-\end{frame}
 
 %----------------------------------------------------------------------------------------
 
@@ -1942,6 +2032,235 @@ Streaming sets $X$ and $Y$ with \algoname{HLL}s $S_X$ and $S_Y$
 }
 \end{center}
 \end{block}
+
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+
+\begin{frame}[label = query]
+\frametitle{\algoname{DegreeSketch} Neighborhood Update} % Table of contents slide, comment this block out to remove it
+
+\begin{center}
+\only<1>{
+		\includegraphics[width=0.7\textwidth]{nbhd_update_1}
+}
+\only<2>{
+		\includegraphics[width=0.7\textwidth]{nbhd_update_2}
+}
+\only<3>{
+		\includegraphics[width=0.7\textwidth]{nbhd_update_3}
+}
+\only<4>{
+		\includegraphics[width=0.7\textwidth]{nbhd_update_4}
+}
+\end{center}
+
+\begin{block}{}
+\begin{center}
+\only<1>{
+	Updates route to each endpoint owner
+}
+\only<2>{
+	Owners exchange ($k-1$)th skeches
+}
+\only<3>{
+	$(k-1)$th sketches are merged into $k$th sketches
+}
+\only<4>{
+	After $k$th pass, output all $k$th local and global estimates
+}
+\end{center}
+\end{block}
+
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+\frametitle{Neighborhood Estimation: Correctness}
+
+\begin{block}{Theorem 6.3.1}
+Let $\mu_{r, n}$ and $\eta_{r, n}$ be the multiplicative bias and standard deviation for \algoname{HLL}s given in Theorem 1 of \cite{flajolet2007hyperloglog}.
+%, where $\mu_{r, n}$ is the sum of a small constant and an oscillating function of small amplitude. 
+The output $\widetilde{\mathcal{N}}(t)$ and $\widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x)$ for $x \in \mathcal{V}$ at the $t$-th iteration satisfies 
+%
+\begin{equation*}
+	\frac{\E \left [ \widetilde{\mathcal{N}}(t) \right ]}{\mathcal{N}(t)} 
+	= \frac{\E \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ]}{\mathcal{C}^{\algoname{Nbhd}}_t(x)} 
+	= \mu_{r, n} 
+	\textnormal{ for $n \rightarrow \infty$,}
+\end{equation*}
+%
+i.e. they are nearly unbiased.
+%where $\delta_1(n)$ is the same as in \cite{flajolet2007hyperloglog} Theorem 1, and $|\delta_1(x)| < 5 \cdot 10^{-5}$ when $r \geq 16$.
+
+Furthermore, both also have standard deviation bounded by $\eta_{r,n}$.
+%the output $\widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x)$ for $x \in \mathcal{V}$ has the standard deviation $\eta_r$ given by \cite{flajolet2007hyperloglog}, which is also shared by $\widetilde{N}(t)$. 
+That is, 
+%
+\begin{equation*}
+	\frac{\sqrt{\Var \left [ \widetilde{\mathcal{N}}(t)\right ]}}{\mathcal{N}(t)} \leq \eta_{r, n}
+	\textnormal{ and }
+	\frac{\sqrt{\Var \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ]}}{\mathcal{C}^{\algoname{Nbhd}}_t(x)} \leq \eta_{r, n}
+\end{equation*}
+%
+%Implementing Algorithm~\ref{alg:ds:anf} with \algoname{HyperLogLog} sketches requires $\widetilde{O}(m)$ time and bits of communication, and only $O(n ( \varepsilon^{-1}\log\log n + \log n))$ space.
+\end{block}
+
+\end{frame}
+
+
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+\frametitle{Neighborhood Estimation: Correctness}
+
+\begin{block}{Proof of Theorem 6.3.1}
+For each $x$, $\widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) = |\mathcal{D}^k[x]|$, where $\mathcal{D}^k[x]$ is a union of \algoname{HLL}s, into which every $y$ such that $d(x,y) < t$ is inserted. 
+Thus by Theorem 1 of \cite{flajolet2007hyperloglog}, 
+%
+\begin{align*}
+%\E \left [ \left | \mathcal{D}^k[x] \right | \right ] 
+\E \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ] 
+&= \mu_{r,n} \mathcal{C}^{\algoname{Nbhd}}_t(x) \\
+%\sqrt{\Var \left [ \left | \mathcal{D}^k[x] \right | \right ]} 
+\sqrt{\Var \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ]} 
+&= \eta_{r,n} \mathcal{C}^{\algoname{Nbhd}}_t(x).
+\end{align*}
+%
+Thus, 
+\begin{align*}
+\E \left [ \widetilde{N}(t) \right ] 
+%= \sum_{x \in \mathcal{V}} \E \left [ \left | \mathcal{D}^k[x] \right | \right ]  
+= \sum_{x \in \mathcal{V}} \E \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ]  
+= \mu_{r, n} \sum_{x \in \mathcal{V}} \mathcal{C}^{\algoname{Nbhd}}_t(x)  
+= \mu_{r,n} \mathcal{N}(t),
+\textnormal{ and} \\
+%\end{equation*}
+%
+%and
+%
+%\begin{equation*}
+\sqrt{\Var \left [ \widetilde{N}(t) \right ]} 
+%\leq \sum_{x \in \mathcal{V}} \sqrt{\Var \left [ \left | \mathcal{D}^k[x] \right | \right ]}  
+\leq \sum_{x \in \mathcal{V}} \sqrt{\Var \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ]}  
+\leq \eta_{r, n} \sum_{x \in \mathcal{V}} \mathcal{C}^{\algoname{Nbhd}}_t(x)  
+= \eta_{r, n} \mathcal{N}(t).
+\end{align*}
+
+\end{block}
+
+\end{frame}
+
+
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+\frametitle{Another Application: Local Triangle Counting}
+
+\textbf{The Problem}:
+\begin{itemize}
+	\item Local triangle counting a common big data analytic
+	\begin{itemize}
+		\item Exact computation expensive $O \left ( m^{\frac{3}{2}} \right )$!
+	\end{itemize}
+	\item Recall
+\end{itemize}
+%
+\vspace{-0.5em}
+\begin{align*}
+	\mathcal{C}^{\algoname{Tri}}(x) 
+	&= |\{yz \in \mathcal{E} \mid xy, yz, xz \in \mathcal{E} \}| 
+	& \textnormal{(vertex-local)} \\
+	\mathcal{C}^{\algoname{Tri}}(xy) 
+	&= |\{z \in \mathcal{E} \mid xy, yz, xz \in \mathcal{E} \}|
+	& \textnormal{(edge-local)} 
+\end{align*}
+%\vspace{-1.0em}
+%
+\textbf{Existing Solutions}:
+\begin{itemize}
+	\item Many exact distributed algorithms \cite{arifuzzaman2013patric, pearce2017triangle}
+	\item Many approximate streaming algorithms via sampling \cite{lim2015mascot, stefani2017triest}
+	\item ... and some utilizing both models \cite{shin2018tri, shin2018dislr}
+\end{itemize}
+
+
+\end{frame}
+
+
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+\frametitle{Approach: Semi-Streaming Intersection Method}
+
+
+\begin{columns}
+\begin{column}{0.65\textwidth}
+	\textbf{Idea}: Intersection method, but using \algoname{DegreeSketch}
+	\begin{itemize}
+		\item Some cardinality sketches support a limited intersection operation $\widetilde{\cap}$
+%		\begin{itemize}
+%			\item High variance if intersection is small
+%			\item Likely best performance on heavy hitters
+%		\end{itemize}
+		\item Affords edge- and vertex-local triangle count estimation
+		\item Approximate intersection implementation rules out analytic verification \`a la neighborhood estimation
+		\begin{itemize}
+			\item Requires empirical evaluation		
+		\end{itemize}
+%		\item Large variance induced by low \emph{triangle density} and \emph{dominations}
+%		\begin{itemize}
+%			\item Triangle density = $\frac{\textnormal{\# triangles}}{\textnormal{\# possible triangles}}$
+%			\item Domination = one sketch element-wise greater than the other
+%		\end{itemize}
+	\end{itemize}
+\end{column}
+\begin{column}{0.35\textwidth}  %%<--- here
+	\begin{center}
+		\includegraphics[width=1.0\textwidth]{edge_local}
+	\end{center}
+	\begin{center}
+		\includegraphics[width=1.0\textwidth]{vertex_local}
+	\end{center}
+\end{column}
+
+\end{columns}
+
+
+\end{frame}
+
+
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+\frametitle{Set operation estimation with \algoname{HLL}s}
+
+Streaming sets $X$ and $Y$ with \algoname{HLL}s $S_X$ and $S_Y$
+\begin{columns}
+\begin{column}{0.5\textwidth}
+	\begin{itemize}
+		\item $S_X \approx |X|$
+		\item $S_Y \approx |Y|$
+		\item $S_X \widetilde{\cup} S_Y \approx |X \cup Y|$
+		\begin{itemize}
+			\item Same error guarantees
+		\end{itemize}
+		\item $S_X \widetilde{\cap} S_Y \approx |X \cap Y|$
+		\begin{itemize}
+			\item High variance if $|X \cap Y|$ small
+			\item Optimization arbitrary if $S_X \leq S_Y$ element-wise
+		\end{itemize}
+	\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}  %%<--- here
+	\begin{center}
+		\includegraphics[width=1.0\textwidth]{edge_local}
+	\end{center}
+\end{column}
+
+\end{columns}
+
 
 \end{frame}
 
@@ -2030,35 +2349,35 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 
 %----------------------------------------------------------------------------------------
 
-\begin{frame}
-\frametitle{Edge-Local Triangle Count Heavy Hitters}
-
-\begin{algorithm}[H]
-\caption{Edge-Local Triangle Count Heavy Hitters}\label{alg:sublinear_kpath}
-\begin{algorithmic}[1]
-%\State $T \gets 2 \kappa^2 n^{1-2\alpha} \ln n$
-\State Accumulate $\mathcal{D}$ in distributed pass over $\sigma$
-\State $H_k \gets \textnormal{empty $k$-heap}$
-\State $T \gets 0$
-\ParFor{$xy \in \sigma_P$}  \qquad // second pass
-	\State Send $(\textnormal{E}, xy)$ to $f(x)$
-	\For {$(\textnormal{E}, xy) \in \mathcal{R}[P]$}
-		\State Send $(\textnormal{S}, xy, \mathcal{D}[x])$ to $f(y)$
-	\EndFor
-	\For {$(\textnormal{S}, xy, \mathcal{D}[x]) \in \mathcal{R}[P]$}
-		\State Insert $(xy, \mathcal{D}[x] \widetilde{\cap} \mathcal{D}[y])$ into $H_k$
-		\State $T \gets T + \mathcal{D}[x] \widetilde{\cap} \mathcal{D}[y]$
-	\EndFor
-\EndParFor
-\State $T \gets T / 2$
-\State Global accounting of $T$, $H_k$
-\State \Return $H_k$
-\end{algorithmic}
-\end{algorithm}
-
-
-
-\end{frame}
+%\begin{frame}
+%\frametitle{Edge-Local Triangle Count Heavy Hitters}
+%
+%\begin{algorithm}[H]
+%\caption{Edge-Local Triangle Count Heavy Hitters}\label{alg:sublinear_kpath}
+%\begin{algorithmic}[1]
+%%\State $T \gets 2 \kappa^2 n^{1-2\alpha} \ln n$
+%\State Accumulate $\mathcal{D}$ in distributed pass over $\sigma$
+%\State $H_k \gets \textnormal{empty $k$-heap}$
+%\State $T \gets 0$
+%\ParFor{$xy \in \sigma_P$}  \qquad // second pass
+%	\State Send $(\textnormal{E}, xy)$ to $f(x)$
+%	\For {$(\textnormal{E}, xy) \in \mathcal{R}[P]$}
+%		\State Send $(\textnormal{S}, xy, \mathcal{D}[x])$ to $f(y)$
+%	\EndFor
+%	\For {$(\textnormal{S}, xy, \mathcal{D}[x]) \in \mathcal{R}[P]$}
+%		\State Insert $(xy, \mathcal{D}[x] \widetilde{\cap} \mathcal{D}[y])$ into $H_k$
+%		\State $T \gets T + \mathcal{D}[x] \widetilde{\cap} \mathcal{D}[y]$
+%	\EndFor
+%\EndParFor
+%\State $T \gets T / 2$
+%\State Global accounting of $T$, $H_k$
+%\State \Return $H_k$
+%\end{algorithmic}
+%\end{algorithm}
+%
+%
+%
+%\end{frame}
 
 
 %----------------------------------------------------------------------------------------
@@ -2072,7 +2391,7 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 			HPEC graph challenge results
 		\end{block}
 		\begin{block}{}
-			Good performance  on top 10 heavy hitters of \emph{most} graphs
+			Good performance  on heavy hitters of \emph{most} graphs
 		\end{block}
 		\begin{block}{}
 			Why do some graphs perform worse?
@@ -2102,13 +2421,31 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 %----------------------------------------------------------------------------------------
 
 \begin{frame}
-\frametitle{High vs Low Triangle Density}
+\frametitle{Heavy Hitter Distributions}
 
-\centerline{\includegraphics[width=0.75\columnwidth]{hh_comp}}
+\centerline{\includegraphics[width=0.9\columnwidth]{hh_comp_3_landscape}}
 
 \begin{block}{}
 	\begin{center}
-		Low triangle density $\rightarrow$ high variance
+		Low triangle density $\rightarrow$ high variance \\
+		Many ties $\rightarrow$ poor recovery
+	\end{center}
+\end{block}
+
+\end{frame}
+
+
+
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+\frametitle{Edge Local Relative Error}
+
+\centerline{\includegraphics[width=1.0\columnwidth]{distn_edge_total_landscape}}
+
+\begin{block}{}
+	\begin{center}
+		Good relative error on reasonably sized graphs
 	\end{center}
 \end{block}
 
@@ -2131,7 +2468,7 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 	\item Implementations for edge- and vertex-local triangle count heavy hitter estimation
 	\item Supports more exotic queries
 	\begin{itemize}
-		\item e.g. 2nd Neighborhood size
+		\item e.g. Intersection of unions
 	\end{itemize}
 \end{itemize}
 
@@ -2150,7 +2487,7 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 %----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
 
-\againframe<6>{overview}
+\againframe<7>{overview}
 
 \begin{frame}
 \frametitle{Motivation: Betweenness Centrality Heavy Hitters}
@@ -2179,14 +2516,14 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 %----------------------------------------------------------------------------------------
 
 \begin{frame}
-\frametitle{Approach: Sublinearize $\kappa$-Path Centrality}
+\frametitle{Approach: Semi-Streaming $\kappa$-Path Centrality}
 
 \textbf{Idea}: ``Come at the problem sideways''
 \begin{itemize}
 	\item High $\kappa$-path centrality empirically correlates with high betweenness centrality \cite{kourtellis2013identifying}%[KTSIT13]
 	\item Algorithm amounts to sampling random simple paths
 	\begin{itemize}
-		\item Use $\ell_p$ sampling sketches to sublinearize
+		\item Sublinearize by accumulating a fixed number of sketches ahead of time
 	\end{itemize}
 	\item Sublinear approximation of $\kappa$-path centrality $\rightarrow$ emprical recovery of high betweenness centrality vertices?
 \end{itemize}
@@ -2197,12 +2534,42 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 %
 $\kappa$-path centrality
 \begin{center}
-$\textnormal{PC}(x, \kappa) =  \Pr_{p: |p| \leq \kappa} [x \in p \wedge \text{$p$ a simple path} ]$
+$\mathcal{C}^{\algoname{Path}}_\kappa(x) =  \Pr_{p: |p| \leq \kappa} [x \in p \wedge \text{$p$ a simple path} ]$
 \end{center}
 %
 ``simple path'' = non-self-intersecting path
 }
 \end{dynblock}
+
+\begin{block}{}
+	\begin{center}
+		Must simulate many history-avoiding random walks
+	\end{center}
+\end{block}
+
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+\frametitle{Parallel Random Walk Simulation - Lower Bound}
+
+\begin{block}{Lemma (\algoname{Index} Problem)}
+Alice gets $X \in \{0,1\}^n$ and Bob gets $i \in [n]$.
+Alice must send $\Omega(n)$ bits for Bob to guess $X_i$ w. p. $>\frac{1}{2}$.
+\end{block}
+
+\begin{block}{Theorem 7.2.2}
+For $t = O(n^2)$ and $k = O(n^2)$, simulating $k$ $t$-step random walks on a simple undirected graph in the insertion-only model within error $\varepsilon = \frac{1}{3}$ requires $\Omega(n\sqrt{kt})$ space.
+\end{block}
+
+\begin{block}{Proof Sketch}
+%Depends upon a reduction from the \algoname{Index} problem. 
+Alice and Bob agree upon an encoding of $X \in \{0,1\}^{n\sqrt{kt}}$ into a graph partitioned into $\frac{n}{\sqrt{kt}}$ bipartite subgraphs with $2\sqrt{kt}$ vertices.
+Bob's index $i \in \left [ n\sqrt{kt} \right ]$ identifies one such subgraph, and $k$ simulated random walks of length $t$ allow probabilistic recovery of $X_i$.
+\end{block}
+
+
 
 
 \end{frame}
@@ -2212,71 +2579,237 @@ $\textnormal{PC}(x, \kappa) =  \Pr_{p: |p| \leq \kappa} [x \in p \wedge \text{$p
 %----------------------------------------------------------------------------------------
 
 \begin{frame}
-\frametitle{$\ell_p$ Sampling Sketches}
-
-\begin{dynblock}
-% l2 sampling
-\opaqueblock<1>{
-%
-\textbf{$\ell_p$ sampling sketches} \\
-Sample from frequency vector $\mathbf{f}$ with probability relative to $\ell_p$ norm
-\begin{itemize}
-\item Sample $t_i \sim_R (0,1)$ $\forall i \in [n]$
-\item Rescale updates to $\mathbf{f}_i$ by $1/t_i^{1/p}$
-\item Accumulate \algoname{Tug-of-War}, \algoname{CountSketch}, and $\ell_p$ norm sketches
-\item Use sketches to output \algoname{CountSketch} argmax or FAIL
-\end{itemize}
-%
-}
-\invblock<2->
-
-% Second block
-\opaqueblock<2->[0.4\textwidth]{
-%
-\vspace{-0.5cm}
-%
-%\vspace{-0.5cm}
-%
-\begin{center}
-Outputs $(i,P)$ w.p. $1 - \delta$, where $i \in [n]$ is sampled w.p. $P = (1 \pm \varepsilon)\frac{|v_i|^p}{\|v\|^p_p}$ \cite{monemizadeh20101}
-\end{center}
-}
-%
-
-\end{dynblock}
+\frametitle{Parallel Random Walk Simulation - Lower Bound}
 
 
+\centerline{\includegraphics[width=0.9\columnwidth]{lower_bound_proof}}
 
-\begin{dynblock}
-% rank-k approximation
-\opaqueblock<3>{
-%
-\begin{tabular*}{\textwidth}{l @{\extracolsep{\fill}} r}
-\textbf{Useful results}  & \cite{jowhari2011tight, vu2018data}
-%[CW09]
-\end{tabular*}
-%
-\vspace{-0.5cm}
-%
-\begin{itemize}
-	\item $\ell_0$ sketch requires $\widetilde{O}(\log (1/\delta))$ memory and update time
-	\begin{itemize}
-		\item Useful for unweighted random hops
-	\end{itemize}
-	\item $\ell_1$ sketch requires $\widetilde{O}(\varepsilon^{-1} \log (1/\delta))$ memory and $\widetilde{O}(\log (1/\delta))$ update time
-	\begin{itemize}
-		\item Useful for weighted random hops
-	\end{itemize}
-	\item $s$ parallel $\ell_p$ sketches can be accumulated in time independent of $s$
-\end{itemize}
-}
-
-\end{dynblock}
+\begin{block}{}
+	\begin{center}
+		$i$ indicates $A_j$ and $B_j$, and in particular the edge $ab$.
+		Bob adds the blue edges. and simulates $k$ random walks of length $t$ starting in $V_0$. 
+		If $ab$ exists, Bob finds with with probability $> \frac{1}{2}, \rightarrow$ solving \algoname{Index}.
+	\end{center}
+\end{block}
 
 
 
 
 \end{frame}
+
+
+
+
+\begin{frame}
+\frametitle{Parallel Random Walk Simulation - Algorithm Sketch}
+
+\begin{block}{Lemma 7.1.4 (Reservoir Sampling)}
+Given an insert-only stream $\sigma$ consisting of $n$ insertions, there is a procedure that uniformly samples $t \leq \frac{n}{2}$ items with replacement in a single pass using $O(t\log(n/t))$ bits of space. 
+\end{block}
+
+\begin{itemize}
+%	\item Split $\mathcal{V}$ into big and small sets
+%	\begin{itemize}
+%		\item $\mathcal{S} = \{x \in \mathcal{V} \mid \mathbf{d}_x \leq c \}$
+%		\item $\mathcal{B} = \{x \in \mathcal{V} \mid \mathbf{d}_x > c \}$
+%	\end{itemize}
+	\item Split $\mathcal{E}$ based upon endpoint degree for a to-be-specified $c$
+	\begin{itemize}
+		\item $\mathcal{E}_\mathcal{S} = \{(x, y) \in \mathcal{E} \mid \mathbf{d}_y \ \leq c \}$ (important)
+		\item $\mathcal{E}_\mathcal{B} = \{(x, y) \in \mathcal{E} \mid \mathbf{d}_y > c \}$ (unimportant)
+	\end{itemize}
+	\item $|\mathcal{E}_\mathcal{S}| = O(nc)$, so can store in memory if $c$ small enough
+	\item In a pass over $\mathcal{G}$, sample $O(c)$ unimportant edges per vertex and build the distributed dictionaries:
+	\begin{itemize}
+		\item $\mathcal{N}_\mathcal{S}[x] = \{(u, v) \in \mathcal{E}_\mathcal{S} \mid u = x \}$
+		\item $\mathcal{N}_\mathcal{B}[x]= \{(u, v) \in \mathcal{E}_\mathcal{B} \mid u = x \wedge \textnormal{$(u, v)$ is sampled} \}$
+	\end{itemize}
+	\item During each simulation, toss a coin whether to pull from $\mathcal{N}_\mathcal{S}$ or $\mathcal{N}_\mathcal{B}$ at each step
+	\begin{itemize}
+		\item Simulation fails if any vertex runs out of unimportant samples
+	\end{itemize}
+\end{itemize}
+
+
+
+
+
+\end{frame}
+
+
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+\frametitle{Parallel Random Walk Simulation - Correctness Sketch}
+
+
+\begin{block}{Lemma 7.2.3}
+%Suppose for every $x \in \mathcal{V}$, $\Pr \left [\textnormal{$x$ fails} \mid v_0^{(1)} = x \wedge \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ] \leq \delta$.
+%Then for any starting vertex $x \in \mathcal{V}$, $\Pr \left [\textnormal{any vertex fails} \mid v_0^{(1)} = s \wedge \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ] \leq tk\delta$.
+Suppose for every $x \in \mathcal{V}$, $\Pr \left [\textnormal{$x$ fails} \mid \textnormal{$x$ a starting vertex} \right ] \leq \delta$.
+Then $\Pr \left [\textnormal{any vertex fails} \right ] \leq tk\delta$.
+\end{block}
+
+\begin{block}{Lemma 7.2.4}
+$\exists c = O\left (\sqrt{kt} \cdot \frac{q}{\log q} \right )$, where $q = 2 + \frac{\log(1/\delta)}{\sqrt{kt}}$ s. t. for all $x \in \mathcal{V}$ 
+%
+\begin{equation*}
+\Pr \left [\textnormal{$x$ fails} \mid \textnormal{$x$ a starting vertex, others drawn from $\mu$} \right ] \leq \delta.\footnote{$\mu$ is the steady state distribution of $\mathcal{G}$}
+\end{equation*}
+%
+%where $x$ does not occur in $\left ( v_0^{(1)}, v_0^{(2)}, \dots, v_0^{(k)} \right )$ more than $\sqrt{k}$ times, 
+%for all $x \in \mathcal{V}$.
+\end{block}
+
+
+\begin{block}{Theorem 7.2.5}
+Can simulate $k$ $t$-step random walks where sources are drawn with replacement from $\mu$ in a one pass within error $\varepsilon$ using $O \left (n \sqrt{kt} \frac{q}{\log q} \right )$ words of memory, where $q = 2 + \frac{\log(1/\varepsilon)}{\sqrt{kt}}$.
+\end{block}
+
+
+\end{frame}
+
+
+
+%----------------------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Parallel Random Walk Simulation - Extensions in Brief}
+
+
+\begin{itemize}
+	\item Recording and playback of adjacency substreams
+	\begin{itemize}
+		\item Each processor records $\mathcal{M}[x]$ in fast memory\footnote{e.g. NVRAM} while accumulating $\mathcal{N}_\mathcal{B}[x]$
+		%
+		\begin{equation*}
+			\mathcal{M}[x] = \{ (u, v) \in \mathcal{E}_\mathcal{B} \mid u = x\}
+		\end{equation*}
+		%
+		\item Instead of failing, simply refresh $\mathcal{N}_\mathcal{B}[x]$ by taking a pass over $M[x]$
+		\begin{itemize}
+			\item Partially avoids the stead state distribution heavy hammer		
+		\end{itemize}
+		\item Affords more robust tuning of I/O versus memory tradeoff
+		\item Reliable and HPC friendly
+	\end{itemize}
+	\item History-Avoiding Walk Simulation
+	\begin{itemize}
+		\item Sample via playback, ignoring previous vertices
+		\item Permits the sublinear space simulation of simple paths
+	\end{itemize}
+\end{itemize}
+
+
+
+
+
+\end{frame}
+
+
+
+%----------------------------------------------------------------------------------------
+
+%\begin{frame}
+%\frametitle{$\ell_p$ Sampling Sketches}
+%
+%\begin{dynblock}
+%% l2 sampling
+%\opaqueblock<1>{
+%%
+%\textbf{$\ell_p$ sampling sketches} \\
+%Sample from frequency vector $\mathbf{f}$ with probability relative to $\ell_p$ norm
+%\begin{itemize}
+%\item Sample $t_i \sim_R (0,1)$ $\forall i \in [n]$
+%\item Rescale updates to $\mathbf{f}_i$ by $1/t_i^{1/p}$
+%\item Accumulate \algoname{Tug-of-War}, \algoname{CountSketch}, and $\ell_p$ norm sketches
+%\item Use sketches to output \algoname{CountSketch} argmax or FAIL
+%\end{itemize}
+%%
+%}
+%\invblock<2->
+%
+%% Second block
+%\opaqueblock<2->[0.4\textwidth]{
+%%
+%\vspace{-0.5cm}
+%%
+%%\vspace{-0.5cm}
+%%
+%\begin{center}
+%Outputs $(i,P)$ w.p. $1 - \delta$, where $i \in [n]$ is sampled w.p. $P = (1 \pm \varepsilon)\frac{|v_i|^p}{\|v\|^p_p}$ \cite{monemizadeh20101}
+%\end{center}
+%}
+%%
+%
+%\end{dynblock}
+%
+%
+%
+%\begin{dynblock}
+%% rank-k approximation
+%\opaqueblock<3>{
+%%
+%\begin{tabular*}{\textwidth}{l @{\extracolsep{\fill}} r}
+%\textbf{Useful results}  & \cite{jowhari2011tight, vu2018data}
+%%[CW09]
+%\end{tabular*}
+%%
+%\vspace{-0.5cm}
+%%
+%\begin{itemize}
+%	\item $\ell_0$ sketch requires $\widetilde{O}(\log (1/\delta))$ memory and update time
+%	\begin{itemize}
+%		\item Useful for unweighted random hops
+%	\end{itemize}
+%	\item $\ell_1$ sketch requires $\widetilde{O}(\varepsilon^{-1} \log (1/\delta))$ memory and $\widetilde{O}(\log (1/\delta))$ update time
+%	\begin{itemize}
+%		\item Useful for weighted random hops
+%	\end{itemize}
+%	\item $s$ parallel $\ell_p$ sketches can be accumulated in time independent of $s$
+%\end{itemize}
+%}
+%\end{dynblock}
+%
+%
+%
+%
+%\end{frame}
+
+%----------------------------------------------------------------------------------------
+
+%\begin{frame}
+%\frametitle{Sublinear Random Walk Simulation}
+%
+%\textbf{Random Walk Simulation}
+%\begin{itemize}
+%	\item Sample $t$ vertices $\{v_{1,1}, \dots, v_{t,1}\}$ and: 
+%	\begin{itemize}
+%		\item Sample $v_{i, j + 1}$ from $\mathcal{A}[v_{i, j}]$
+%		\item Communicate $(v_{i, 1}, \dots, v_{i, j + 1})$ to $f(v_{i, j + 1})$
+%%		\item When a processor exhausts $s$ sketches for $v$, take another pass over $a_v$ in disk memory 
+%	\end{itemize}
+%\end{itemize}
+%\textbf{Random Simple Path Simulation}
+%\begin{itemize}
+%	\item Similar to random walks, except:
+%	\begin{itemize}
+%		\item Do not accumulate sketches ahead of time
+%		\item Sample $v_{i, j + 1}$ from $\mathcal{A}[v_{i, j}] \setminus \{v_{i, 1}, \dots, v_{i, j - 1}\}$ 
+%		\begin{itemize}
+%			\item If $\mathcal{A}[v_{i, j}]$ is not in memory, accumulate a sketch ignoring edges to any of $\{v_{i, 1}, \dots, v_{i, j - 1}\}$
+%		\end{itemize}
+%		\item Communicate $(v_{i, 1}, \dots, v_{i, j + 1})$ to $f(v_{i, j + 1})$
+%	\end{itemize}
+%\end{itemize}
+%
+%\begin{block}{}
+%\begin{center}
+%Sublinear distributed storage of graph by sketching high degree vertices
+%\end{center}
+%\end{block}
+%
+%
+%\end{frame}
 
 %----------------------------------------------------------------------------------------
 
@@ -2318,76 +2851,76 @@ Outputs $(i,P)$ w.p. $1 - \delta$, where $i \in [n]$ is sampled w.p. $P = (1 \pm
 
 
 
-\begin{frame}
-\frametitle{Distributed Accumulation $\ell_p$ Sampling Sketches}
-
-%Recall pseudo-asynchronous communication and let $\mathcal{P}$ and $f$ be as before
-\begin{itemize}
-	\item $P \in \mathcal{P}$ accumulates adjacency set $\mathcal{A}[v]$ for each $v \in \mathcal{V}_P$ %from edge stream
-	\begin{itemize}
-		\item When $\mathcal{A}[v]$ too large, replace it with $s$ $\ell_0$ sampling sketches
-		\item Write current state and all subsequent updates to disk memory % in addition to updating $S_v^{(1)}, \dots, S_v^{(s)}$
-	\end{itemize}
-	\item Queries to $\mathcal{A}[v]$ return a sampled neighbor of $v$
-	\begin{itemize}
-		\item If $\mathcal{A}[v]$ is a set of sketches, one is consumed
-		\begin{itemize}
-			\item If \algoname{Fail}, repeat		
-		\end{itemize}
-		\item Once $\mathcal{A}[v]$ sketches are exhausted, $P$ takes another pass over $v$'s substream in disk memory
-	\end{itemize}
-%	\item {[AGM12-1]} \& [AGM12-2] use this method to solve several problems:
-\end{itemize}
-
-\begin{block}{}
-\begin{center}
-Avoids vertex cuts, exchanging communication for I/O
-\end{center}
-\end{block}
-
-\end{frame}
-
-%----------------------------------------------------------------------------------------
-
-\begin{frame}
-\frametitle{Sublinear Random Walk and Simple Path Sampling}
-
-\textbf{Random Walk Simulation}
-\begin{itemize}
-	\item Sample $t$ vertices $\{v_{1,1}, \dots, v_{t,1}\}$ and: 
-	\begin{itemize}
-		\item Sample $v_{i, j + 1}$ from $\mathcal{A}[v_{i, j}]$
-		\item Communicate $(v_{i, 1}, \dots, v_{i, j + 1})$ to $f(v_{i, j + 1})$
-%		\item When a processor exhausts $s$ sketches for $v$, take another pass over $a_v$ in disk memory 
-	\end{itemize}
-\end{itemize}
-\textbf{Random Simple Path Simulation}
-\begin{itemize}
-	\item Similar to random walks, except:
-	\begin{itemize}
-		\item Do not accumulate sketches ahead of time
-		\item Sample $v_{i, j + 1}$ from $\mathcal{A}[v_{i, j}] \setminus \{v_{i, 1}, \dots, v_{i, j - 1}\}$ 
-		\begin{itemize}
-			\item If $\mathcal{A}[v_{i, j}]$ is not in memory, accumulate a sketch ignoring edges to any of $\{v_{i, 1}, \dots, v_{i, j - 1}\}$
-		\end{itemize}
-		\item Communicate $(v_{i, 1}, \dots, v_{i, j + 1})$ to $f(v_{i, j + 1})$
-	\end{itemize}
-\end{itemize}
-
-\begin{block}{}
-\begin{center}
-Sublinear distributed storage of graph by sketching high degree vertices
-\end{center}
-\end{block}
-
-
-\end{frame}
+%\begin{frame}
+%\frametitle{Distributed Accumulation $\ell_p$ Sampling Sketches}
+%
+%%Recall pseudo-asynchronous communication and let $\mathcal{P}$ and $f$ be as before
+%\begin{itemize}
+%	\item $P \in \mathcal{P}$ accumulates adjacency set $\mathcal{A}[v]$ for each $v \in \mathcal{V}_P$ %from edge stream
+%	\begin{itemize}
+%		\item When $\mathcal{A}[v]$ too large, replace it with $s$ $\ell_0$ sampling sketches
+%		\item Write current state and all subsequent updates to disk memory % in addition to updating $S_v^{(1)}, \dots, S_v^{(s)}$
+%	\end{itemize}
+%	\item Queries to $\mathcal{A}[v]$ return a sampled neighbor of $v$
+%	\begin{itemize}
+%		\item If $\mathcal{A}[v]$ is a set of sketches, one is consumed
+%		\begin{itemize}
+%			\item If \algoname{Fail}, repeat		
+%		\end{itemize}
+%		\item Once $\mathcal{A}[v]$ sketches are exhausted, $P$ takes another pass over $v$'s substream in disk memory
+%	\end{itemize}
+%%	\item {[AGM12-1]} \& [AGM12-2] use this method to solve several problems:
+%\end{itemize}
+%
+%\begin{block}{}
+%\begin{center}
+%Avoids vertex cuts, exchanging communication for I/O
+%\end{center}
+%\end{block}
+%
+%\end{frame}
 
 %----------------------------------------------------------------------------------------
 
+%\begin{frame}
+%\frametitle{Sublinear Random Walk and Simple Path Sampling}
+%
+%\textbf{Random Walk Simulation}
+%\begin{itemize}
+%	\item Sample $t$ vertices $\{v_{1,1}, \dots, v_{t,1}\}$ and: 
+%	\begin{itemize}
+%		\item Sample $v_{i, j + 1}$ from $\mathcal{A}[v_{i, j}]$
+%		\item Communicate $(v_{i, 1}, \dots, v_{i, j + 1})$ to $f(v_{i, j + 1})$
+%%		\item When a processor exhausts $s$ sketches for $v$, take another pass over $a_v$ in disk memory 
+%	\end{itemize}
+%\end{itemize}
+%\textbf{Random Simple Path Simulation}
+%\begin{itemize}
+%	\item Similar to random walks, except:
+%	\begin{itemize}
+%		\item Do not accumulate sketches ahead of time
+%		\item Sample $v_{i, j + 1}$ from $\mathcal{A}[v_{i, j}] \setminus \{v_{i, 1}, \dots, v_{i, j - 1}\}$ 
+%		\begin{itemize}
+%			\item If $\mathcal{A}[v_{i, j}]$ is not in memory, accumulate a sketch ignoring edges to any of $\{v_{i, 1}, \dots, v_{i, j - 1}\}$
+%		\end{itemize}
+%		\item Communicate $(v_{i, 1}, \dots, v_{i, j + 1})$ to $f(v_{i, j + 1})$
+%	\end{itemize}
+%\end{itemize}
+%
+%\begin{block}{}
+%\begin{center}
+%Sublinear distributed storage of graph by sketching high degree vertices
+%\end{center}
+%\end{block}
+%
+%
+%\end{frame}
+
+%----------------------------------------------------------------------------------------
+
 
 \begin{frame}
-\frametitle{Sublinear $\kappa$-Path Centrality}
+\frametitle{Semi-Streaming $\kappa$-Path Centrality}
 
 \begin{dynblock}
 % kappa-path centrality
@@ -2398,7 +2931,7 @@ $\kappa$-Path Centrality Approximation Algorithm (\cite{kourtellis2013identifyin
 	\begin{itemize}
 		\item maintain $count[x]$ for each $x \in \mathcal{V}$
 	\end{itemize}
-	\item $\widetilde{\mathcal{C}}^{\kappa}(x) \gets \frac{count[x]}{2 \kappa n^{-2\alpha} \ln n}$
+	\item $\widetilde{\mathcal{C}}^{\algoname{Path}}_{\kappa}(x) \gets \frac{count[x]}{2 \kappa n^{-2\alpha} \ln n}$
 \end{enumerate}
 }
 %\invblock<2->
@@ -2414,11 +2947,23 @@ $\kappa$-Path Centrality Approximation Algorithm (\cite{kourtellis2013identifyin
 
 \end{dynblock}
 
+\begin{block}{Theorem ($\kappa$-Path correctness)}
+The serial algorithm runs in $O(\kappa^3 n^{2-2\alpha} \log n)$ time and $\Theta(m)$ space, where accuracy parameter 
+$\alpha \in \left [ -\frac{1}{2}, \frac{1}{2} \right ]$.
+For each $x \in \mathcal{V}$ it produces estimates $\widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x]$ such that 
+$\left | \widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x] - \mathcal{C}_\kappa^{\algoname{Path}}[x] \right | \leq n^{\frac{1}{2} + \alpha}$ with probability at least $1 - \frac{1}{n^2}$.
+\end{block}
 
-\begin{itemize}
-	\item Given $\alpha \in [-1/2,1/2]$, for each $x \in \mathcal{V}$, $\left | \widetilde{\mathcal{C}}^{\kappa}(x) -  \mathcal{C}^{\kappa}(x) \right | \leq n^{1/2+\alpha}$ w.h.p.
-	\item Easy to distribute in vertex-centric model
-\end{itemize}
+\begin{block}{}
+	\begin{center}
+		Easy application of distributed, semi-streaming history-avoiding random walk simulation
+	\end{center}
+\end{block}
+
+
+%\begin{itemize}
+%	\item Given $\alpha \in [-1/2,1/2]$, for each $x \in \mathcal{V}$, $\left | \widetilde{\mathcal{C}}^{\algoname{Path}}_{\kappa}(x) -  \mathcal{C}^{\algoname{Path}}_{\kappa}(x) \right | \leq n^{1/2+\alpha}$ w.h.p.
+%\end{itemize}
 
 %\begin{dynblock}
 %% Sublinear kappa-path centrality
@@ -2470,38 +3015,38 @@ $\kappa$-Path Centrality Approximation Algorithm (\cite{kourtellis2013identifyin
 %----------------------------------------------------------------------------------------
 
 
-\begin{frame}
-\frametitle{Sublinear $\kappa$-Path Centrality}
-
-\begin{algorithm}[H]
-\caption{Sublinear $\kappa$-Path Centrality}\label{alg:sublinear_kpath}
-\begin{algorithmic}[1]
-%\State $T \gets 2 \kappa^2 n^{1-2\alpha} \ln n$
-\For {$i \in \{1, \dots, T\}$}
-	\State $p_i \gets$ empty path
-	\State $p_{i,1} \gets$ uniform sample from $\mathcal{V}$
-	\State $l_i \gets$ uniform sample from $\{1, 2, \dots, \kappa \}$
-\EndFor
-\For {$x \in \mathcal{V}$}{$c_x \gets 0$}
-\EndFor
-\ParFor{$j \in \{1, 2, \dots, \kappa - 1 \}$} 
-	\ParFor {$i \in \{1, 2, \dots, T\}$}
-		\If {$j < l_i$}
-			\State $p_{i,j+1} \gets$ sample from $\mathcal{A}[p_{i,j}]$
-			\If {$p_{i,j+1} = \emptyset$}{ discard}
-			\EndIf
-		\ElsIf {$j = l_i$}
-			\State $c_{p_{i,k}} \gets c_{p_{i,k}} + 1$ for $k \in \{1, \dots, j\}$
-		\EndIf
-	\EndParFor
-\EndParFor
-\State \Return $c_x /  2 \kappa n^{-2\alpha} \ln n$ for $x \in V$
-\end{algorithmic}
-\end{algorithm}
-
-
-
-\end{frame}
+%\begin{frame}
+%\frametitle{Sublinear $\kappa$-Path Centrality}
+%
+%\begin{algorithm}[H]
+%\caption{Sublinear $\kappa$-Path Centrality}\label{alg:sublinear_kpath}
+%\begin{algorithmic}[1]
+%%\State $T \gets 2 \kappa^2 n^{1-2\alpha} \ln n$
+%\For {$i \in \{1, \dots, T\}$}
+%	\State $p_i \gets$ empty path
+%	\State $p_{i,1} \gets$ uniform sample from $\mathcal{V}$
+%	\State $l_i \gets$ uniform sample from $\{1, 2, \dots, \kappa \}$
+%\EndFor
+%\For {$x \in \mathcal{V}$}{$c_x \gets 0$}
+%\EndFor
+%\ParFor{$j \in \{1, 2, \dots, \kappa - 1 \}$} 
+%	\ParFor {$i \in \{1, 2, \dots, T\}$}
+%		\If {$j < l_i$}
+%			\State $p_{i,j+1} \gets$ sample from $\mathcal{A}[p_{i,j}]$
+%			\If {$p_{i,j+1} = \emptyset$}{ discard}
+%			\EndIf
+%		\ElsIf {$j = l_i$}
+%			\State $c_{p_{i,k}} \gets c_{p_{i,k}} + 1$ for $k \in \{1, \dots, j\}$
+%		\EndIf
+%	\EndParFor
+%\EndParFor
+%\State \Return $c_x /  2 \kappa n^{-2\alpha} \ln n$ for $x \in V$
+%\end{algorithmic}
+%\end{algorithm}
+%
+%
+%
+%\end{frame}
 
 
 
@@ -2712,7 +3257,7 @@ $\kappa$-Path Centrality Approximation Algorithm (\cite{kourtellis2013identifyin
 \frametitle{Summary of Results}
 
 \begin{itemize}
-	\item The Goal: distributed sublinear approximations of centrality indices
+	\item The Goal: distributed semi-streaming approximations of centrality indices
 	\item Engineering Results
 	\begin{itemize}
 		\item \algoname{YGM}: Pseudo-Asynchronous 	Communication Handler
@@ -2721,14 +3266,14 @@ $\kappa$-Path Centrality Approximation Algorithm (\cite{kourtellis2013identifyin
 	\begin{itemize}
 		\item A streaming degree centrality approximation and heavy hitter recovery algorithms
 		\item A O(1)-pass semi-streaming closeness centrality approximation algorithm
-		\item 2-pass distributed semi-streaming edge- and vertex-local triangle count heavy hitter estimation algorithms using \algoname{DegreeSketch}
-		\item Distributed sublinear semi-streaming random walk and random simple path sampling algorithms
+		\item 2-pass distributed semi-streaming local neighborhood and triangle count estimation algorithms using \algoname{DegreeSketch}
+		\item Distributed semi-streaming random walk simulation algorithm
 		\item Distributed sublinear semi-streaming $\kappa$-path centrality estimation algorithm
 	\end{itemize}
 	\item Future Work
 	\begin{itemize}
 		\item Applications for $\algoname{DegreeSketch}$
-		\item Sublinear random walk and random simple path implementation
+		\item Semi-streaming random walk with playback implementation
 	\end{itemize}
 \end{itemize}
 
@@ -2736,6 +3281,58 @@ $\kappa$-Path Centrality Approximation Algorithm (\cite{kourtellis2013identifyin
 
 
 %----------------------------------------------------------------------------------------
+
+\begin{frame}
+\frametitle{Dartmouth Publications}
+
+{\scriptsize
+\begin{enumerate}
+\item \textbf{Benjamin W. Priest} and George Cybenko.
+	Efficient inference of hidden Markov mod- els from large observation sequences.
+	In \emph{Proceedings of the 2016 SPIE Defense + Security Conference}, 
+	SPIE D$\! + \!$S.
+	2016.
+
+\item \textbf{Benjamin W. Priest} and George Cybenko.
+	Approximating centrality in evolving graphs: toward sublinearity.
+	In \emph{Proceedings of the 2017 SPIE Defense + Security Conference}, 
+	SPIE D$\! + \!$S.
+	2017.
+
+\item Luan Hoy Pham, Massimiliano Albanese, and \textbf{Benjamin W. Priest}.
+	A quantitative framework to model advanced persistent threats.
+	In \emph{Proceedings of the 15th International Conference on Security and Cryptography}, 
+	SECRYPT. 
+	2018.
+	
+\item \textbf{Benjamin W. Priest}, Roger Pearce, and Geoffrey Sanders.
+	Estimating edge-local triangle count heavy hitters in edge-linear time and almost-vertex-linear space.
+	In \emph{Proceedings of the IEEE High Performance Extreme Computing Conference}, 
+	HPEC. 
+	2018.
+	
+\item \textbf{Bejamin W. Priest}, George Cybenko, Satinder Singh, Massimiliano Albanese and Peng Liu.
+	Online and Scalable Adaptive Cyber Defense. 
+	In:
+	Michael Wellman~(Ed.), \emph{Adversarial and Uncertain Reasoning in Adaptive Cyber-Defense}, ch.
+	11, pp. xxx--xxx. 2019.
+	Anticipated.
+
+\item \textbf{Benjamin W. Priest}, Trevor Steil, Roger Pearce, and Geoffrey Sanders.
+	You've {G}ot {M}ail: Building missing asynchronous communication primitives.
+	In:
+	Proceedings of the 2019 International Conference on Supercomputing,
+	SC.
+	2019.
+	\textbf{Anticipated}.
+	
+\item \textbf{Benjamin W. Priest}, Roger Pearce, and Geoffrey Sanders.
+	DegreeSketch: Distributed cardinality sketches on graphs with applications.
+	\textbf{In Preparation}.
+\end{enumerate}
+}
+
+\end{frame}
 
 
 \begin{frame}
