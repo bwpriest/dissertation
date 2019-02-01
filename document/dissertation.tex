@@ -112,7 +112,7 @@
 \pagenumbering{roman}
 \begin{onehalfspace}
 \begin{center}
-\textbf{Sublinear Approximation of Centrality Indices in Large Graphs}
+\textbf{Sublinear Approximation of Centrality Indices in Massive Graphs}
 \vspace{0.4cm}
 %\title{Sublinear Approximations of Vertex Importance in Evolving Social Network Graphs}
 
@@ -2860,28 +2860,33 @@ Let the neighborhood function $\mathcal{N}_\mathcal{G}(t)$ be defined by
 \end{equation}
 %
 This function provides data about how fast the ``average ball'' around each $x \in \mathcal{V}$ expands, permitting the estimation of $G$'s properties such as the effective diameter \cite{palmer2002anf}.
-For $t \in \mathbf{N}$, let $\mathcal{N}_\mathcal{G}^t(x)$ be the \emph{local} neighborhood function defined as 
+We will drop the subscripts where they are clear.
+%For $t \in \mathbf{N}$, let $\mathcal{N}_\mathcal{G}^t(x)$ be the \emph{local} neighborhood function defined as 
+For $t \in \mathbf{N}$, let $\mathcal{C}^{\algoname{Nbhd}}_t(x)$ be the \emph{local} neighborhood function defined as 
 %
 \begin{equation} \label{eq:func:nbhd:local}
-	\mathcal{N}_\mathcal{G}^t(x) = |\{y \in \mathcal{V} | d_\mathcal{G}(x, y) < t\}|.
+%	\mathcal{N}_\mathcal{G}^t(x) = |\{y \in \mathcal{V} | d_\mathcal{G}(x, y) < t\}|.
+	\mathcal{C}^{\algoname{Nbhd}}_t(x) = |\{y \in \mathcal{V} | d_\mathcal{G}(x, y) < t\}|.
 \end{equation}
 %
-We will drop the subscripts where they are clear.
+While not usually treated as a centrality index, we can think of the $t$th neighborhood size of $x$ as a generalization of its degree centrality.
 In particular, we have that 
 %
 \begin{equation} \label{eq:func:nbhd:sum}
-	\mathcal{N}(t) = \sum_{x \in \mathcal{V}} \mathcal{N}^t(x).
+	\mathcal{N}(t) = \sum_{x \in \mathcal{V}} \mathcal{C}^{\algoname{Nbhd}}_t(x).
 \end{equation}
 %
-The \algoname{ANF} \cite{palmer2002anf} and \algoname{HyperANF} \cite{boldi2011hyperanf} algorithms estimate $\mathcal{N}^t(x)$ for each $x \in \mathcal{V}$ using Flajolet-Martin and \algoname{HyperLogLog} cardinality sketches, respectively, and produce estimates of $\mathcal{N}(t)$ of the form Eq.~\eqref{eq:func:nbhd:sum}.
+The \algoname{ANF} \cite{palmer2002anf} and \algoname{HyperANF} \cite{boldi2011hyperanf} algorithms estimate 
+$\mathcal{C}^{\algoname{Nbhd}}_t(x)$ 
+for each $x \in \mathcal{V}$ using Flajolet-Martin and \algoname{HyperLogLog} cardinality sketches, respectively, and produce estimates of $\mathcal{N}(t)$ of the form Eq.~\eqref{eq:func:nbhd:sum}.
 
 Let $\mathcal{D}$ be an instance of \algoname{DegreeSketch} as described, so that for $x \in \mathcal{V}$, $\mathcal{D}[x]$ is a cardinality sketch of the adjacency set of $x$.
 Assume that there is an approximate union operator $\widetilde{\cup}$.
-If we have $A_{:,x}$, then we can compute an estimate of $\mathcal{N}^2(x)$ by computing 
+If we have $A_{:,x}$, then we can compute an estimate of $\mathcal{C}^{\algoname{Nbhd}}_2(x)$ by computing 
 %
 \begin{equation} \label{eq:estimate:nbhd}
-	\widetilde{\mathcal{N}}^2(x) 
-	= \widetilde{\bigcup}_{y: xy \in \mathcal{E}} \mathcal{D}[y].
+	\widetilde{\mathcal{C}}^{\algoname{Nbhd}}_2(x) 
+	= \algoname{Estimate} \left ( \widetilde{\bigcup}_{y: xy \in \mathcal{E}} \mathcal{D}[y] \right ).
 \end{equation}
 %
 
@@ -2965,35 +2970,91 @@ By construction, we have that
 \mathcal{D}^t[x] = \widetilde{\bigcup}_{y: d(x,y) = s < t-1} \mathcal{D}^{s}[y].
 \end{equation}
 %
-Ergo, the set of elements inserted into $\mathcal{D}^t[x]$ consists of all $y \in \mathcal{V}$ such that $d(x,y) < t$, which is to say that $\mathcal{D}^t[x]$ directly approximates $\mathcal{N}^t(x)$ (Eq.~\eqref{eq:func:nbhd:local}). 
+Ergo, the set of elements inserted into $\mathcal{D}^t[x]$ consists of all $y \in \mathcal{V}$ such that $d(x,y) < t$, which is to say that $\mathcal{D}^t[x]$ directly approximates $\mathcal{C}^{\algoname{Nbhd}}_t(x)$ (Eq.~\eqref{eq:func:nbhd:local}). 
 Ergo, the summations over all sketches in lines \ref{alg:ds:anf:line:sum1} and \ref{alg:ds:anf:line:sum2} of Algorithm~\ref{alg:ds:anf} estimate $\mathcal{N}(t)$ in the same way as does the equivalent procedure in \algoname{HyperANF}.
 Note that these summations are performed as distributed \algoname{Reduce} operations.
-In addition to returning estimates of the neighborhood function, this procedure can be used to return estimates of the local $t$-degree neighborhoods of vertices, which have their own uses.
+In addition to returning estimates of the neighborhood function, this procedure can be used to return estimates of the local $t$-degree neighborhoods of vertices $\mathcal{C}^{\algoname{Nbhd}}_t(\cdot)$, which have their own uses.
 Furthermore, as the actual estimates produced by Algorithm~\ref{alg:ds:anf} as the same as those produced by \algoname{HyperANF}, all of the statistical results of \cite{boldi2011hyperanf} apply.
 We reproduce the following theorem, although the other theorems and corollaries of \cite{boldi2011hyperanf} also apply. 
 
 \begin{theorem}
-The output $\widetilde{\mathcal{N}}(t)$ of Algorithm~\ref{alg:ds:anf} at the $t$-th iteration satisfies 
+Let $\mu_{r, n}$ and $\eta_{r, n}$ be the multiplicative bias and standard deviation for \algoname{HLL}s given in Theorem 1 of \cite{flajolet2007hyperloglog}.
+%, where $\mu_{r, n}$ is the sum of a small constant and an oscillating function of small amplitude. 
+The output $\widetilde{\mathcal{N}}(t)$ and $\widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x)$ for $x \in \mathcal{V}$ at the $t$-th iteration satisfies 
 %
 \begin{equation*}
-	\frac{\E \left [ \widetilde{\mathcal{N}}(t) \right ]}{\mathcal{N}(t)} = 1 + \delta_1(n) + o(1) \textnormal{ for $n \rightarrow \infty$,}
+	\frac{\E \left [ \widetilde{\mathcal{N}}(t) \right ]}{\mathcal{N}(t)} 
+	= \frac{\E \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ]}{\mathcal{C}^{\algoname{Nbhd}}_t(x)} 
+	= \mu_{r, n} 
+	\textnormal{ for $n \rightarrow \infty$,}
 \end{equation*}
 %
-where $\delta_1(n)$ is the same as in \cite{flajolet2007hyperloglog} Theorem 1, and $|\delta_1(x)| < 5 \cdot 10^{-5}$ when $r \geq 16$.
+i.e. they are nearly unbiased.
+%where $\delta_1(n)$ is the same as in \cite{flajolet2007hyperloglog} Theorem 1, and $|\delta_1(x)| < 5 \cdot 10^{-5}$ when $r \geq 16$.
 
-Furthermore, let $\widetilde{\mathcal{N}}^t(\cdot)$ be the local output of Algorithm~\ref{alg:ds:anf} (i.e. $\widetilde{\mathcal{N}}^t(x) = \algoname{Estimate}(\mathcal{D}^t[x]$).
-Each of these estimates shares the standard deviation $\eta_r$ given by \cite{flajolet2007hyperloglog}, which is also shared by $\widetilde{N}(t)$. 
+Furthermore, both also have standard deviation bounded by $\eta_{r,n}$.
+%the output $\widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x)$ for $x \in \mathcal{V}$ has the standard deviation $\eta_r$ given by \cite{flajolet2007hyperloglog}, which is also shared by $\widetilde{N}(t)$. 
 That is, 
 %
 \begin{equation*}
-	\frac{\sqrt{\Var \left [ \widetilde{\mathcal{N}}(t)\right ]}}{\mathcal{N}(t)} \leq \eta_r.
+	\frac{\sqrt{\Var \left [ \widetilde{\mathcal{N}}(t)\right ]}}{\mathcal{N}(t)} \leq \eta_{r, n}
+	\textnormal{ and }
+	\frac{\sqrt{\Var \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ]}}{\mathcal{C}^{\algoname{Nbhd}}_t(x)} \leq \eta_{r, n}
 \end{equation*}
 %
+%Implementing Algorithm~\ref{alg:ds:anf} with \algoname{HyperLogLog} sketches requires $\widetilde{O}(m)$ time and bits of communication, and only $O(n ( \varepsilon^{-1}\log\log n + \log n))$ space.
+%The output $\widetilde{\mathcal{N}}(t)$ of Algorithm~\ref{alg:ds:anf} at the $t$-th iteration satisfies 
+%%
+%\begin{equation*}
+%	\frac{\E \left [ \widetilde{\mathcal{N}}(t) \right ]}{\mathcal{N}(t)} = 1 + \delta_1(n) + o(1) \textnormal{ for $n \rightarrow \infty$,}
+%\end{equation*}
+%%
+%where $\delta_1(n)$ is the same as in \cite{flajolet2007hyperloglog} Theorem 1, and $|\delta_1(x)| < 5 \cdot 10^{-5}$ when $r \geq 16$.
+%
+%Furthermore, let $\widetilde{\mathcal{N}}^t(\cdot)$ be the local output of Algorithm~\ref{alg:ds:anf} (i.e. $\widetilde{\mathcal{N}}^t(x) = \algoname{Estimate}(\mathcal{D}^t[x]$).
+%Each of these estimates shares the standard deviation $\eta_r$ given by \cite{flajolet2007hyperloglog}, which is also shared by $\widetilde{N}(t)$. 
+%That is, 
+%%
+%\begin{equation*}
+%	\frac{\sqrt{\Var \left [ \widetilde{\mathcal{N}}(t)\right ]}}{\mathcal{N}(t)} \leq \eta_r.
+%\end{equation*}
+%%
 %Implementing Algorithm~\ref{alg:ds:anf} with \algoname{HyperLogLog} sketches requires $\widetilde{O}(m)$ time and bits of communication, and only $O(n ( \varepsilon^{-1}\log\log n + \log n))$ space.
 \end{theorem}
 
 \begin{proof}
-The proof of the first two claims is the same as the proof of Theorem 1 in \cite{boldi2011hyperanf}, so we will not reproduce it here.
+For each $x$, $\widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) = |\mathcal{D}^k[x]|$, where $\mathcal{D}^k[x]$ is a union of \algoname{HLL}s, into which every $y$ such that $d(x,y) < t$ is inserted, as we noted from Eq.~\eqref{eq:nextlayer:full}. 
+Thus by Theorem 1 of \cite{flajolet2007hyperloglog}, 
+%
+\begin{align*}
+%\E \left [ \left | \mathcal{D}^k[x] \right | \right ] 
+\E \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ] 
+&= \mu_{r,n} \mathcal{C}^{\algoname{Nbhd}}_t(x) \\
+%\sqrt{\Var \left [ \left | \mathcal{D}^k[x] \right | \right ]} 
+\sqrt{\Var \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ]} 
+&= \eta_{r,n} \mathcal{C}^{\algoname{Nbhd}}_t(x).
+\end{align*}
+%
+Thus, by the linearity of expectation and the subadditivity of variance, 
+\begin{align*}
+\E \left [ \widetilde{N}(t) \right ] 
+%= \sum_{x \in \mathcal{V}} \E \left [ \left | \mathcal{D}^k[x] \right | \right ]  
+= \sum_{x \in \mathcal{V}} \E \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ]  
+= \mu_{r, n} \sum_{x \in \mathcal{V}} \mathcal{C}^{\algoname{Nbhd}}_t(x)  
+= \mu_{r,n} \mathcal{N}(t),
+\textnormal{ and} \\
+%\end{equation*}
+%
+%and
+%
+%\begin{equation*}
+\sqrt{\Var \left [ \widetilde{N}(t) \right ]} 
+%\leq \sum_{x \in \mathcal{V}} \sqrt{\Var \left [ \left | \mathcal{D}^k[x] \right | \right ]}  
+\leq \sum_{x \in \mathcal{V}} \sqrt{\Var \left [ \widetilde{\mathcal{C}}^{\algoname{Nbhd}}_t(x) \right ]}  
+\leq \eta_{r, n} \sum_{x \in \mathcal{V}} \mathcal{C}^{\algoname{Nbhd}}_t(x)  
+= \eta_{r, n} \mathcal{N}(t).
+\end{align*}
+
 \end{proof}
 
 %Rather than inserting received edges into sketches, however, processors forward
@@ -4994,11 +5055,11 @@ Given a weighted insert-only stream $\sigma$ with index weights $\mathbf{f}_i$ a
 
 However, these weighted reservoir samplers are not robust to changes in weight, even cash register-style monotoic changes, and a suitable only for weighted insert-only streams.
 A similar approach that is robust to changes was developed by Indyk and Woodruff to estimate $F_k$ moments \cite{indyk2005optimal} and was subsequently formalized and streamlined as \emph{precision sampling} \cite{andoni2011streaming} and applied to many other problems in the streaming literature, such as estimating entropy \cite{bhuvanagiri2006estimating}, cascading norms \cite{jayram2009data}, Earth-mover distance \cite{andoni2009efficient}, and even $\ell_p$ sampling in \cite{monemizadeh20101, jowhari2011tight}. 
-At a high level, so-called precision sampling involves executing precision sampling with an internal \algoname{CountSketch} data structure that estimates the frequency vector whose indices are modulated by the random values sampled in precision sampling. 
+At a high level, so-called precision sampling involves executing reservoir sampling with an internal \algoname{CountSketch} data structure that estimates the frequency vector whose indices are modulated by the aforementioned random values. 
  
 
 
-It if further worth noting that reservoir sampling can also be use to sample $t$ items \emph{with replacement} by maintaining $t$ parallel reservoir samplers each of size 1. 
+It is further worth noting that reservoir sampling can also be use to sample $t$ items \emph{with replacement} by maintaining $t$ parallel reservoir samplers each of size 1. 
 However, this increases the amount of work required to process each element in the stream by a factor of $t$.
 We can instead simulate sampling with replacement, which we summarize in Lemmas~\ref{lem:reservoir} and \ref{lem:reservoir:weighted}.
 This procedure maintains the update time up to constant factors at the cost of a logarithmic increase in the space overhead.
@@ -5227,7 +5288,7 @@ Solving the \algoname{Index} problem with probability $> \frac{1}{2}$ requires t
 We now prove the corresponding lower bound for the streaming simulation of parallel random walk sumulation, whose proof is inspired by that of Theorem~13 of \cite{jin2018simulating}.
 %
 \begin{theorem} \label{thm:rw:lower}
-For $t = O(n^2)$, simulating $k$ $t$-step random walks on a simple undirected graph in the insertion-only model within error $\varepsilon = \frac{1}{3}$ requires $\Omega(n\sqrt{kt})$ space.
+For $t = O(n^2)$ and $k = O(n^2)$, simulating $k$ $t$-step random walks on a simple undirected graph in the insertion-only model within error $\varepsilon = \frac{1}{3}$ requires $\Omega(n\sqrt{kt})$ space.
 \end{theorem}
 %
 \begin{proof}
@@ -5499,7 +5560,7 @@ It suffices to show that the algorithm fails with probability at most $\frac{\va
 
 \begin{lemma} \label{lem:rw:startbound}
 Suppose for every $x \in \mathcal{V}$, $\Pr \left [\textnormal{$x$ fails} \mid v_0^{(1)} = x \wedge \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ] \leq \delta$.
-Then for any starting vertex $x \in \mathcal{V}$, $\Pr \left [\textnormal{any vertex fails} \mid v_0^{(1)} = s \wedge \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ] \leq tk\delta$.
+Then for any starting vertex $s \in \mathcal{V}$, $\Pr \left [\textnormal{any vertex fails} \mid v_0^{(1)} = s \wedge \left (v_0^{(2)}, \dots, v_0^{(k)} \right ) \right ] \leq tk\delta$.
 \end{lemma}
 %
 \begin{proof}
@@ -5580,7 +5641,7 @@ $\mu$ corresponds to the left dominant eigenvector of $A$.
 There is a parameter $c = O\left (\sqrt{kt} \cdot \frac{q}{\log q} \right )$, where $q = 2 + \frac{\log(1/\delta)}{\sqrt{kt}}$ such that 
 %
 \begin{equation*}
-\Pr \left [\textnormal{$x$ fails} \mid v_0^{(1)} = x \wedge v_0^{(2)}, \dots, v_0^{(k)} \sim \mu \right ], \leq \delta
+\Pr \left [\textnormal{$x$ fails} \mid v_0^{(1)} = x \wedge v_0^{(2)}, \dots, v_0^{(k)} \sim \mu \right ] \leq \delta
 \end{equation*}
 %
 %where $x$ does not occur in $\left ( v_0^{(1)}, v_0^{(2)}, \dots, v_0^{(k)} \right )$ more than $\sqrt{k}$ times, 
@@ -6113,7 +6174,7 @@ Algorithms~\ref{alg:rw:distributed:insert-only:accumulation} and \ref{alg:rw:dis
 Again, if $k=1$ the algorithm generalizes the insert-only algorithm of \cite{jin2018simulating}.
 Furthermore, a distribution of this type (where $k=1$ and the appropriate changes are made) also serves to generalize the simulation of a single random walk on multigraphs and turnstile streams.
 Furthermore, $k$ instances of these algorithms can run distributed in parallel, affording the sampling of $k$ independent random walks. 
-However, such an algorithm uses $O \left (nk\sqrt{t} \frac{q}{\log q} \right )$ words of memory, where $q = 2 + \frac{\log(1/\varepsilon)}{\sqrt{t}}$.
+However, such an algorithm uses $O \left (nk\sqrt{t} \frac{q^\prime}{\log q^\prime} \right )$ words of memory, where $q^\prime = 2 + \frac{\log(1/\varepsilon)}{\sqrt{t}}$.
 This is why we want a better version of Lemma~\ref{lem:rw:setc}.
 
 %%----------------------------------------------------------------------------------------
@@ -6151,7 +6212,7 @@ Each processor might have its own memory bank, or there may be many that partiti
 In either case $\mathcal{M}$ refers to a distributed data structure in the convention we have used throughout this document.
 Assume that $P \in \mathcal{P}$ can allocate a portion of its memory bank, $\mathcal{M}_P[x]$, allocated to $x \in \mathcal{V}_P$.
 
-Algorithm~\ref{alg:rw:distributed:insert-only:accumulation:playback} is generalizes the \algoname{FeedSampler} function of Algorithm~\ref{alg:rw:distributed:insert-only:accumulation} to include playback.
+Algorithm~\ref{alg:rw:distributed:insert-only:accumulation:playback} generalizes the \algoname{FeedSampler} function of Algorithm~\ref{alg:rw:distributed:insert-only:accumulation} to include playback.
 The other contexts of the accumulation procedure are unchanged.
 While processing an insert $(x, y)$ to $\mathcal{N}_\mathcal{E}[x]$ for some $x \in \mathcal{B}$ that it owns, $P$ also writes $(x,y)$ to $M[x]$.
 After accumulation is finished, $\mathcal{M}[x] = \{ (u, v) \in \mathcal{E}_\mathcal{B} \mid u = x\}$ is a stream recorded in fast storage, but not held in working memory.
@@ -6350,7 +6411,7 @@ Consider a particular vertex $x \in \mathcal{V}$, and assume that while simulati
 Then the algorithm considers $\omega \left ( k \sqrt{t}\right )$ samples from neighbors of $x$ in $\mathcal{B}$. 
 This means that there is at least one simulated random walk $w$ that consumes $\omega(\sqrt{t})$ of these samples.
 As there are no failures by design, these random walks are perfectly simulated.
-That means that, should that $w$ have been simulated by the single source algorithm, it would have failed. 
+That means that, should that $w$ have been simulated by the single source algorithm using the same bits of randomness, it would have failed. 
 We have shown that $\omega(k^{1 - \alpha})$ playbacks occurring on one vertex implies that some walk is simulated that would have failed using the single source algorithm. 
 Thus, the probability that $\omega(k^\alpha)$ playbacks occur on a single vertex is bounded by the probability that one of $k$ independent single source instantiations of the algorithm with the same starting vertices fails. 
 We have proven the following Lemma.
@@ -6364,7 +6425,7 @@ Then the distributed algorithm will generate $O(k^{1-\alpha})$ playbacks on each
 This means that we are unlikely to take too many passes over the memory banks, which has the added benefit of allowing us to partially skirt the limitations of Lemma~\ref{lem:rw:setc} in the distributed case.
 In particular, if $\alpha=\frac{1}{2}$ we will accumulate $O(\sqrt{kt})$ neighbors per vertex per pass.
 It is likely that we will take $O(\sqrt{k})$ passes over the unimportant edges $\mathcal{E}_\mathcal{B}$, while using $O \left (n\sqrt{kt}\frac{q}{\log q} \right )$ words of memory.
-Meanwhile, using $k$ single source simulators in parallel requires a single pass over all of $\boldsymbol{\sigma}$ using $O\left (nk\sqrt{t}\frac{q^\prime}{\log q^\prime} \right )$ words of memory, where $q^\prime = 2 + \frac{\log 1/\varepsilon}{\sqrt{k}}$.
+Meanwhile, using $k$ single source simulators in parallel requires a single pass over all of $\boldsymbol{\sigma}$ using $O\left (nk\sqrt{t}\frac{q^\prime}{\log q^\prime} \right )$ words of memory, where $q^\prime = 2 + \frac{\log 1/\varepsilon}{\sqrt{t}}$.
 Further, using a single source simulator in a series requires $\Theta(k)$ passes over all of $\boldsymbol{\sigma}$ using $O\left (n\sqrt{t}\frac{q^\prime}{\log q^\prime} \right )$ words of memory.
 So, we are able to provide a middle ground in terms of memory and pass efficiency.
 
