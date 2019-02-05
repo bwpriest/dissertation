@@ -98,6 +98,8 @@
 \usetikzlibrary{graphs}
 \usetikzlibrary {positioning}
 
+\usepackage{subcaption}
+
 % dynamic blocks
 \usepackage{dynblocks} 
 
@@ -203,6 +205,7 @@ Thayer School of Engineering \\
 		\setlength\itemsep{0.5em}
 		\item Streaming Degree Centrality
 		\item $O(1)$-Pass Semi-Streaming Closeness Centrality
+		\item $t$-Pass Semi-Streaming Local $t$th Neighborhood Centrality
 		\item $2$-Pass Semi-Streaming Triangle Count Heavy Hitters
 		\item Distributed Semi-Streaming Simulation of Random Walks
 		\item Distributed Sublinear $\kappa$-Path Centrality
@@ -298,6 +301,78 @@ Thayer School of Engineering \\
 
 \end{frame}
 
+
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Centrality Indices}
+
+
+\begin{columns}
+\begin{column}{0.6\textwidth}
+	\begin{itemize}
+		\item Assign scores to vertices or edges
+		\begin{itemize}
+			\item Higher score $\rightarrow$ more important
+			\item Depends on graph structure
+			\item Different indices in different domains
+		\end{itemize}
+		\item Scores are not informative
+		\begin{itemize}
+			\item Usually want top $k$ elements
+		\end{itemize}
+		\item Relative order-preserving approximation is acceptable
+	%	\item Data warehousing becomes difficult
+	%	\begin{itemize}
+	%		\item parallelization, pass-contrained computation
+	%	\end{itemize}
+	\end{itemize}
+\end{column}
+\begin{column}{0.4\textwidth}  %%<--- here
+\begin{center}
+	\includegraphics[width=1.0\textwidth]{centrality_greyscale}
+\end{center}
+\end{column}
+
+\end{columns}
+
+\begin{block}{}
+	\begin{center}
+		Exact algorithms do not scale to massive graphs
+	\end{center}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+ \begin{frame}
+\frametitle{Massive-Scale Graph Centrality}
+
+\textbf{The Problem}
+\begin{itemize}
+	\item High Memory, Computation, Comunication cost
+	\item Wasted effort 
+	\begin{itemize}
+		\item Generally only need top elements vis-\'a-vis a centrality index
+	\end{itemize}
+\end{itemize}
+\textbf{Our Solution}
+\begin{itemize}
+	\item Sketch data structures
+	\begin{itemize}
+		\item Utilize composable streaming summaries of vertex-local information
+	\end{itemize}
+	\item Distributed memory
+	\begin{itemize}
+		\item Partition graph and distribute sketches
+		\item Polyloglinear computation, memory, and communication
+	\end{itemize}
+\end{itemize}
+
+\end{frame}
+
 %------------------------------------------------
 
 \begin{frame}
@@ -381,71 +456,6 @@ Thayer School of Engineering \\
 \end{column}
 
 \end{columns}
-\end{frame}
-
-%------------------------------------------------
-
-\begin{frame}
-\frametitle{Centrality Indices}
-
-
-\begin{columns}
-\begin{column}{0.6\textwidth}
-	\begin{itemize}
-		\item Assign scores to vertices or edges
-		\begin{itemize}
-			\item Higher score $\rightarrow$ more important
-			\item Depends on graph structure
-			\item Different indices in different domains
-		\end{itemize}
-		\item Scores are not informative
-		\begin{itemize}
-			\item Usually want top $k$ elements
-		\end{itemize}
-		\item Relative order-preserving approximation is acceptable
-	%	\item Data warehousing becomes difficult
-	%	\begin{itemize}
-	%		\item parallelization, pass-contrained computation
-	%	\end{itemize}
-	\end{itemize}
-\end{column}
-\begin{column}{0.4\textwidth}  %%<--- here
-\begin{center}
-	\includegraphics[width=1.0\textwidth]{centrality_greyscale}
-\end{center}
-\end{column}
-
-\end{columns}
-\end{frame}
-
-%------------------------------------------------
-
- \begin{frame}
-\frametitle{Massive-Scale Graph Centrality}
-
-\textbf{The Problem}
-\begin{itemize}
-	\item Memory overhead
-	\item Compuational Overhead
-	\item Communication Overhead
-	\item Wasted effort 
-	\begin{itemize}
-		\item Generally only need top elements vis-\'a-vis a centrality index
-	\end{itemize}
-\end{itemize}
-\textbf{Our Solution}
-\begin{itemize}
-	\item Sketch data structures
-	\begin{itemize}
-		\item Utilize composable streaming summaries of vertex-local information
-	\end{itemize}
-	\item Distributed memory
-	\begin{itemize}
-		\item Partition graph and distribute sketches
-		\item Polyloglinear computation, memory, and communication
-	\end{itemize}
-\end{itemize}
-
 \end{frame}
 
 
@@ -564,7 +574,7 @@ $\mathcal{G}$ is given by a \emph{stream} $\sigma$
 	\item If deletions exist, say \emph{turnstile stream}
 \end{itemize}
 
-An algorithm accumulating a data structure $\mathcal{S}$ and is said to be...
+An algorithm accumulating a data structure $\mathcal{S}$ and is called...
 \begin{itemize}
 	\item \emph{streaming} if $\mathcal{S}$ uses $\widetilde{O}(1) = O(\log n)$
 	\footnote{\scriptsize $\widetilde{O}()$ notation suppresses polylogarithmic factors} memory
@@ -638,6 +648,47 @@ For any streaming frequency vectors $\mathbf{f}_1$ and $\mathbf{f}_2$ and scalar
 	\emph{comparisons between streams} are important
 \end{center}
 \end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Proposal Refresh}
+
+\begin{enumerate}
+	\item Semi-streaming approximation of betweenness centrality heavy hitters
+	\begin{itemize}
+		\item Semi-streaming simulation of $k$ random walks of length $t$
+		\begin{itemize} 
+			\item Lower and almost-tight upper bound algorithm
+		\end{itemize}
+		\item Semi-streaming $\kappa$-path centrality algorithm
+	\end{itemize}
+	\item Semi-streaming eigencentrality approximation 
+	\begin{itemize}
+		\item Explored at length by Eisha R. Nathan in \cite{nathan2018numerical}
+		\begin{itemize}
+			\item Mostly applied to Katz's Index
+		\end{itemize}
+	\end{itemize}
+	\item Sketch robustness analysis 
+	\begin{itemize}
+		\item Analysis of HyperLogLog cardinality sketches and their intersections
+	\end{itemize}
+	\item Implementation and empirical evaluation of semi-streaming graph algorithms 
+	\begin{itemize}
+		\item Implementation of \algoname{YGM} communication protocol
+%		\begin{itemize}
+%			\item Powers HPC algorithms with asymmetric computational loads
+%		\end{itemize}
+		\item Implementation of \algoname{DegreeSketch} and related algorithms
+		\begin{itemize}
+			\item Local neighborhood size and triangle count 
+		\end{itemize}
+	\end{itemize}
+\end{enumerate}
+
 
 \end{frame}
 
@@ -746,20 +797,46 @@ Local $t$th Neighborhood Centrality
 	\item Serial estimation algorithms ANF \cite{palmer2002anf} and HyperANF \cite{boldi2011hyperanf}
 \end{itemize}
 }
+
+
+%\invblock<2->
+%
+%% Second block
+%\opaqueblock<2->[0.8\textwidth]{
+%\begin{center}
+%	\vspace{-1.1em}
+%	We show $\widetilde{O}(\varepsilon^{-2}n)$-space distributable streaming algorithms
+%\end{center}
+%}
 \end{dynblock}
 
 
 %close/between centrality
 \begin{dynblock}
 % First block
-\opaqueblock<2>{
+\opaqueblock<1->{
+	\begin{center}
+		\includegraphics[width=0.35\textwidth]{nbhd_fig_landscape}
+	\end{center}
 %\vspace{-1.1em}
-We demonstrate a $t$-pass, semi-streaming, distributed \algoname{DegreeSketch}-based algorithm for estimating $\mathcal{N}(t)$ and $\mathcal{C}^{\algoname{Nb}}_t(x)$ for each $x \in \mathcal{V}$
+%We demonstrate a $t$-pass, semi-streaming, distributed \algoname{DegreeSketch}-based algorithm for estimating $\mathcal{N}(t)$ and $\mathcal{C}^{\algoname{Nb}}_t(x)$ for each $x \in \mathcal{V}$
+%\cite{priest2019degreesketch}.
+%%[PPS18, PPS19]
+%%\footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``Estimating Edge-Local Triangle Count Heavy Hitters in Edge-Linear Time and Almost-Vertex-Linear Space,'' HPEC 2018}
+%\footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``\algoname{DegreeSketch}: Distributed Cardinality Sketches on Graphs, with Applications,'' In preparation for SigKDD 2019}
+}
+
+\invblock<2->
+
+% Second block
+\opaqueblock<2->{
+We demonstrate a $t$-pass, semi-streaming, distributed \algoname{DegreeSketch}-based algorithm for estimating $\mathcal{N}(t)$ and $\mathcal{C}^{\algoname{Nbhd}}_t(x)$ for each $x \in \mathcal{V}$
 \cite{priest2019degreesketch}.
 %[PPS18, PPS19]
 %\footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``Estimating Edge-Local Triangle Count Heavy Hitters in Edge-Linear Time and Almost-Vertex-Linear Space,'' HPEC 2018}
 \footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``\algoname{DegreeSketch}: Distributed Cardinality Sketches on Graphs, with Applications,'' In preparation for SigKDD 2019}
 }
+
 
 \end{dynblock}
 
@@ -797,10 +874,10 @@ Triangle Count Centrality
 \begin{itemize}
 	\item Exact $O(m)$-space, $O \left ( m^{\frac{3}{2}} \right )$-time serial and distributed algorithms \cite{arifuzzaman2013patric, pearce2017triangle}
 	\footnote{\tiny Roger Pearce, ``Triangle counting for scale-free graphs at scale in distributed memory,'' HPEC 2017}
-	\item Streaming sampling sublinear-space algorithms \cite{lim2015mascot, stefani2017triest}
-	\begin{itemize}
-		\item Including distributed generalizations \cite{shin2018tri, shin2018dislr}
-	\end{itemize}
+	\item Semi-streaming sampling algorithms \cite{lim2015mascot, stefani2017triest} and distributed generalizations \cite{shin2018tri, shin2018dislr}
+%	\begin{itemize}
+%		\item Including distributed generalizations 
+%	\end{itemize}
 \end{itemize}
 }
 \end{dynblock}
@@ -808,12 +885,22 @@ Triangle Count Centrality
 
 %close/between centrality
 \begin{dynblock}
-% First block
+\opaqueblock<1->{
+	\begin{columns}
+	\begin{column}{0.3\textwidth}
+		\includegraphics[width=1.0\textwidth]{edge_local}
+	\end{column}
+	\begin{column}{0.3\textwidth}
+		\includegraphics[width=1.0\textwidth]{vertex_local}
+	\end{column}
+	\end{columns}
+}
+
+\invblock<2->
+
 \opaqueblock<2>{
-%\vspace{-1.1em}
 We show 2-pass, semi-streaming, distributed \algoname{DegreeSketch}-based algorithms for estimating heavy hitters 
 \cite{priest2018estimating, priest2019degreesketch}
-%[PPS18, PPS19]
 \footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``Estimating Edge-Local Triangle Count Heavy Hitters in Edge-Linear Time and Almost-Vertex-Linear Space,'' HPEC 2018}
 \footnote{\tiny Benjamin W. Priest, Roger Pearce and Geoffrey Sanders, ``\algoname{DegreeSketch}: Distributed Cardinality Sketches on Graphs, with Applications,'' In preparation for SigKDD 2019}
 }
@@ -850,7 +937,7 @@ Semi-streaming simulation of $k$ random walks of length $t$
 %
 \begin{itemize}	
 	\item $O(nkt)$-space trivial algorithm
-	\item $\Omega \left ( n\sqrt{t} \right )$ lower bound and almost-tight upper bound for simulating a single random walk \cite{jin2018simulating}.
+	\item $\Omega \left ( n\sqrt{t} \right )$ lower bound and almost-tight upper bound for simulating a single random walk of length $t$ \cite{jin2018simulating}.
 %	\begin{itemize}
 %		\item Online exact and approximate $O(n^2)$- and $O(m)$-space algorithms exist \cite{green2012fast, wei2014real, kourtellis2015scalable, bergamini2014approximating}%, [GMB12], [WC14], [KMB15], [BMS15]
 %	\end{itemize}
@@ -892,13 +979,13 @@ $\kappa$-Path Centrality
 \vspace{-0.2cm}
 %
 \begin{equation*}
-	\mathcal{C}^{\algoname{$\kappa$}}(x)  =  \Pr_{p: |p| \leq \kappa} [x \in p \wedge \text{$p$ a simple path } ]
+	\mathcal{C}^{\algoname{Path}}_{\kappa}(x)  =  \Pr_{p: |p| \leq \kappa} [x \in p \wedge \text{$p$ a simple path } ]
 \end{equation*}
 %
 \vspace{-0.6cm}
 %
 \begin{itemize}	
-	\item $O(m)$-space $O(n^{1 + \alpha} \log^{2} n)$-time approximation algorithm \cite{wei2014real}
+	\item $O(m)$-space $O(n^{1 + \alpha} \log^{2} n)$-time approximation algorithm \cite{kourtellis2013identifying}
 	\item Empirical proxy for betweenness centrality heavy hitters
 	\begin{itemize}
 		\item Online exact and approximate $O(n^2)$- and $O(m)$-space algorithms exist \cite{green2012fast, wei2014real, kourtellis2015scalable, bergamini2014approximating}%, [GMB12], [WC14], [KMB15], [BMS15]
@@ -921,6 +1008,50 @@ $\kappa$-Path Centrality
 \end{dynblock}
 
 
+
+
+
+
+
+\end{frame}
+
+
+
+%------------------------------------------------
+
+
+
+\begin{frame}
+\frametitle{Summary of Results}
+
+%Degree centrality
+
+
+\begin{table}[htbp]
+\caption{Summary of Algorithmic Results \label{tab:scaling_graphs}}
+\begin{center}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Problem} & passes & distributed? & dynamic? &  analytic bound? & lower bound? & experiments? \\
+\hline
+\hline
+Degree Centrality & 1 & & \checkmark & \checkmark &  & \\
+\hline
+Closeness Centrality & O(1) & & \checkmark & \checkmark & & \\
+\hline
+$t$th Neighborhood & $t$ & \checkmark & & \checkmark & & \\
+\hline
+Local Triangle Counts & 2 & \checkmark & &  & & \checkmark \\
+\hline
+$k$ $t$-step Random Walks & 1\footnote{Changes when subject to playback} & \checkmark& \checkmark & \checkmark & \checkmark & \\
+\hline
+$\kappa$-Path Centrality & $*$ & \checkmark& \checkmark & \checkmark & & \\
+\hline
+\end{tabular}
+}
+\end{center}
+\end{table}
 
 
 
@@ -1620,6 +1751,74 @@ $\kappa$-Path Centrality
 
 \againframe<5>{overview}
 
+%\begin{frame}
+%\frametitle{Motivation: Vertex-Centric Algorithms}
+%
+%\textbf{The Problem}:
+%\begin{itemize}
+%	\item Most distributed graph algorithms are vertex-centric
+%	\begin{itemize}
+%		\item Partition local vertex information across processors
+%		\item Processors communicate as in rounds \cite{malewicz2010pregel}
+%	\end{itemize}
+%	\item Scale-free graphs common in applications
+%	\begin{itemize}
+%		\item High degree vertices cause computation ``hotspots''
+%		\item Moves at the speed of the slowest processor
+%	\end{itemize}
+%\end{itemize}
+%
+%\textbf{Solutions}:
+%\begin{itemize}
+%	\item Asynchronous Communication 
+%	\begin{itemize}
+%		\item Processors communicate point-to-point as needed
+%		\item Increased implementation complexity
+%	\end{itemize}
+%	\item Vertex delegation \cite{pearce2014faster}
+%	\footnote{\scriptsize Roger Pearce, Maya Gokhale and Nancy M. Amato, ``Faster parallel traversal of scale free graphs at extreme scale with vertex delegates,'' SC 2014}
+%	\begin{itemize}
+%		\item Cut hubs between processors
+%%		\item Adds communication overhead
+%	\end{itemize}
+%\end{itemize}
+%
+%
+%\end{frame}
+%
+%%----------------------------------------------------------------------------------------
+%
+%\begin{frame}
+%\frametitle{Approach: Pseudo-Asynchronous Communication Protocol}
+%
+%\begin{block}{The Idea}
+%Aggregate and route messages ``asynchronously'', allowing processors to drop out of communication exchanges when finished
+%\end{block}
+%
+%\begin{itemize}
+%	\item Partion processor set $\mathcal{P}$ into \emph{local} and \emph{remote} exchanges
+%	\begin{itemize}
+%%		\item Each processor belongs to one local and one remote exchange
+%		\item Takes advantage of hybrid distributed memory
+%	\end{itemize}
+%	\item Mailbox abstraction
+%	\begin{itemize}
+%		\item Aggregate messages at intermediaries
+%		\item Route destination node traffic traffic through same remote channel
+%	\end{itemize}
+%	\item Three protocols:
+%	\begin{itemize}
+%		\item Node Local
+%		\item Node Remote
+%		\item Node Local Node Remote (NLNR)
+%	\end{itemize}
+%\end{itemize}
+%
+%\end{frame}
+
+
+%----------------------------------------------------------------------------------------
+
 \begin{frame}
 \frametitle{Motivation: Vertex-Centric Algorithms}
 
@@ -1684,6 +1883,7 @@ Aggregate and route messages ``asynchronously'', allowing processors to drop out
 \end{itemize}
 
 \end{frame}
+
 
 %----------------------------------------------------------------------------------------
 
@@ -1792,31 +1992,51 @@ Aggregate and route messages ``asynchronously'', allowing processors to drop out
 \frametitle{Validation of Claims}
 
 
-\begin{columns}
-\begin{column}{0.3\textwidth}
-	\textbf{Experiment}
-	\begin{itemize}
-		\item 20B message exchange
-		\begin{itemize}
-			\item Destination sampled from Pareto distribution
-			\item Batch size is maximum $|\mathcal{S}[P]|$
-		\end{itemize}
-		\item Run on quartz @ LLNL
-	\end{itemize}
-\end{column}
-\begin{column}{0.7\textwidth}  %%<--- here
-\begin{center}
-	\includegraphics[width=1.0\textwidth]{512_32}
-\end{center}
-\end{column}
-
-\end{columns}
-
-\begin{block}{}
+\begin{figure}
 	\begin{center}
-		NLNR exhibits best scaling, NR best with fewer nodes
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{degree_weak_scaling}}
+			\caption{Weak scaling. \label{fig:degree_weak_scaling}}
+		\end{subfigure}
+		\begin{subfigure}{0.49\linewidth}
+			\centerline{\includegraphics[width=1.0\columnwidth]{degree_strong_scaling}}
+			\caption{Strong scaling \label{fig:degree_strong_scaling}}
+		\end{subfigure}
+		\caption{Weak and strong scaling wall time experiments for degree counting, as the number of nodes $N$ varies from 1 up to 1024.
+			Weak scaling experiments (a) assumed a universe of $N2^{28}$ vertices and sampled a total of $N2^{32}$ edges.
+			Strong scaling experiments (b) assumed a universe of $2^{32}$ vertices and sampled a total of $2^{37}$ edges. 
+			Edge samplings uniformly sample two vertices without replacement from the universe of vertices.
+			In all experiments mailbox sizes are fixed at $2^{18}$ messages.
+			\label{fig:degree_scaling}}
 	\end{center}
-\end{block}
+\end{figure}
+
+
+%\begin{columns}
+%\begin{column}{0.3\textwidth}
+%	\textbf{Experiment}
+%	\begin{itemize}
+%		\item 20B message exchange
+%		\begin{itemize}
+%			\item Destination sampled from Pareto distribution
+%			\item Batch size is maximum $|\mathcal{S}[P]|$
+%		\end{itemize}
+%		\item Run on quartz @ LLNL
+%	\end{itemize}
+%\end{column}
+%\begin{column}{0.7\textwidth}  %%<--- here
+%\begin{center}
+%	\includegraphics[width=1.0\textwidth]{512_32}
+%\end{center}
+%\end{column}
+%
+%\end{columns}
+%
+%\begin{block}{}
+%	\begin{center}
+%		NLNR exhibits best scaling, NR best with fewer nodes
+%	\end{center}
+%\end{block}
 
 \end{frame}
 
@@ -1840,7 +2060,7 @@ Aggregate and route messages ``asynchronously'', allowing processors to drop out
 		\item Sierra 42 - largest scale to date graph 500 ($\sim 70$T edges)
 		\item Possibly more in the future
 		\begin{itemize}
-			\item Eccentricity
+			\item e.g. Eccentricity
 		\end{itemize}
 	\end{itemize}
 	\item Improvements over legacy HavoqGT routing
@@ -1854,7 +2074,7 @@ Aggregate and route messages ``asynchronously'', allowing processors to drop out
 
 \begin{block}{}
 	\begin{center}
-		\algoname{YGM} to be open sourced, published in IPDPS 2019 workshop
+		\algoname{YGM} to be open sourced, submitted to IPDPS 2019 workshop
 	\end{center}
 \end{block}
 
@@ -2271,13 +2491,13 @@ Streaming sets $X$ and $Y$ with \algoname{HLL}s $S_X$ and $S_Y$
 
 \begin{center}
 \only<1>{
-		\includegraphics[width=0.85\textwidth]{query_1}
+		\includegraphics[width=0.72\textwidth]{query_1}
 }
 \only<2>{
-		\includegraphics[width=0.85\textwidth]{query_2}
+		\includegraphics[width=0.72\textwidth]{query_2}
 }
 \only<3>{
-		\includegraphics[width=0.85\textwidth]{query_3}
+		\includegraphics[width=0.72\textwidth]{query_3}
 }
 \end{center}
 
@@ -2439,7 +2659,7 @@ $\widetilde{O}(m)$ time and communication and $\widetilde{O}(\varepsilon^{-2}n)$
 %----------------------------------------------------------------------------------------
 
 \begin{frame}
-\frametitle{Edge Local Relative Error}
+\frametitle{Edge Local Relative Error - Experimental Distributions}
 
 \centerline{\includegraphics[width=1.0\columnwidth]{distn_edge_total_landscape}}
 
@@ -2601,7 +2821,7 @@ Bob's index $i \in \left [ n\sqrt{kt} \right ]$ identifies one such subgraph, an
 
 
 \begin{frame}
-\frametitle{Parallel Random Walk Simulation - Algorithm Sketch}
+\frametitle{Parallel Random Walk Simulation - Algorithm Outline}
 
 \begin{block}{Lemma 7.1.4 (Reservoir Sampling)}
 Given an insert-only stream $\sigma$ consisting of $n$ insertions, there is a procedure that uniformly samples $t \leq \frac{n}{2}$ items with replacement in a single pass using $O(t\log(n/t))$ bits of space. 
@@ -2626,7 +2846,7 @@ Given an insert-only stream $\sigma$ consisting of $n$ insertions, there is a pr
 	\end{itemize}
 	\item During each simulation, toss a coin whether to pull from $\mathcal{N}_\mathcal{S}$ or $\mathcal{N}_\mathcal{B}$ at each step
 	\begin{itemize}
-		\item Simulation fails if any vertex runs out of unimportant samples
+		\item Simulation \emph{fails} on a vertex if it runs out of unimportant samples
 	\end{itemize}
 \end{itemize}
 
@@ -2640,7 +2860,7 @@ Given an insert-only stream $\sigma$ consisting of $n$ insertions, there is a pr
 %----------------------------------------------------------------------------------------
 
 \begin{frame}
-\frametitle{Parallel Random Walk Simulation - Correctness Sketch}
+\frametitle{Parallel Random Walk Simulation - Correctness Outline}
 
 
 \begin{block}{Lemma 7.2.3}
@@ -2679,18 +2899,21 @@ Can simulate $k$ $t$-step random walks where sources are drawn with replacement 
 \begin{itemize}
 	\item Recording and playback of adjacency substreams
 	\begin{itemize}
-		\item Each processor records $\mathcal{M}[x]$ in fast memory\footnote{e.g. NVRAM} while accumulating $\mathcal{N}_\mathcal{B}[x]$
+		\item Each processor records $\mathcal{M}[x]$ in faster-than-disc external memory\footnote{e.g. NVRAM} while accumulating $\mathcal{N}_\mathcal{B}[x]$
 		%
 		\begin{equation*}
 			\mathcal{M}[x] = \{ (u, v) \in \mathcal{E}_\mathcal{B} \mid u = x\}
 		\end{equation*}
 		%
-		\item Instead of failing, simply refresh $\mathcal{N}_\mathcal{B}[x]$ by taking a pass over $M[x]$
+		\item Instead of failing when $\mathcal{N}_\mathcal{B}[x]$ runs out of samples, simply take another pass over $M[x]$
 		\begin{itemize}
-			\item Partially avoids the stead state distribution heavy hammer		
+			\item Partially avoids the steady state distribution heavy hammer		
 		\end{itemize}
-		\item Affords more robust tuning of I/O versus memory tradeoff
-		\item Reliable and HPC friendly
+		\item I/O versus memory tradeoff
+		\begin{itemize}
+			\item Sublinear storage of graph
+			\item Playbacks incur additional I/O on some processors
+		\end{itemize}
 	\end{itemize}
 	\item History-Avoiding Walk Simulation
 	\begin{itemize}
@@ -3288,7 +3511,7 @@ $\left | \widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x] - \mathcal{C}_\kapp
 {\scriptsize
 \begin{enumerate}
 \item \textbf{Benjamin W. Priest} and George Cybenko.
-	Efficient inference of hidden Markov mod- els from large observation sequences.
+	Efficient inference of hidden Markov models from large observation sequences.
 	In \emph{Proceedings of the 2016 SPIE Defense + Security Conference}, 
 	SPIE D$\! + \!$S.
 	2016.
@@ -3304,6 +3527,7 @@ $\left | \widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x] - \mathcal{C}_\kapp
 	In \emph{Proceedings of the 15th International Conference on Security and Cryptography}, 
 	SECRYPT. 
 	2018.
+	\textbf{[Best Paper Award]}
 	
 \item \textbf{Benjamin W. Priest}, Roger Pearce, and Geoffrey Sanders.
 	Estimating edge-local triangle count heavy hitters in edge-linear time and almost-vertex-linear space.
@@ -3316,19 +3540,23 @@ $\left | \widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x] - \mathcal{C}_\kapp
 	In:
 	Michael Wellman~(Ed.), \emph{Adversarial and Uncertain Reasoning in Adaptive Cyber-Defense}, ch.
 	11, pp. xxx--xxx. 2019.
-	Anticipated.
+	\textbf{[In Press]}.
 
 \item \textbf{Benjamin W. Priest}, Trevor Steil, Roger Pearce, and Geoffrey Sanders.
 	You've {G}ot {M}ail: Building missing asynchronous communication primitives.
 	In:
-	Proceedings of the 2019 International Conference on Supercomputing,
-	SC.
+	Proceedings of the 2019 IEEE International Symposium on Parallel and Distributed Processing,
+	IPDPS.
 	2019.
-	\textbf{Anticipated}.
+	\textbf{[Submitted]}.
 	
 \item \textbf{Benjamin W. Priest}, Roger Pearce, and Geoffrey Sanders.
 	DegreeSketch: Distributed cardinality sketches on graphs with applications.
-	\textbf{In Preparation}.
+	\textbf{[In Preparation]}.
+
+\item \textbf{Benjamin W. Priest}.
+	Efficient distributed and semi-streaming simulation of random walks.
+	\textbf{[In Preparation]}.
 \end{enumerate}
 }
 
