@@ -227,7 +227,7 @@ Thayer School of Engineering \\
 		\setlength\itemsep{0.5em}
 		\item Vertex-Centric Algorithm Challenges
 		\item Pseudo-Asyncronous Communication Protocols
-		\item Verification \& Implementation Details
+		\item Experiments \& Implementation Details
 	\end{enumerate}
 	}
 	\item {\color<2-5, 7>{gray}DegreeSketch and Generalizations of Degree Centrality}
@@ -239,7 +239,7 @@ Thayer School of Engineering \\
 		\item DegreeSketch and Local Neighborhood Size
 		\item Local Triangle Counting
 		\item DegreeSketch and Triangle Counting
-		\item Verification \& Implementation Details
+		\item Experiments \& Implementation Details
 	\end{enumerate}
 	}
 	\item {\color<2-6>{gray}Semi-Streaming Random Walk Simulation and $\kappa$-Path Centrality}
@@ -248,8 +248,9 @@ Thayer School of Engineering \\
 		\setlength\itemsep{0.5em}
 		\item Betweenness Centrality Challenges
 		\item $\kappa$-Path Centrality and Betweenness Centrality
-		\item $\ell_p$ Sampling Sketches
-		\item Sublinear Distributed $\kappa$-Path Centrality
+		\item Semi-Streaming Simulation of Multiple Random Walks
+%		\item $\ell_p$ Sampling Sketches
+		\item Semi-Streaming Distributed $\kappa$-Path Centrality
 	\end{enumerate}
 	}
 \end{enumerate}
@@ -2808,7 +2809,7 @@ Bob's index $i \in \left [ n\sqrt{kt} \right ]$ identifies one such subgraph, an
 	\begin{center}
 		$i$ indicates $A_j$ and $B_j$, and in particular the edge $ab$.
 		Bob adds the blue edges. and simulates $k$ random walks of length $t$ starting in $V_0$. 
-		If $ab$ exists, Bob finds with with probability $> \frac{1}{2}, \rightarrow$ solving \algoname{Index}.
+		If $ab$ exists, Bob returns $X_i$ with with probability $> \frac{1}{2}, \rightarrow$ solving \algoname{Index}.
 	\end{center}
 \end{block}
 
@@ -3508,7 +3509,7 @@ $\left | \widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x] - \mathcal{C}_\kapp
 \begin{frame}
 \frametitle{Dartmouth Publications}
 
-{\scriptsize
+{\tiny
 \begin{enumerate}
 \item \textbf{Benjamin W. Priest} and George Cybenko.
 	Efficient inference of hidden Markov models from large observation sequences.
@@ -3545,10 +3546,17 @@ $\left | \widetilde{\mathcal{C}}_\kappa^{\algoname{Path}}[x] - \mathcal{C}_\kapp
 \item \textbf{Benjamin W. Priest}, Trevor Steil, Roger Pearce, and Geoffrey Sanders.
 	You've {G}ot {M}ail: Building missing asynchronous communication primitives.
 	In:
-	Proceedings of the 2019 IEEE International Symposium on Parallel and Distributed Processing,
+	GraML Workshop at the 2019 IEEE International Symposium on Parallel and Distributed Processing,
 	IPDPS.
 	2019.
-	\textbf{[Submitted]}.
+	\textbf{[To Be Submitted]}.
+
+\item Trevor Steil, \textbf{Benjamin W. Priest}, Roger Pearce, Keita Iwabuchi, Timothy LaFond, and Geoff Sanders. 
+	Massive-scale graph generation with ground truth: Triangles, centrality, and communities.
+	GraPL Workshop at the 2019 IEEE International Symposium on Parallel and Distributed Processing,
+	IPDPS.
+	2019.
+	\textbf{[To Be Submitted]}.
 	
 \item \textbf{Benjamin W. Priest}, Roger Pearce, and Geoffrey Sanders.
 	DegreeSketch: Distributed cardinality sketches on graphs with applications.
